@@ -88,6 +88,32 @@ namespace GameLogic
             return new RoguelikeCombatResult(run.Player.IsAlive, turn, summary.ToString());
         }
 
+        public RoguelikeCombatResult CompleteRoomAfterRealtimeCombat(RoguelikeRunState run, string combatSummary)
+        {
+            RoguelikeRoom room = run?.CurrentRoom;
+            if (room == null)
+            {
+                return new RoguelikeCombatResult(true, 0, "本轮冒险已结束。");
+            }
+
+            if (room.IsCleared)
+            {
+                return new RoguelikeCombatResult(run.Player.IsAlive, room.CombatTurnCount, $"第 {room.Index + 1} 个房间已清理。");
+            }
+
+            if (room.Enemy != null && room.Enemy.IsAlive)
+            {
+                return new RoguelikeCombatResult(run.Player.IsAlive, room.CombatTurnCount, "当前战斗尚未结束。");
+            }
+
+            ApplyReward(run, room.Reward);
+            room.MarkCleared();
+            string summary = string.IsNullOrEmpty(combatSummary)
+                ? DescribeReward(room.Reward)
+                : $"{combatSummary} {DescribeReward(room.Reward)}";
+            return new RoguelikeCombatResult(run.Player.IsAlive, room.CombatTurnCount, summary);
+        }
+
         public bool TryAdvanceAfterCleared(RoguelikeRunState run)
         {
             if (run == null || run.IsCompleted)

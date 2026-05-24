@@ -21,10 +21,12 @@ namespace GameLogic
         private Text[] _choiceTexts;
         private Button _restartButton;
         private Text _restartText;
-        private float _autoBattleTimer;
-
-        private const float CombatTickSeconds = 0.75f;
-        private const float TravelTickSeconds = 0.35f;
+        private Button _moveLeftButton;
+        private Button _moveStopButton;
+        private Button _moveRightButton;
+        private Button _skillButton;
+        private Button _dashButton;
+        private float _moveAxis;
 
         protected override void ScriptGenerator()
         {
@@ -40,6 +42,7 @@ namespace GameLogic
             {
                 _touchButton.onClick.AddListener(OnTouchBattle);
             }
+            BindControlEvents();
 
             RefreshBattleInfo();
         }
@@ -52,21 +55,18 @@ namespace GameLogic
         protected override void OnUpdate()
         {
             RoguelikeRunState run = RoguelikeGame.Instance.CurrentRun;
-            if (run == null || RoguelikeGame.Instance.Phase != RoguelikeGamePhase.Running)
+            if (run == null)
             {
                 RefreshBattleInfo();
                 return;
             }
 
-            _autoBattleTimer += Time.deltaTime;
-            float tickSeconds = run.CurrentRoom != null && run.CurrentRoom.Enemy != null ? CombatTickSeconds : TravelTickSeconds;
-            if (_autoBattleTimer < tickSeconds)
+            if (RoguelikeGame.Instance.Phase == RoguelikeGamePhase.Running)
             {
-                return;
+                RoguelikeGame.Instance.SetMoveInput(_moveAxis);
+                RoguelikeGame.Instance.UpdateRealtimeCombat(Time.deltaTime);
             }
 
-            _autoBattleTimer = 0f;
-            RoguelikeGame.Instance.TickAutoBattle();
             RefreshBattleInfo();
         }
 
@@ -76,6 +76,8 @@ namespace GameLogic
             {
                 _touchButton.onClick.RemoveListener(OnTouchBattle);
             }
+
+            UnbindControlEvents();
         }
 
         private void OnTouchBattle()
@@ -89,8 +91,14 @@ namespace GameLogic
 
             if (RoguelikeGame.Instance.Phase == RoguelikeGamePhase.Running)
             {
-                _autoBattleTimer = CombatTickSeconds;
-                RoguelikeGame.Instance.TickAutoBattle();
+                if (RoguelikeGame.Instance.InRealtimeCombat)
+                {
+                    RoguelikeGame.Instance.RequestSkill();
+                }
+                else
+                {
+                    RoguelikeGame.Instance.TickAutoBattle();
+                }
                 RefreshBattleInfo();
             }
         }
@@ -98,14 +106,14 @@ namespace GameLogic
         private void RestartRun()
         {
             RoguelikeGame.Instance.StartNewRun();
-            _autoBattleTimer = 0f;
+            _moveAxis = 0f;
             RefreshBattleInfo();
         }
 
         private void ChooseReward(int index)
         {
             RoguelikeGame.Instance.ChooseReward(index);
-            _autoBattleTimer = 0f;
+            _moveAxis = 0f;
             RefreshBattleInfo();
         }
 
@@ -119,13 +127,14 @@ namespace GameLogic
 
             RoguelikeRoom room = run.CurrentRoom;
             RoguelikeActorState player = run.Player;
-            SetText(_titleText, $"自动肉鸽 - {RoguelikeText.GetPhaseName(RoguelikeGame.Instance.Phase)}");
-            SetText(_playerText, $"角色\n生命 {player.Health}/{player.Stats.MaxHealth}\n攻击 {player.Stats.Attack}  防御 {player.Stats.Defense}\n金币 {run.Gold}  遗物 {run.Relics.Count}");
+            SetText(_titleText, $"轻操作肉鸽 - {RoguelikeText.GetPhaseName(RoguelikeGame.Instance.Phase)}");
+            SetText(_playerText, $"角色\n生命 {player.Health}/{player.Stats.MaxHealth}\n攻击 {player.Stats.Attack}  防御 {player.Stats.Defense}\n金币 {run.Gold}  遗物 {run.Relics.Count}\n技能CD {RoguelikeGame.Instance.SkillCooldownRemaining:0.0}s  闪避CD {RoguelikeGame.Instance.DashCooldownRemaining:0.0}s");
             SetSlider(_playerHpSlider, player.Health, player.Stats.MaxHealth);
 
             if (room != null && room.Enemy != null)
             {
-                SetText(_enemyText, $"{room.Enemy.DisplayName}\n生命 {room.Enemy.Health}/{room.Enemy.Stats.MaxHealth}\n房间 {room.Index + 1}/{run.Rooms.Count}  {RoguelikeText.GetRoomName(room.Type)}\n回合 {room.CombatTurnCount}");
+                float dist = Mathf.Abs(RoguelikeGame.Instance.EnemyLanePosition - RoguelikeGame.Instance.PlayerLanePosition);
+                SetText(_enemyText, $"{room.Enemy.DisplayName}\n生命 {room.Enemy.Health}/{room.Enemy.Stats.MaxHealth}\n房间 {room.Index + 1}/{run.Rooms.Count}  {RoguelikeText.GetRoomName(room.Type)}\n距离 {dist:0.00}  P:{RoguelikeGame.Instance.PlayerLanePosition:0.0} E:{RoguelikeGame.Instance.EnemyLanePosition:0.0}");
                 SetSlider(_enemyHpSlider, room.Enemy.Health, room.Enemy.Stats.MaxHealth);
             }
             else if (room != null)
@@ -143,6 +152,7 @@ namespace GameLogic
             SetText(_routeText, BuildRouteText(run));
             RefreshChoiceButtons();
             RefreshRestartButton();
+            RefreshControlButtons();
         }
 
         private void RefreshChoiceButtons()
@@ -181,6 +191,24 @@ namespace GameLogic
             _restartText.text = "重新开始";
         }
 
+        private void RefreshControlButtons()
+        {
+            bool running = RoguelikeGame.Instance.Phase == RoguelikeGamePhase.Running;
+            bool realtime = running && RoguelikeGame.Instance.InRealtimeCombat;
+
+            _moveLeftButton.gameObject.SetActive(running);
+            _moveStopButton.gameObject.SetActive(running);
+            _moveRightButton.gameObject.SetActive(running);
+            _skillButton.gameObject.SetActive(running);
+            _dashButton.gameObject.SetActive(running);
+
+            _moveLeftButton.interactable = realtime;
+            _moveStopButton.interactable = realtime;
+            _moveRightButton.interactable = realtime;
+            _skillButton.interactable = realtime;
+            _dashButton.interactable = realtime;
+        }
+
         private void CreateMvpHud()
         {
             Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
@@ -203,6 +231,16 @@ namespace GameLogic
 
             _messageText = CreateText("Message", root, font, 24, TextAnchor.MiddleCenter, new Vector2(0.08f, 0.45f), new Vector2(0.92f, 0.55f), Vector2.zero, Vector2.zero);
             _routeText = CreateText("Route", root, font, 19, TextAnchor.UpperCenter, new Vector2(0.08f, 0.26f), new Vector2(0.92f, 0.43f), Vector2.zero, Vector2.zero);
+            _moveLeftButton = CreateButton("MoveLeft", root, font, new Vector2(0.08f, 0.02f), new Vector2(0.23f, 0.08f), new Color(0.15f, 0.18f, 0.33f, 0.96f));
+            _moveLeftButton.GetComponentInChildren<Text>(true).text = "左移";
+            _moveStopButton = CreateButton("MoveStop", root, font, new Vector2(0.24f, 0.02f), new Vector2(0.39f, 0.08f), new Color(0.15f, 0.18f, 0.25f, 0.96f));
+            _moveStopButton.GetComponentInChildren<Text>(true).text = "停";
+            _moveRightButton = CreateButton("MoveRight", root, font, new Vector2(0.40f, 0.02f), new Vector2(0.55f, 0.08f), new Color(0.15f, 0.18f, 0.33f, 0.96f));
+            _moveRightButton.GetComponentInChildren<Text>(true).text = "右移";
+            _skillButton = CreateButton("SkillButton", root, font, new Vector2(0.63f, 0.02f), new Vector2(0.78f, 0.08f), new Color(0.28f, 0.22f, 0.16f, 0.96f));
+            _skillButton.GetComponentInChildren<Text>(true).text = "技能";
+            _dashButton = CreateButton("DashButton", root, font, new Vector2(0.79f, 0.02f), new Vector2(0.92f, 0.08f), new Color(0.22f, 0.30f, 0.18f, 0.96f));
+            _dashButton.GetComponentInChildren<Text>(true).text = "闪避";
 
             _choiceButtons = new Button[3];
             _choiceTexts = new Text[3];
@@ -219,6 +257,49 @@ namespace GameLogic
             _restartButton = CreateButton("RestartButton", root, font, new Vector2(0.37f, 0.09f), new Vector2(0.63f, 0.20f), new Color(0.35f, 0.18f, 0.18f, 0.96f));
             _restartText = _restartButton.GetComponentInChildren<Text>(true);
             _restartButton.onClick.AddListener(RestartRun);
+        }
+
+        private void BindControlEvents()
+        {
+            _moveLeftButton.onClick.AddListener(OnMoveLeft);
+            _moveStopButton.onClick.AddListener(OnMoveStop);
+            _moveRightButton.onClick.AddListener(OnMoveRight);
+            _skillButton.onClick.AddListener(OnSkill);
+            _dashButton.onClick.AddListener(OnDash);
+        }
+
+        private void UnbindControlEvents()
+        {
+            _moveLeftButton.onClick.RemoveListener(OnMoveLeft);
+            _moveStopButton.onClick.RemoveListener(OnMoveStop);
+            _moveRightButton.onClick.RemoveListener(OnMoveRight);
+            _skillButton.onClick.RemoveListener(OnSkill);
+            _dashButton.onClick.RemoveListener(OnDash);
+        }
+
+        private void OnMoveLeft()
+        {
+            _moveAxis = -1f;
+        }
+
+        private void OnMoveStop()
+        {
+            _moveAxis = 0f;
+        }
+
+        private void OnMoveRight()
+        {
+            _moveAxis = 1f;
+        }
+
+        private void OnSkill()
+        {
+            RoguelikeGame.Instance.RequestSkill();
+        }
+
+        private void OnDash()
+        {
+            RoguelikeGame.Instance.RequestDash();
         }
 
         private Button FindOrCreateTouchButton()

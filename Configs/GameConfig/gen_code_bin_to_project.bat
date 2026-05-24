@@ -3,6 +3,12 @@ echo %CD%
 
 set WORKSPACE=../..
 set LUBAN_DLL=%WORKSPACE%\Tools\Luban\Luban.dll
+if not exist "%LUBAN_DLL%" set LUBAN_DLL=D:\Work\Project\3rd\luban_examples\Tools\Luban\Luban.dll
+if not exist "%LUBAN_DLL%" set LUBAN_DLL=D:\Work\Project\Learn\ServerBuild\GameServers\Tools\luban\Tools\Luban\Luban.dll
+if not exist "%LUBAN_DLL%" (
+    echo [Error] Luban.dll not found. Please place it at %WORKSPACE%\Tools\Luban\Luban.dll
+    exit /b 1
+)
 set CONF_ROOT=.
 set DATA_OUTPATH=%WORKSPACE%/UnityProject/Assets/AssetRaw/Configs/bytes/
 set CODE_OUTPATH=%WORKSPACE%/UnityProject/Assets/GameScripts/HotFix/GameProto/GameConfig/
@@ -19,4 +25,3 @@ dotnet %LUBAN_DLL% ^
     -x outputCodeDir=%CODE_OUTPATH% ^
     -x outputDataDir=%DATA_OUTPATH% 
 if not defined AI_MODE pause
-
