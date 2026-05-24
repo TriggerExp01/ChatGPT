@@ -57,7 +57,7 @@ namespace GameLogic
             {
                 ApplyReward(run, room.Reward);
                 room.MarkCleared();
-                return new RoguelikeCombatResult(true, room.CombatTurnCount, $"第 {room.Index + 1} 个房间（{GetRoomName(room.Type)}）：{DescribeReward(room.Reward)}");
+                return new RoguelikeCombatResult(true, room.CombatTurnCount, $"第 {room.Index + 1} 个房间（{RoguelikeText.GetRoomName(room.Type)}）：{DescribeReward(room.Reward)}");
             }
 
             int turn = room.AdvanceCombatTurn();
@@ -108,7 +108,7 @@ namespace GameLogic
             {
                 RoguelikeRoom room = run.Rooms[i];
                 string enemy = room.Enemy == null ? "-" : room.Enemy.DisplayName;
-                builder.AppendLine($"{i + 1:00}. {GetRoomName(room.Type)} / {enemy}");
+                builder.AppendLine($"{i + 1:00}. {RoguelikeText.GetRoomName(room.Type)} / {enemy}");
             }
 
             return builder.ToString();
@@ -247,29 +247,6 @@ namespace GameLogic
                     return reward.Relic == null ? "没有获得遗物。" : $"获得遗物：{reward.Relic.DisplayName}。";
                 default:
                     return "没有奖励。";
-            }
-        }
-
-        private static string GetRoomName(RoguelikeRoomType type)
-        {
-            switch (type)
-            {
-                case RoguelikeRoomType.Start:
-                    return "起点";
-                case RoguelikeRoomType.Combat:
-                    return "战斗";
-                case RoguelikeRoomType.Elite:
-                    return "精英";
-                case RoguelikeRoomType.Treasure:
-                    return "宝箱";
-                case RoguelikeRoomType.Rest:
-                    return "营火";
-                case RoguelikeRoomType.Shop:
-                    return "商店";
-                case RoguelikeRoomType.Boss:
-                    return "首领";
-                default:
-                    return type.ToString();
             }
         }
 

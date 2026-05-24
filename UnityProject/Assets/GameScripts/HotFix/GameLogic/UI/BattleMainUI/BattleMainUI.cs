@@ -119,18 +119,18 @@ namespace GameLogic
 
             RoguelikeRoom room = run.CurrentRoom;
             RoguelikeActorState player = run.Player;
-            SetText(_titleText, $"自动肉鸽 - {GetPhaseName(RoguelikeGame.Instance.Phase)}");
+            SetText(_titleText, $"自动肉鸽 - {RoguelikeText.GetPhaseName(RoguelikeGame.Instance.Phase)}");
             SetText(_playerText, $"角色\n生命 {player.Health}/{player.Stats.MaxHealth}\n攻击 {player.Stats.Attack}  防御 {player.Stats.Defense}\n金币 {run.Gold}  遗物 {run.Relics.Count}");
             SetSlider(_playerHpSlider, player.Health, player.Stats.MaxHealth);
 
             if (room != null && room.Enemy != null)
             {
-                SetText(_enemyText, $"{room.Enemy.DisplayName}\n生命 {room.Enemy.Health}/{room.Enemy.Stats.MaxHealth}\n房间 {room.Index + 1}/{run.Rooms.Count}  {GetRoomName(room.Type)}\n回合 {room.CombatTurnCount}");
+                SetText(_enemyText, $"{room.Enemy.DisplayName}\n生命 {room.Enemy.Health}/{room.Enemy.Stats.MaxHealth}\n房间 {room.Index + 1}/{run.Rooms.Count}  {RoguelikeText.GetRoomName(room.Type)}\n回合 {room.CombatTurnCount}");
                 SetSlider(_enemyHpSlider, room.Enemy.Health, room.Enemy.Stats.MaxHealth);
             }
             else if (room != null)
             {
-                SetText(_enemyText, $"{GetRoomName(room.Type)}\n房间 {room.Index + 1}/{run.Rooms.Count}\n无敌人\n事件房间");
+                SetText(_enemyText, $"{RoguelikeText.GetRoomName(room.Type)}\n房间 {room.Index + 1}/{run.Rooms.Count}\n无敌人\n事件房间");
                 SetSlider(_enemyHpSlider, 1, 1);
             }
             else
@@ -342,7 +342,7 @@ namespace GameLogic
                     builder.Append("[");
                 }
 
-                builder.Append(GetRoomShortName(room.Type));
+                builder.Append(RoguelikeText.GetRoomName(room.Type));
 
                 if (i == run.CurrentRoomIndex)
                 {
@@ -353,67 +353,5 @@ namespace GameLogic
             return builder.ToString();
         }
 
-        private static string GetRoomShortName(RoguelikeRoomType type)
-        {
-            switch (type)
-            {
-                case RoguelikeRoomType.Start:
-                    return "起点";
-                case RoguelikeRoomType.Combat:
-                    return "战斗";
-                case RoguelikeRoomType.Elite:
-                    return "精英";
-                case RoguelikeRoomType.Treasure:
-                    return "宝箱";
-                case RoguelikeRoomType.Rest:
-                    return "营火";
-                case RoguelikeRoomType.Shop:
-                    return "商店";
-                case RoguelikeRoomType.Boss:
-                    return "首领";
-                default:
-                    return type.ToString();
-            }
-        }
-
-        private static string GetRoomName(RoguelikeRoomType type)
-        {
-            switch (type)
-            {
-                case RoguelikeRoomType.Start:
-                    return "起点";
-                case RoguelikeRoomType.Combat:
-                    return "战斗";
-                case RoguelikeRoomType.Elite:
-                    return "精英";
-                case RoguelikeRoomType.Treasure:
-                    return "宝箱";
-                case RoguelikeRoomType.Rest:
-                    return "营火";
-                case RoguelikeRoomType.Shop:
-                    return "商店";
-                case RoguelikeRoomType.Boss:
-                    return "首领";
-                default:
-                    return type.ToString();
-            }
-        }
-
-        private static string GetPhaseName(RoguelikeGamePhase phase)
-        {
-            switch (phase)
-            {
-                case RoguelikeGamePhase.Running:
-                    return "探索中";
-                case RoguelikeGamePhase.RewardChoice:
-                    return "选择奖励";
-                case RoguelikeGamePhase.Victory:
-                    return "胜利";
-                case RoguelikeGamePhase.Defeated:
-                    return "失败";
-                default:
-                    return phase.ToString();
-            }
-        }
     }
 }
