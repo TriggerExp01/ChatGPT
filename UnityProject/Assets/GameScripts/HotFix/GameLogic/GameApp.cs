@@ -36,6 +36,7 @@ public partial class GameApp
     private static void StartGameLogic()
     {
         // GameEvent.Get<ILoginUI>().ShowLoginUI();
+        RoguelikeGame.Instance.StartNewRun();
         GameModule.UI.ShowUIAsync<BattleMainUI>();
     }
     
