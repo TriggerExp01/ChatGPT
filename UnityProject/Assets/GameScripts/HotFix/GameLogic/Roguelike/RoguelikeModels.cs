@@ -223,6 +223,8 @@ namespace GameLogic
         public bool IsCleared { get; private set; }
 
         public int CombatTurnCount { get; private set; }
+        public int DamageDealt { get; private set; }
+        public int DamageTaken { get; private set; }
 
         public RoguelikeRoom(int index, RoguelikeRoomType type, RoguelikeActorState enemy, RoguelikeReward reward)
         {
@@ -236,6 +238,16 @@ namespace GameLogic
         {
             CombatTurnCount++;
             return CombatTurnCount;
+        }
+
+        public void RecordDamageDealt(int amount)
+        {
+            DamageDealt += Math.Max(0, amount);
+        }
+
+        public void RecordDamageTaken(int amount)
+        {
+            DamageTaken += Math.Max(0, amount);
         }
 
         public void MarkCleared()
@@ -256,6 +268,10 @@ namespace GameLogic
         public int Gold { get; private set; }
 
         public int CurrentRoomIndex { get; private set; }
+        public int ClearedRoomCount { get; private set; }
+        public int TotalDamageDealt { get; private set; }
+        public int TotalDamageTaken { get; private set; }
+        public int TotalTurns { get; private set; }
 
         public IReadOnlyList<RoguelikeRoom> Rooms => _rooms;
 
@@ -298,6 +314,26 @@ namespace GameLogic
 
             _relics.Add(relic);
             relic.Apply?.Invoke(this);
+        }
+
+        public void RecordTurn()
+        {
+            TotalTurns++;
+        }
+
+        public void RecordDamageDealt(int amount)
+        {
+            TotalDamageDealt += Math.Max(0, amount);
+        }
+
+        public void RecordDamageTaken(int amount)
+        {
+            TotalDamageTaken += Math.Max(0, amount);
+        }
+
+        public void MarkRoomCleared()
+        {
+            ClearedRoomCount++;
         }
 
         public bool MoveNextRoom()

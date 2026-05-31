@@ -10,8 +10,10 @@ namespace GameLogic
         private RoguelikeConfigModule _configModule;
         private RoguelikeProgressionModule _progressionModule;
         private RealtimeCombatState _realtimeState;
+        private float _moveAxisInput;
 
         public RoguelikeRunState CurrentRun { get; private set; }
+        public bool IsPaused { get; private set; }
 
         public string LastMessage { get; private set; } = "准备就绪。";
         
@@ -23,6 +25,7 @@ namespace GameLogic
         public float PlayerLanePosition => _realtimeState?.PlayerPosition ?? 0f;
         public float EnemyLanePosition => _realtimeState?.EnemyPosition ?? 0f;
         public bool InRealtimeCombat => IsRealtimeCombatRoom(CurrentRun?.CurrentRoom) && Phase == RoguelikeGamePhase.Running;
+        public string SettlementSummary => BuildSettlementSummary(CurrentRun);
 
         private readonly List<RoguelikeChoiceOption> _rewardOptions = new List<RoguelikeChoiceOption>(3);
 
@@ -53,6 +56,8 @@ namespace GameLogic
             LastMessage = $"新的冒险开始。种子 {seed}。";
             Phase = RoguelikeGamePhase.Running;
             _realtimeState = null;
+            IsPaused = false;
+            _moveAxisInput = 0f;
             _rewardOptions.Clear();
 
             Log.Info("肉鸽冒险已创建。");
@@ -76,13 +81,29 @@ namespace GameLogic
             return UpdateRealtimeCombat(0.2f);
         }
 
-        public void SetMoveInput(float axis)
+        public RoguelikeCombatResult Tick(float deltaTime, float moveAxisInput)
         {
-            if (_realtimeState == null)
+            SetMoveInput(moveAxisInput);
+            return Tick(deltaTime);
+        }
+
+        public RoguelikeCombatResult Tick(float deltaTime)
+        {
+            if (CurrentRun == null)
             {
-                return;
+                StartNewRun();
             }
 
+            if (Phase == RoguelikeGamePhase.Running)
+            {
+                return UpdateRealtimeCombat(deltaTime);
+            }
+
+            return new RoguelikeCombatResult(CurrentRun.Player.IsAlive, CurrentRun.CurrentRoom?.CombatTurnCount ?? 0, LastMessage);
+        }
+
+        public void SetMoveInput(float axis)
+        {
             if (axis < -1f)
             {
                 axis = -1f;
@@ -92,7 +113,11 @@ namespace GameLogic
                 axis = 1f;
             }
 
-            _realtimeState.MoveAxisInput = axis;
+            _moveAxisInput = axis;
+            if (_realtimeState != null)
+            {
+                _realtimeState.MoveAxisInput = axis;
+            }
         }
 
         public void RequestSkill()
@@ -111,11 +136,185 @@ namespace GameLogic
             }
         }
 
+        public void DebugAddGold(int amount)
+        {
+            if (CurrentRun == null)
+            {
+                StartNewRun();
+            }
+
+            int delta = Math.Max(1, amount);
+            CurrentRun.AddGold(delta);
+            LastMessage = $"调试：金币 +{delta}。";
+        }
+
+        public void DebugAddRandomRelic()
+        {
+            if (CurrentRun == null)
+            {
+                StartNewRun();
+            }
+
+            IReadOnlyList<RoguelikeRelicTemplate> relics = _configModule.ContentCatalog.Relics;
+            if (relics == null || relics.Count == 0)
+            {
+                LastMessage = "调试：没有可用遗物。";
+                return;
+            }
+
+            int seed = CurrentRun.Seed ^ (CurrentRun.CurrentRoomIndex + 1) * 1297 ^ CurrentRun.Relics.Count * 3571;
+            Random random = new Random(seed);
+            RoguelikeRelicTemplate relic = relics[random.Next(relics.Count)];
+            CurrentRun.AddRelic(relic);
+            LastMessage = $"调试：获得遗物 {relic.DisplayName}。";
+        }
+
+        public void DebugSkipRoom(int count = 1)
+        {
+            if (CurrentRun == null)
+            {
+                StartNewRun();
+            }
+
+            int steps = Math.Max(1, count);
+            for (int i = 0; i < steps; i++)
+            {
+                RoguelikeRoom room = CurrentRun.CurrentRoom;
+                if (room == null)
+                {
+                    break;
+                }
+
+                room.MarkCleared();
+                if (!_runService.TryAdvanceAfterCleared(CurrentRun))
+                {
+                    break;
+                }
+            }
+
+            _realtimeState = null;
+            _rewardOptions.Clear();
+
+            if (CurrentRun.IsCompleted)
+            {
+                Phase = RoguelikeGamePhase.Victory;
+                LastMessage = "调试：已跳至终点并判定胜利。";
+                return;
+            }
+
+            Phase = RoguelikeGamePhase.Running;
+            RoguelikeRoom currentRoom = CurrentRun.CurrentRoom;
+            LastMessage = currentRoom == null
+                ? "调试：当前无房间。"
+                : $"调试：跳转到第 {currentRoom.Index + 1} 个房间（{RoguelikeText.GetRoomName(currentRoom.Type)}）。";
+        }
+
+        public void DebugForceVictory()
+        {
+            if (CurrentRun == null)
+            {
+                StartNewRun();
+            }
+
+            for (int i = CurrentRun.CurrentRoomIndex; i < CurrentRun.Rooms.Count; i++)
+            {
+                CurrentRun.Rooms[i].MarkCleared();
+            }
+
+            while (_runService.TryAdvanceAfterCleared(CurrentRun))
+            {
+            }
+
+            _realtimeState = null;
+            _rewardOptions.Clear();
+            Phase = RoguelikeGamePhase.Victory;
+            LastMessage = "调试：强制胜利。";
+            IsPaused = false;
+        }
+
+        public void DebugForceDefeat()
+        {
+            if (CurrentRun == null)
+            {
+                StartNewRun();
+            }
+
+            CurrentRun.Player.TakeDamage(int.MaxValue);
+            _realtimeState = null;
+            _rewardOptions.Clear();
+            Phase = RoguelikeGamePhase.Defeated;
+            LastMessage = "调试：强制失败。";
+            IsPaused = false;
+        }
+
+        public void TogglePause()
+        {
+            if (Phase != RoguelikeGamePhase.Running)
+            {
+                IsPaused = false;
+                return;
+            }
+
+            IsPaused = !IsPaused;
+            LastMessage = IsPaused ? "已暂停。" : "继续战斗。";
+        }
+
+        public string RunSmokeSimulation(int runCount, int maxStepsPerRun = 512)
+        {
+            int total = Math.Max(1, runCount);
+            int wins = 0;
+            int fails = 0;
+            int totalRooms = 0;
+            int totalTurns = 0;
+            int totalDamageTaken = 0;
+            int totalDamageDealt = 0;
+
+            for (int i = 0; i < total; i++)
+            {
+                StartNewRun(unchecked((int)DateTime.UtcNow.Ticks) + i * 97);
+                int guard = 0;
+                while (guard < maxStepsPerRun && Phase == RoguelikeGamePhase.Running)
+                {
+                    UpdateRealtimeCombat(0.2f);
+                    if (Phase == RoguelikeGamePhase.RewardChoice)
+                    {
+                        ChooseFirstAffordableReward();
+                    }
+
+                    guard++;
+                }
+
+                if (Phase == RoguelikeGamePhase.Victory)
+                {
+                    wins++;
+                }
+                else
+                {
+                    fails++;
+                }
+
+                if (CurrentRun != null)
+                {
+                    totalRooms += CurrentRun.ClearedRoomCount;
+                    totalTurns += CurrentRun.TotalTurns;
+                    totalDamageTaken += CurrentRun.TotalDamageTaken;
+                    totalDamageDealt += CurrentRun.TotalDamageDealt;
+                }
+            }
+
+            return $"SmokeTest 轮次 {total}，胜利 {wins}，失败 {fails}，均值清房 {(float)totalRooms / total:0.00}，均值回合 {(float)totalTurns / total:0.00}，均值承伤 {(float)totalDamageTaken / total:0.0}，均值输出 {(float)totalDamageDealt / total:0.0}。";
+        }
+
         public RoguelikeCombatResult UpdateRealtimeCombat(float deltaTime)
         {
             if (CurrentRun == null)
             {
                 StartNewRun();
+            }
+
+            if (IsPaused)
+            {
+                return new RoguelikeCombatResult(true, 0, "已暂停。");
             }
 
             if (Phase == RoguelikeGamePhase.RewardChoice)
@@ -246,6 +445,41 @@ namespace GameLogic
             LastMessage = RoguelikeText.GetChoicePrompt(clearedRoom.Type);
         }
 
+        private void ChooseFirstAffordableReward()
+        {
+            if (CurrentRun == null || Phase != RoguelikeGamePhase.RewardChoice)
+            {
+                return;
+            }
+
+            for (int i = 0; i < _rewardOptions.Count; i++)
+            {
+                if (_rewardOptions[i].CanAfford(CurrentRun))
+                {
+                    ChooseReward(i);
+                    return;
+                }
+            }
+
+            if (_rewardOptions.Count > 0)
+            {
+                ChooseReward(0);
+            }
+        }
+
+        private static string BuildSettlementSummary(RoguelikeRunState run)
+        {
+            if (run == null)
+            {
+                return "Run not started.";
+            }
+
+            string phase = run.Player.IsAlive
+                ? (run.IsCompleted ? "Victory" : "Running")
+                : "Defeated";
+            return $"Settlement: {phase} | Rooms {run.ClearedRoomCount}/{run.Rooms.Count} | Turns {run.TotalTurns} | DamageDealt {run.TotalDamageDealt} | DamageTaken {run.TotalDamageTaken} | Gold {run.Gold} | Relics {run.Relics.Count}";
+        }
+
         private void EnsureRealtimeState(RoguelikeRoom room)
         {
             if (_realtimeState != null && _realtimeState.RoomIndex == room.Index)
@@ -254,6 +488,7 @@ namespace GameLogic
             }
 
             _realtimeState = RealtimeCombatState.Create(CurrentRun.Seed, room);
+            _realtimeState.MoveAxisInput = _moveAxisInput;
             LastMessage = $"进入实时战斗：{room.Enemy.DisplayName}。";
         }
 
@@ -305,6 +540,10 @@ namespace GameLogic
                     {
                         int skillDamage = Math.Max(1, CurrentRun.Player.Stats.Attack * 2 + 4);
                         int dealt = room.Enemy.TakeDamage(skillDamage);
+                        room.RecordDamageDealt(dealt);
+                        CurrentRun.RecordDamageDealt(dealt);
+                        CurrentRun.RecordTurn();
+                        room.AdvanceCombatTurn();
                         LastMessage = $"主动技能命中，造成 {dealt} 点伤害。";
                     }
                     else
@@ -336,6 +575,10 @@ namespace GameLogic
             {
                 int playerDamage = RollDamage(CurrentRun.Player, _realtimeState.Random);
                 int dealt = room.Enemy.TakeDamage(playerDamage);
+                room.RecordDamageDealt(dealt);
+                CurrentRun.RecordDamageDealt(dealt);
+                CurrentRun.RecordTurn();
+                room.AdvanceCombatTurn();
                 _realtimeState.PlayerAttackCooldownRemaining = _realtimeState.PlayerAttackInterval;
                 LastMessage = $"自动普攻命中，造成 {dealt} 点伤害。";
             }
@@ -362,6 +605,8 @@ namespace GameLogic
                         taken -= reduced;
                     }
 
+                    room.RecordDamageTaken(taken);
+                    CurrentRun.RecordDamageTaken(taken);
                     _realtimeState.EnemyAttackCooldownRemaining = _realtimeState.EnemyAttackInterval;
                     LastMessage = $"{room.Enemy.DisplayName} 命中你，造成 {taken} 点伤害。";
                 }

@@ -57,6 +57,7 @@ namespace GameLogic
             {
                 ApplyReward(run, room.Reward);
                 room.MarkCleared();
+                run.MarkRoomCleared();
                 return new RoguelikeCombatResult(true, room.CombatTurnCount, $"第 {room.Index + 1} 个房间（{RoguelikeText.GetRoomName(room.Type)}）：{DescribeReward(room.Reward)}");
             }
 
@@ -66,18 +67,24 @@ namespace GameLogic
 
             int playerDamage = RollDamage(run.Player, random);
             int dealt = room.Enemy.TakeDamage(playerDamage);
+            room.RecordDamageDealt(dealt);
+            run.RecordDamageDealt(dealt);
+            run.RecordTurn();
             summary.Append($"第 {turn} 回合：你对 {room.Enemy.DisplayName} 造成 {dealt} 点伤害。");
 
             if (!room.Enemy.IsAlive)
             {
                 ApplyReward(run, room.Reward);
                 room.MarkCleared();
+                run.MarkRoomCleared();
                 summary.Append($" 战斗胜利。{DescribeReward(room.Reward)}");
                 return new RoguelikeCombatResult(true, turn, summary.ToString());
             }
 
             int enemyDamage = RollDamage(room.Enemy, random);
             int taken = run.Player.TakeDamage(enemyDamage);
+            room.RecordDamageTaken(taken);
+            run.RecordDamageTaken(taken);
             summary.Append($" {room.Enemy.DisplayName} 对你造成 {taken} 点伤害。");
 
             if (!run.Player.IsAlive)
@@ -108,6 +115,7 @@ namespace GameLogic
 
             ApplyReward(run, room.Reward);
             room.MarkCleared();
+            run.MarkRoomCleared();
             string summary = string.IsNullOrEmpty(combatSummary)
                 ? DescribeReward(room.Reward)
                 : $"{combatSummary} {DescribeReward(room.Reward)}";
