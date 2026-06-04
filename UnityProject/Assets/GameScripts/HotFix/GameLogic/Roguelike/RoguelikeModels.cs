@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace GameLogic
 {
@@ -361,6 +362,72 @@ namespace GameLogic
             PlayerWon = playerWon;
             TurnCount = turnCount;
             Summary = summary;
+        }
+    }
+
+    public sealed class RoguelikeSurvivalEnemy
+    {
+        public int Id { get; }
+        public Vector2 Position;
+        public int Health;
+        public int MaxHealth;
+        public int Attack;
+        public float MoveSpeed;
+        public float AttackCooldown;
+        public float HitFlash;
+
+        public bool IsAlive => Health > 0;
+
+        public RoguelikeSurvivalEnemy(int id, Vector2 position, int health, int attack, float moveSpeed)
+        {
+            Id = id;
+            Position = position;
+            Health = health;
+            MaxHealth = health;
+            Attack = attack;
+            MoveSpeed = moveSpeed;
+        }
+    }
+
+    public enum RoguelikePickupType
+    {
+        Experience,
+        Gold,
+    }
+
+    public sealed class RoguelikeSurvivalPickup
+    {
+        public int Id { get; }
+        public RoguelikePickupType Type { get; }
+        public Vector2 Position;
+        public int Amount { get; }
+
+        public RoguelikeSurvivalPickup(int id, RoguelikePickupType type, Vector2 position, int amount)
+        {
+            Id = id;
+            Type = type;
+            Position = position;
+            Amount = amount;
+        }
+    }
+
+    public sealed class RoguelikeSurvivalProjectile
+    {
+        public int Id { get; }
+        public Vector2 Position;
+        public Vector2 Direction;
+        public float Speed;
+        public float RemainingDistance;
+        public int Damage;
+
+        public RoguelikeSurvivalProjectile(int id, Vector2 position, Vector2 direction, float speed, float distance, int damage)
+        {
+            Id = id;
+            Position = position;
+            Direction = direction;
+            Speed = speed;
+            RemainingDistance = distance;
+            Damage = damage;
         }
     }
 }

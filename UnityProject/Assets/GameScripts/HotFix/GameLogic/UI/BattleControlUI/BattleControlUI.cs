@@ -6,97 +6,85 @@ namespace GameLogic
     [Window(UILayer.Top, location: "BattleControlUI")]
     class BattleControlUI : UIWindow
     {
-        private Button _moveLeftButton;
-        private Button _moveStopButton;
-        private Button _moveRightButton;
-        private Button _skillButton;
-        private Button _dashButton;
         private Button _pauseButton;
-        private Text _cooldownText;
+        private Button _restartButton;
+        private Text _helpText;
+        private RectTransform _panel;
 
         protected override void ScriptGenerator()
         {
             RectTransform root = RoguelikeUIFactory.ResolveContainer(this);
-            RectTransform panel = RoguelikeUIFactory.CreatePanel("ControlPanel", root, new Vector2(0.06f, 0.03f), new Vector2(0.94f, 0.17f), new Color(0.02f, 0.025f, 0.03f, 0.74f));
-            _moveLeftButton = RoguelikeUIFactory.CreateButton("MoveLeft", panel, "左移", new Vector2(0.02f, 0.14f), new Vector2(0.16f, 0.86f), new Color(0.15f, 0.18f, 0.33f, 0.96f));
-            _moveStopButton = RoguelikeUIFactory.CreateButton("MoveStop", panel, "停", new Vector2(0.18f, 0.14f), new Vector2(0.30f, 0.86f), new Color(0.15f, 0.18f, 0.25f, 0.96f));
-            _moveRightButton = RoguelikeUIFactory.CreateButton("MoveRight", panel, "右移", new Vector2(0.32f, 0.14f), new Vector2(0.46f, 0.86f), new Color(0.15f, 0.18f, 0.33f, 0.96f));
-            _skillButton = RoguelikeUIFactory.CreateButton("Skill", panel, "技能", new Vector2(0.58f, 0.14f), new Vector2(0.72f, 0.86f), new Color(0.28f, 0.22f, 0.16f, 0.96f));
-            _dashButton = RoguelikeUIFactory.CreateButton("Dash", panel, "闪避", new Vector2(0.74f, 0.14f), new Vector2(0.86f, 0.86f), new Color(0.22f, 0.30f, 0.18f, 0.96f));
-            _pauseButton = RoguelikeUIFactory.CreateButton("Pause", panel, "暂停", new Vector2(0.88f, 0.14f), new Vector2(0.98f, 0.86f), new Color(0.18f, 0.22f, 0.28f, 0.96f), 18);
-            _cooldownText = RoguelikeUIFactory.CreateText("Cooldown", root, 18, TextAnchor.MiddleCenter, new Vector2(0.38f, 0.18f), new Vector2(0.62f, 0.23f), Vector2.zero, Vector2.zero);
+            _panel = RoguelikeUIFactory.CreatePanel("操作提示", root, new Vector2(0.16f, 0.02f), new Vector2(0.84f, 0.105f), new Color(0.02f, 0.035f, 0.055f, 0.90f));
+            _helpText = RoguelikeUIFactory.CreateText("提示", _panel, 17, TextAnchor.MiddleCenter, new Vector2(0.02f, 0.05f), new Vector2(0.72f, 0.95f), Vector2.zero, Vector2.zero);
+            _helpText.text = "WASD 移动　武器自动攻击最近敌人　Esc 暂停　R 重开";
+            _pauseButton = RoguelikeUIFactory.CreateButton("暂停", _panel, "暂停", new Vector2(0.74f, 0.14f), new Vector2(0.86f, 0.86f), new Color(0.18f, 0.24f, 0.30f, 0.96f), 17);
+            _restartButton = RoguelikeUIFactory.CreateButton("重开", _panel, "重开", new Vector2(0.87f, 0.14f), new Vector2(0.98f, 0.86f), new Color(0.30f, 0.18f, 0.18f, 0.96f), 17);
         }
 
         protected override void OnCreate()
         {
-            _moveLeftButton.onClick.AddListener(OnMoveLeft);
-            _moveStopButton.onClick.AddListener(OnMoveStop);
-            _moveRightButton.onClick.AddListener(OnMoveRight);
-            _skillButton.onClick.AddListener(OnSkill);
-            _dashButton.onClick.AddListener(OnDash);
             _pauseButton.onClick.AddListener(OnPause);
-            RefreshControlButtons();
+            _restartButton.onClick.AddListener(OnRestart);
         }
 
         protected override void OnDestroy()
         {
-            _moveLeftButton.onClick.RemoveListener(OnMoveLeft);
-            _moveStopButton.onClick.RemoveListener(OnMoveStop);
-            _moveRightButton.onClick.RemoveListener(OnMoveRight);
-            _skillButton.onClick.RemoveListener(OnSkill);
-            _dashButton.onClick.RemoveListener(OnDash);
             _pauseButton.onClick.RemoveListener(OnPause);
+            _restartButton.onClick.RemoveListener(OnRestart);
         }
 
         protected override void OnUpdate()
         {
-            RefreshControlButtons();
-        }
-
-        private void RefreshControlButtons()
-        {
+            HandleInput();
             bool running = RoguelikeGame.Instance.Phase == RoguelikeGamePhase.Running;
-            bool realtime = running && RoguelikeGame.Instance.InRealtimeCombat;
-            gameObject.SetActive(running);
-            _moveLeftButton.interactable = realtime;
-            _moveStopButton.interactable = realtime;
-            _moveRightButton.interactable = realtime;
-            _skillButton.interactable = realtime;
-            _dashButton.interactable = realtime;
-            _pauseButton.interactable = running;
+            _panel.gameObject.SetActive(running);
             _pauseButton.GetComponentInChildren<Text>(true).text = RoguelikeGame.Instance.IsPaused ? "继续" : "暂停";
-            RoguelikeUIFactory.SetText(_cooldownText, $"技能 {RoguelikeGame.Instance.SkillCooldownRemaining:0.0}s  闪避 {RoguelikeGame.Instance.DashCooldownRemaining:0.0}s");
         }
 
-        private void OnMoveLeft()
+        private static void HandleInput()
         {
-            RoguelikeGame.Instance.SetMoveInput(-1f);
-        }
+            float horizontal = 0f;
+            float vertical = 0f;
+            if (Input.GetKey(KeyCode.A)) horizontal -= 1f;
+            if (Input.GetKey(KeyCode.D)) horizontal += 1f;
+            if (Input.GetKey(KeyCode.S)) vertical -= 1f;
+            if (Input.GetKey(KeyCode.W)) vertical += 1f;
+            RoguelikeGame.Instance.SetMoveInput(new Vector2(horizontal, vertical));
 
-        private void OnMoveStop()
-        {
-            RoguelikeGame.Instance.SetMoveInput(0f);
-        }
+            Vector2 arrowDirection = Vector2.zero;
+            if (Input.GetKey(KeyCode.LeftArrow)) arrowDirection.x -= 1f;
+            if (Input.GetKey(KeyCode.RightArrow)) arrowDirection.x += 1f;
+            if (Input.GetKey(KeyCode.DownArrow)) arrowDirection.y -= 1f;
+            if (Input.GetKey(KeyCode.UpArrow)) arrowDirection.y += 1f;
+            if (arrowDirection.sqrMagnitude > 0.01f)
+            {
+                RoguelikeGame.Instance.SetAttackDirection(arrowDirection);
+            }
+            else if (Camera.main != null)
+            {
+                Vector3 mouse = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+                RoguelikeGame.Instance.SetAttackDirection((Vector2)mouse - RoguelikeGame.Instance.PlayerPosition);
+            }
 
-        private void OnMoveRight()
-        {
-            RoguelikeGame.Instance.SetMoveInput(1f);
-        }
+            if (Input.GetKeyDown(KeyCode.Escape))
+            {
+                RoguelikeGame.Instance.TogglePause();
+            }
 
-        private void OnSkill()
-        {
-            RoguelikeGame.Instance.RequestSkill();
-        }
-
-        private void OnDash()
-        {
-            RoguelikeGame.Instance.RequestDash();
+            if (Input.GetKeyDown(KeyCode.R))
+            {
+                RoguelikeGame.Instance.StartNewRun();
+            }
         }
 
         private void OnPause()
         {
             RoguelikeGame.Instance.TogglePause();
-            RefreshControlButtons();
+        }
+
+        private void OnRestart()
+        {
+            RoguelikeGame.Instance.StartNewRun();
         }
     }
 }

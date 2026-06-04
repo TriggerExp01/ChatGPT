@@ -54,7 +54,14 @@ namespace GameLogic
             image.color = color;
             Button button = rect.gameObject.AddComponent<Button>();
             button.targetGraphic = image;
-            Text text = CreateText("Label", rect, fontSize, TextAnchor.MiddleCenter, Vector2.zero, Vector2.one, new Vector2(8f, 6f), new Vector2(-8f, -6f));
+            ColorBlock colors = button.colors;
+            colors.normalColor = Color.white;
+            colors.highlightedColor = new Color(1.12f, 1.12f, 1.12f, 1f);
+            colors.pressedColor = new Color(0.72f, 0.78f, 0.86f, 1f);
+            colors.disabledColor = new Color(0.42f, 0.42f, 0.42f, 0.65f);
+            colors.fadeDuration = 0.08f;
+            button.colors = colors;
+            Text text = CreateText("Label", rect, fontSize, TextAnchor.MiddleCenter, Vector2.zero, Vector2.one, new Vector2(8f, 0f), new Vector2(-8f, 0f));
             text.text = label;
             text.raycastTarget = false;
             return button;

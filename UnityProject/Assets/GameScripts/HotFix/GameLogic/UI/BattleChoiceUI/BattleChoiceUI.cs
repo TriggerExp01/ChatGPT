@@ -9,18 +9,19 @@ namespace GameLogic
         private readonly Button[] _choiceButtons = new Button[3];
         private readonly Text[] _choiceTexts = new Text[3];
         private Text _promptText;
+        private RectTransform _panel;
 
         protected override void ScriptGenerator()
         {
             RectTransform root = RoguelikeUIFactory.ResolveContainer(this);
-            RectTransform panel = RoguelikeUIFactory.CreatePanel("ChoicePanel", root, new Vector2(0.10f, 0.16f), new Vector2(0.90f, 0.46f), new Color(0.02f, 0.025f, 0.03f, 0.88f));
-            _promptText = RoguelikeUIFactory.CreateText("Prompt", panel, 22, TextAnchor.MiddleCenter, new Vector2(0.04f, 0.72f), new Vector2(0.96f, 0.96f), Vector2.zero, Vector2.zero);
+            _panel = RoguelikeUIFactory.CreatePanel("ChoicePanel", root, new Vector2(0.10f, 0.27f), new Vector2(0.90f, 0.62f), new Color(0.02f, 0.035f, 0.055f, 0.97f));
+            _promptText = RoguelikeUIFactory.CreateText("Prompt", _panel, 22, TextAnchor.MiddleCenter, new Vector2(0.04f, 0.72f), new Vector2(0.96f, 0.96f), Vector2.zero, Vector2.zero);
             for (int i = 0; i < _choiceButtons.Length; i++)
             {
                 int captured = i;
                 float xMin = 0.03f + i * 0.325f;
                 float xMax = xMin + 0.29f;
-                _choiceButtons[i] = RoguelikeUIFactory.CreateButton($"Choice{i + 1}", panel, "-", new Vector2(xMin, 0.10f), new Vector2(xMax, 0.76f), new Color(0.17f, 0.27f, 0.35f, 0.96f), 17);
+                _choiceButtons[i] = RoguelikeUIFactory.CreateButton($"Choice{i + 1}", _panel, "-", new Vector2(xMin, 0.10f), new Vector2(xMax, 0.76f), new Color(0.17f, 0.27f, 0.35f, 0.96f), 17);
                 _choiceTexts[i] = _choiceButtons[i].GetComponentInChildren<Text>(true);
                 _choiceButtons[i].onClick.AddListener(() => ChooseReward(captured));
             }
@@ -47,13 +48,13 @@ namespace GameLogic
         private void RefreshChoiceButtons()
         {
             bool choosing = RoguelikeGame.Instance.Phase == RoguelikeGamePhase.RewardChoice;
-            gameObject.SetActive(choosing);
+            _panel.gameObject.SetActive(choosing);
             if (!choosing)
             {
                 return;
             }
 
-            RoguelikeUIFactory.SetText(_promptText, RoguelikeGame.Instance.LastMessage);
+            RoguelikeUIFactory.SetText(_promptText, $"{RoguelikeGame.Instance.LastMessage}\n战斗暂停，选择后继续。");
             for (int i = 0; i < _choiceButtons.Length; i++)
             {
                 if (i < RoguelikeGame.Instance.RewardOptions.Count)

@@ -22,9 +22,9 @@ namespace GameLogic
         {
             return new RoguelikeRunConfig(
                 seed,
-                maxRooms: 12,
-                eliteInterval: 4,
-                playerStats: new RoguelikeStats(maxHealth: 105, attack: 12, defense: 3, critChance: 0.1f, critMultiplier: 1.5f));
+                maxRooms: 7,
+                eliteInterval: 3,
+                playerStats: new RoguelikeStats(maxHealth: 120, attack: 14, defense: 4, critChance: 0.12f, critMultiplier: 1.5f));
         }
     }
 }

@@ -1,190 +1,254 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace GameLogic
 {
     public sealed class RoguelikeBattleStageView : MonoBehaviour
     {
-        private const string StageName = "RoguelikeBattleStage";
-        private const float LaneToWorldScale = 1.35f;
-
+        private const string StageName = "Roguelike2DSurvivalStage";
+        private readonly Dictionary<int, Transform> _enemyViews = new Dictionary<int, Transform>();
+        private readonly Dictionary<int, Transform> _pickupViews = new Dictionary<int, Transform>();
+        private readonly Dictionary<int, Transform> _projectileViews = new Dictionary<int, Transform>();
         private Transform _player;
-        private Transform _enemy;
-        private Transform _playerHpFill;
-        private Transform _enemyHpFill;
-        private TextMesh _playerLabel;
-        private TextMesh _enemyLabel;
-        private TextMesh _roomLabel;
+        private Transform _attackView;
         private Camera _camera;
-        private int _lastRoomIndex = -1;
+        private RoguelikePlayerMotor _playerMotor;
+        private static Sprite _whiteSprite;
 
         public static RoguelikeBattleStageView Ensure()
         {
             GameObject existing = GameObject.Find(StageName);
             if (existing != null)
             {
-                RoguelikeBattleStageView view = existing.GetComponent<RoguelikeBattleStageView>();
-                return view != null ? view : existing.AddComponent<RoguelikeBattleStageView>();
+                return existing.GetComponent<RoguelikeBattleStageView>() ?? existing.AddComponent<RoguelikeBattleStageView>();
             }
 
             GameObject root = new GameObject(StageName);
             DontDestroyOnLoad(root);
-            RoguelikeBattleStageView created = root.AddComponent<RoguelikeBattleStageView>();
-            created.BuildStage();
-            return created;
+            RoguelikeBattleStageView view = root.AddComponent<RoguelikeBattleStageView>();
+            view.BuildStage();
+            return view;
         }
 
         public void Refresh(RoguelikeRunState run)
         {
-            if (run == null)
-            {
-                return;
-            }
-
-            if (_player == null || _enemy == null)
+            if (_player == null)
             {
                 BuildStage();
             }
 
-            RoguelikeRoom room = run.CurrentRoom;
-            bool hasEnemy = room != null && room.Enemy != null && !room.IsCleared;
-            if (room != null && room.Index != _lastRoomIndex)
+            RoguelikeGame game = RoguelikeGame.Instance;
+            if (_playerMotor != null)
             {
-                _lastRoomIndex = room.Index;
-                _roomLabel.text = $"Room {room.Index + 1}/{run.Rooms.Count}  {RoguelikeText.GetRoomName(room.Type)}";
+                _playerMotor.SetGame(game);
             }
 
-            Vector3 playerTarget = new Vector3(RoguelikeGame.Instance.PlayerLanePosition * LaneToWorldScale, 0.95f, 0f);
-            _player.position = Vector3.Lerp(_player.position, playerTarget, 18f * Time.deltaTime);
-            _player.gameObject.SetActive(run.Player.IsAlive);
-            _playerLabel.text = $"Player\nHP {run.Player.Health}/{run.Player.Stats.MaxHealth}";
-            SetBar(_playerHpFill, run.Player.Health, run.Player.Stats.MaxHealth);
-            PositionLabel(_playerLabel.transform, _player.position + new Vector3(0f, 1.65f, 0f));
-
-            _enemy.gameObject.SetActive(hasEnemy);
-            _enemyLabel.gameObject.SetActive(hasEnemy);
-            if (hasEnemy)
-            {
-                Vector3 enemyTarget = new Vector3(RoguelikeGame.Instance.EnemyLanePosition * LaneToWorldScale, 0.95f, 0f);
-                _enemy.position = Vector3.Lerp(_enemy.position, enemyTarget, 18f * Time.deltaTime);
-                _enemyLabel.text = $"{room.Enemy.DisplayName}\nHP {room.Enemy.Health}/{room.Enemy.Stats.MaxHealth}";
-                SetBar(_enemyHpFill, room.Enemy.Health, room.Enemy.Stats.MaxHealth);
-                PositionLabel(_enemyLabel.transform, _enemy.position + new Vector3(0f, 1.65f, 0f));
-            }
-
-            _camera.transform.position = new Vector3(0f, 7.5f, -10.5f);
-            _camera.transform.rotation = Quaternion.Euler(58f, 0f, 0f);
+            float angle = Mathf.Atan2(game.AttackDirection.y, game.AttackDirection.x) * Mathf.Rad2Deg;
+            _attackView.localPosition = _player.localPosition;
+            _attackView.localRotation = Quaternion.Euler(0f, 0f, angle);
+            _attackView.localScale = new Vector3(0.9f, 0.25f, 1f);
+            _attackView.gameObject.SetActive(game.AttackFlash > 0f);
+            SyncEnemies(game.Enemies);
+            SyncProjectiles(game.Projectiles);
+            SyncPickups(game.Pickups);
         }
 
         private void BuildStage()
         {
-            transform.position = Vector3.zero;
-            ClearChildren();
-
             _camera = Camera.main;
+            if (_camera != null && _camera.transform.parent == transform)
+            {
+                _camera.transform.SetParent(null, true);
+            }
+
+            ClearChildren();
+            _enemyViews.Clear();
+            _pickupViews.Clear();
+            _projectileViews.Clear();
             if (_camera == null)
             {
                 GameObject cameraObject = new GameObject("MainCamera");
-                _camera = cameraObject.AddComponent<Camera>();
                 cameraObject.tag = "MainCamera";
+                _camera = cameraObject.AddComponent<Camera>();
             }
 
-            _camera.clearFlags = CameraClearFlags.SolidColor;
-            _camera.backgroundColor = new Color(0.08f, 0.09f, 0.10f, 1f);
-            _camera.fieldOfView = 45f;
             _camera.transform.SetParent(transform, false);
+            _camera.transform.localPosition = new Vector3(0f, 0f, -10f);
+            _camera.transform.localRotation = Quaternion.identity;
+            _camera.orthographic = true;
+            _camera.orthographicSize = 5.4f;
+            _camera.clearFlags = CameraClearFlags.SolidColor;
+            _camera.backgroundColor = new Color(0.025f, 0.045f, 0.065f, 1f);
+            RoguelikeCameraFollow cameraFollow = _camera.GetComponent<RoguelikeCameraFollow>() ??
+                                                 _camera.gameObject.AddComponent<RoguelikeCameraFollow>();
 
-            GameObject lightObject = new GameObject("KeyLight");
-            lightObject.transform.SetParent(transform, false);
-            lightObject.transform.rotation = Quaternion.Euler(50f, -30f, 0f);
-            Light light = lightObject.AddComponent<Light>();
-            light.type = LightType.Directional;
-            light.intensity = 1.1f;
-
-            GameObject ground = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            ground.name = "Arena";
-            ground.transform.SetParent(transform, false);
-            ground.transform.localPosition = new Vector3(0f, -0.08f, 0f);
-            ground.transform.localScale = new Vector3(18f, 0.16f, 5.2f);
-            SetMaterial(ground, new Color(0.13f, 0.15f, 0.17f, 1f));
-
-            GameObject lane = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            lane.name = "CombatLane";
-            lane.transform.SetParent(transform, false);
-            lane.transform.localPosition = new Vector3(0f, 0.02f, 0f);
-            lane.transform.localScale = new Vector3(16f, 0.08f, 0.18f);
-            SetMaterial(lane, new Color(0.75f, 0.62f, 0.28f, 1f));
-
-            _player = CreateActor("PlayerActor", new Color(0.18f, 0.55f, 0.95f, 1f), new Vector3(-3f, 0.95f, 0f));
-            _enemy = CreateActor("EnemyActor", new Color(0.88f, 0.24f, 0.20f, 1f), new Vector3(3f, 0.95f, 0f));
-            _playerLabel = CreateLabel("PlayerLabel", new Vector3(-3f, 2.6f, 0f), TextAnchor.MiddleCenter);
-            _enemyLabel = CreateLabel("EnemyLabel", new Vector3(3f, 2.6f, 0f), TextAnchor.MiddleCenter);
-            _roomLabel = CreateLabel("RoomLabel", new Vector3(0f, 3.8f, 0f), TextAnchor.MiddleCenter);
-            _roomLabel.fontSize = 42;
-
-            _playerHpFill = CreateWorldBar("PlayerHpBar", _player, new Vector3(0f, 1.28f, 0f), new Color(0.20f, 0.85f, 0.34f, 1f));
-            _enemyHpFill = CreateWorldBar("EnemyHpBar", _enemy, new Vector3(0f, 1.28f, 0f), new Color(0.95f, 0.25f, 0.20f, 1f));
-        }
-
-        private Transform CreateActor(string name, Color color, Vector3 position)
-        {
-            GameObject actor = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-            actor.name = name;
-            actor.transform.SetParent(transform, false);
-            actor.transform.localPosition = position;
-            actor.transform.localScale = new Vector3(0.72f, 0.95f, 0.72f);
-            SetMaterial(actor, color);
-            return actor.transform;
-        }
-
-        private TextMesh CreateLabel(string name, Vector3 position, TextAnchor anchor)
-        {
-            GameObject labelObject = new GameObject(name);
-            labelObject.transform.SetParent(transform, false);
-            labelObject.transform.localPosition = position;
-            TextMesh label = labelObject.AddComponent<TextMesh>();
-            label.anchor = anchor;
-            label.alignment = TextAlignment.Center;
-            label.fontSize = 34;
-            label.characterSize = 0.08f;
-            label.color = Color.white;
-            return label;
-        }
-
-        private Transform CreateWorldBar(string name, Transform parent, Vector3 offset, Color color)
-        {
-            GameObject root = new GameObject(name);
-            root.transform.SetParent(parent, false);
-            root.transform.localPosition = offset;
-
-            GameObject bg = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            bg.name = "Bg";
-            bg.transform.SetParent(root.transform, false);
-            bg.transform.localScale = new Vector3(1.35f, 0.08f, 0.08f);
-            SetMaterial(bg, new Color(0.06f, 0.06f, 0.06f, 1f));
-
-            GameObject fill = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            fill.name = "Fill";
-            fill.transform.SetParent(root.transform, false);
-            fill.transform.localPosition = new Vector3(0f, 0.01f, -0.02f);
-            fill.transform.localScale = new Vector3(1.28f, 0.09f, 0.09f);
-            SetMaterial(fill, color);
-            return fill.transform;
-        }
-
-        private static void SetBar(Transform fill, int value, int maxValue)
-        {
-            float rate = Mathf.Clamp01((float)value / Mathf.Max(1, maxValue));
-            fill.localScale = new Vector3(1.28f * rate, fill.localScale.y, fill.localScale.z);
-            fill.localPosition = new Vector3(-0.64f + 0.64f * rate, fill.localPosition.y, fill.localPosition.z);
-        }
-
-        private void PositionLabel(Transform label, Vector3 position)
-        {
-            label.position = position;
-            if (_camera != null)
+            CreateSprite("地图底色", Vector3.zero, new Vector3(16f, 9f, 1f), new Color(0.08f, 0.14f, 0.15f, 1f), 0);
+            for (int x = -7; x <= 7; x += 2)
             {
-                label.rotation = _camera.transform.rotation;
+                for (int y = -4; y <= 4; y += 2)
+                {
+                    CreateSprite($"地砖{x}_{y}", new Vector3(x, y, 0f), new Vector3(1.82f, 1.82f, 1f), new Color(0.10f, 0.18f, 0.19f, 1f), 1);
+                }
             }
+
+            _attackView = CreateSprite("攻击范围", Vector3.zero, Vector3.one, new Color(1f, 0.82f, 0.24f, 0.45f), 8);
+            _player = CreateActor("玩家", Vector3.zero, new Color(0.16f, 0.68f, 1f, 1f), 10);
+            Rigidbody2D body = _player.gameObject.AddComponent<Rigidbody2D>();
+            body.gravityScale = 0f;
+            body.freezeRotation = true;
+            body.interpolation = RigidbodyInterpolation2D.Interpolate;
+            _player.gameObject.AddComponent<CircleCollider2D>().radius = 0.48f;
+            _playerMotor = _player.gameObject.AddComponent<RoguelikePlayerMotor>();
+            _playerMotor.SetGame(RoguelikeGame.Instance);
+            cameraFollow.SetTarget(_player);
+        }
+
+        private void SyncEnemies(IReadOnlyList<RoguelikeSurvivalEnemy> enemies)
+        {
+            HashSet<int> active = new HashSet<int>();
+            for (int i = 0; i < enemies.Count; i++)
+            {
+                RoguelikeSurvivalEnemy enemy = enemies[i];
+                active.Add(enemy.Id);
+                if (!_enemyViews.TryGetValue(enemy.Id, out Transform view))
+                {
+                    view = CreateActor($"敌人_{enemy.Id}", enemy.Position, new Color(0.95f, 0.26f, 0.20f, 1f), 9);
+                    Rigidbody2D body = view.gameObject.AddComponent<Rigidbody2D>();
+                    body.bodyType = RigidbodyType2D.Kinematic;
+                    body.interpolation = RigidbodyInterpolation2D.Interpolate;
+                    view.gameObject.AddComponent<CircleCollider2D>().isTrigger = true;
+                    view.gameObject.AddComponent<RoguelikeEnemyMotor>().SetTarget(enemy.Position);
+                    _enemyViews.Add(enemy.Id, view);
+                }
+
+                view.GetComponent<RoguelikeEnemyMotor>().SetTarget(enemy.Position);
+                SpriteRenderer renderer = view.GetComponent<SpriteRenderer>();
+                renderer.color = enemy.HitFlash > 0f ? Color.white : new Color(0.95f, 0.26f, 0.20f, 1f);
+                float healthRate = Mathf.Clamp01((float)enemy.Health / Mathf.Max(1, enemy.MaxHealth));
+                view.localScale = Vector3.one * Mathf.Lerp(0.55f, 0.8f, healthRate);
+            }
+
+            List<int> removed = new List<int>();
+            foreach (KeyValuePair<int, Transform> pair in _enemyViews)
+            {
+                if (!active.Contains(pair.Key))
+                {
+                    Destroy(pair.Value.gameObject);
+                    removed.Add(pair.Key);
+                }
+            }
+
+            for (int i = 0; i < removed.Count; i++)
+            {
+                _enemyViews.Remove(removed[i]);
+            }
+        }
+
+        private void SyncPickups(IReadOnlyList<RoguelikeSurvivalPickup> pickups)
+        {
+            HashSet<int> active = new HashSet<int>();
+            for (int i = 0; i < pickups.Count; i++)
+            {
+                RoguelikeSurvivalPickup pickup = pickups[i];
+                active.Add(pickup.Id);
+                if (!_pickupViews.TryGetValue(pickup.Id, out Transform view))
+                {
+                    Color color = pickup.Type == RoguelikePickupType.Experience
+                        ? new Color(0.25f, 0.72f, 1f, 1f)
+                        : new Color(1f, 0.78f, 0.16f, 1f);
+                    view = CreateSprite($"掉落_{pickup.Id}", pickup.Position, new Vector3(0.22f, 0.22f, 1f), color, 7);
+                    view.localRotation = Quaternion.Euler(0f, 0f, 45f);
+                    _pickupViews.Add(pickup.Id, view);
+                }
+
+                view.localPosition = new Vector3(pickup.Position.x, pickup.Position.y, 0f);
+            }
+
+            List<int> removed = new List<int>();
+            foreach (KeyValuePair<int, Transform> pair in _pickupViews)
+            {
+                if (!active.Contains(pair.Key))
+                {
+                    Destroy(pair.Value.gameObject);
+                    removed.Add(pair.Key);
+                }
+            }
+
+            for (int i = 0; i < removed.Count; i++)
+            {
+                _pickupViews.Remove(removed[i]);
+            }
+        }
+
+        private void SyncProjectiles(IReadOnlyList<RoguelikeSurvivalProjectile> projectiles)
+        {
+            HashSet<int> active = new HashSet<int>();
+            for (int i = 0; i < projectiles.Count; i++)
+            {
+                RoguelikeSurvivalProjectile projectile = projectiles[i];
+                active.Add(projectile.Id);
+                if (!_projectileViews.TryGetValue(projectile.Id, out Transform view))
+                {
+                    view = CreateSprite($"投射物_{projectile.Id}", projectile.Position, new Vector3(0.28f, 0.14f, 1f), new Color(1f, 0.82f, 0.24f, 1f), 11);
+                    _projectileViews.Add(projectile.Id, view);
+                }
+
+                view.localPosition = projectile.Position;
+                float angle = Mathf.Atan2(projectile.Direction.y, projectile.Direction.x) * Mathf.Rad2Deg;
+                view.localRotation = Quaternion.Euler(0f, 0f, angle);
+            }
+
+            List<int> removed = new List<int>();
+            foreach (KeyValuePair<int, Transform> pair in _projectileViews)
+            {
+                if (!active.Contains(pair.Key))
+                {
+                    Destroy(pair.Value.gameObject);
+                    removed.Add(pair.Key);
+                }
+            }
+
+            for (int i = 0; i < removed.Count; i++)
+            {
+                _projectileViews.Remove(removed[i]);
+            }
+        }
+
+        private Transform CreateActor(string name, Vector3 position, Color color, int order)
+        {
+            Transform body = CreateSprite(name, position, new Vector3(0.75f, 0.75f, 1f), color, order);
+            CreateSprite("脸", new Vector3(0f, 0.05f, -0.1f), new Vector3(0.42f, 0.26f, 1f), new Color(0.92f, 0.86f, 0.68f, 1f), order + 1, body);
+            CreateSprite("眼睛左", new Vector3(-0.10f, 0.08f, -0.2f), new Vector3(0.06f, 0.06f, 1f), Color.black, order + 2, body);
+            CreateSprite("眼睛右", new Vector3(0.10f, 0.08f, -0.2f), new Vector3(0.06f, 0.06f, 1f), Color.black, order + 2, body);
+            return body;
+        }
+
+        private Transform CreateSprite(string name, Vector3 position, Vector3 scale, Color color, int order, Transform parent = null)
+        {
+            GameObject go = new GameObject(name);
+            go.transform.SetParent(parent != null ? parent : transform, false);
+            go.transform.localPosition = position;
+            go.transform.localScale = scale;
+            SpriteRenderer renderer = go.AddComponent<SpriteRenderer>();
+            renderer.sprite = GetWhiteSprite();
+            renderer.color = color;
+            renderer.sortingOrder = order;
+            return go.transform;
+        }
+
+        private static Sprite GetWhiteSprite()
+        {
+            if (_whiteSprite != null)
+            {
+                return _whiteSprite;
+            }
+
+            Texture2D texture = new Texture2D(1, 1);
+            texture.SetPixel(0, 0, Color.white);
+            texture.Apply();
+            texture.hideFlags = HideFlags.HideAndDontSave;
+            _whiteSprite = Sprite.Create(texture, new Rect(0f, 0f, 1f, 1f), new Vector2(0.5f, 0.5f), 1f);
+            return _whiteSprite;
         }
 
         private void ClearChildren()
@@ -194,18 +258,96 @@ namespace GameLogic
                 Destroy(transform.GetChild(i).gameObject);
             }
         }
+    }
 
-        private static void SetMaterial(GameObject target, Color color)
+    public sealed class RoguelikePlayerMotor : MonoBehaviour
+    {
+        private Rigidbody2D _body;
+        private RoguelikeGame _game;
+        private RoguelikeRunState _run;
+
+        public void SetGame(RoguelikeGame game)
         {
-            Renderer renderer = target.GetComponent<Renderer>();
-            if (renderer == null)
+            _game = game;
+            SyncRunPosition();
+        }
+
+        private void Awake()
+        {
+            _body = GetComponent<Rigidbody2D>();
+        }
+
+        private void FixedUpdate()
+        {
+            if (_game == null)
             {
                 return;
             }
 
-            Material material = new Material(Shader.Find("Standard"));
-            material.color = color;
-            renderer.sharedMaterial = material;
+            if (SyncRunPosition() || !_game.InRealtimeCombat || _game.IsPaused)
+            {
+                return;
+            }
+
+            Vector2 target = _body.position + _game.MoveInput.normalized * _game.MoveSpeed * Time.fixedDeltaTime;
+            target.x = Mathf.Clamp(target.x, -RoguelikeGame.ArenaHalfWidth, RoguelikeGame.ArenaHalfWidth);
+            target.y = Mathf.Clamp(target.y, -RoguelikeGame.ArenaHalfHeight, RoguelikeGame.ArenaHalfHeight);
+            _body.MovePosition(target);
+            _game.SyncPlayerPosition(target);
+        }
+
+        private bool SyncRunPosition()
+        {
+            if (_body == null || _game == null || _run == _game.CurrentRun)
+            {
+                return false;
+            }
+
+            _run = _game.CurrentRun;
+            _body.position = _game.PlayerPosition;
+            return true;
+        }
+    }
+
+    public sealed class RoguelikeCameraFollow : MonoBehaviour
+    {
+        private Transform _target;
+
+        public void SetTarget(Transform target)
+        {
+            _target = target;
+        }
+
+        private void LateUpdate()
+        {
+            if (_target == null)
+            {
+                return;
+            }
+
+            Vector3 targetPosition = new Vector3(_target.position.x, _target.position.y, -10f);
+            transform.position = Vector3.Lerp(transform.position, targetPosition, 10f * Time.deltaTime);
+        }
+    }
+
+    public sealed class RoguelikeEnemyMotor : MonoBehaviour
+    {
+        private Rigidbody2D _body;
+        private Vector2 _target;
+
+        public void SetTarget(Vector2 target)
+        {
+            _target = target;
+            if (_body == null)
+            {
+                _body = GetComponent<Rigidbody2D>();
+                _body.position = target;
+            }
+        }
+
+        private void FixedUpdate()
+        {
+            _body.MovePosition(_target);
         }
     }
 }

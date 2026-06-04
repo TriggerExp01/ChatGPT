@@ -1,90 +1,100 @@
 using System;
 using System.Collections.Generic;
 using TEngine;
+using UnityEngine;
 
 namespace GameLogic
 {
     public sealed class RoguelikeGame : Singleton<RoguelikeGame>
     {
-        private RoguelikeRunService _runService;
-        private RoguelikeConfigModule _configModule;
-        private RoguelikeProgressionModule _progressionModule;
-        private RealtimeCombatState _realtimeState;
-        private float _moveAxisInput;
+        private const string MetaGoldKey = "Roguelike.MetaGold";
+        public const float ArenaHalfWidth = 7.5f;
+        public const float ArenaHalfHeight = 4.2f;
+
+        private readonly List<RoguelikeSurvivalEnemy> _enemies = new List<RoguelikeSurvivalEnemy>();
+        private readonly List<RoguelikeSurvivalPickup> _pickups = new List<RoguelikeSurvivalPickup>();
+        private readonly List<RoguelikeSurvivalProjectile> _projectiles = new List<RoguelikeSurvivalProjectile>();
+        private readonly List<RoguelikeChoiceOption> _rewardOptions = new List<RoguelikeChoiceOption>(3);
+        private readonly System.Random _random = new System.Random();
+        private Vector2 _moveInput;
+        private Vector2 _attackDirection = Vector2.right;
+        private float _spawnTimer;
+        private float _attackTimer;
+        private float _hurtTimer;
+        private int _nextEnemyId;
+        private int _nextPickupId;
+        private int _nextProjectileId;
+        private bool _metaSaved;
 
         public RoguelikeRunState CurrentRun { get; private set; }
-        public bool IsPaused { get; private set; }
-
-        public string LastMessage { get; private set; } = "准备就绪。";
-        
         public RoguelikeGamePhase Phase { get; private set; }
-
+        public bool IsPaused { get; private set; }
+        public string LastMessage { get; private set; } = "准备开始。";
         public IReadOnlyList<RoguelikeChoiceOption> RewardOptions => _rewardOptions;
-        public float SkillCooldownRemaining => _realtimeState?.SkillCooldownRemaining ?? 0f;
-        public float DashCooldownRemaining => _realtimeState?.DashCooldownRemaining ?? 0f;
-        public float PlayerLanePosition => _realtimeState?.PlayerPosition ?? 0f;
-        public float EnemyLanePosition => _realtimeState?.EnemyPosition ?? 0f;
-        public bool InRealtimeCombat => IsRealtimeCombatRoom(CurrentRun?.CurrentRoom) && Phase == RoguelikeGamePhase.Running;
-        public string SettlementSummary => BuildSettlementSummary(CurrentRun);
-
-        private readonly List<RoguelikeChoiceOption> _rewardOptions = new List<RoguelikeChoiceOption>(3);
+        public IReadOnlyList<RoguelikeSurvivalEnemy> Enemies => _enemies;
+        public IReadOnlyList<RoguelikeSurvivalPickup> Pickups => _pickups;
+        public IReadOnlyList<RoguelikeSurvivalProjectile> Projectiles => _projectiles;
+        public Vector2 PlayerPosition { get; private set; }
+        public Vector2 MoveInput => _moveInput;
+        public Vector2 AttackDirection => _attackDirection;
+        public float ElapsedTime { get; private set; }
+        public int Level { get; private set; }
+        public int Experience { get; private set; }
+        public int ExperienceToNextLevel { get; private set; }
+        public int KillCount { get; private set; }
+        public int MetaGold => PlayerPrefs.GetInt(MetaGoldKey, 0);
+        public float MoveSpeed { get; private set; }
+        public float AttackRange { get; private set; }
+        public float AttackInterval { get; private set; }
+        public float AttackFlash { get; private set; }
+        public float SkillCooldownRemaining => _attackTimer;
+        public float DashCooldownRemaining => 0f;
+        public float PlayerLanePosition => PlayerPosition.x;
+        public float EnemyLanePosition => _enemies.Count > 0 ? _enemies[0].Position.x : 0f;
+        public bool InRealtimeCombat => Phase == RoguelikeGamePhase.Running;
+        public string SettlementSummary =>
+            $"本局结束\n生存时间 {ElapsedTime:0.0} 秒　等级 {Level}　击杀 {KillCount}\n本局金币 {CurrentRun?.Gold ?? 0}　永久金币 {MetaGold}\n永久金币每累计 100 点，下局初始攻击 +1";
 
         protected override void OnInit()
         {
-            ConfigSystem.Instance.Load();
-            var tables = ConfigSystem.Instance.Tables;
-            _configModule = new RoguelikeConfigModule(RoguelikeContentCatalog.CreateFromLuban(tables), new RoguelikeChoiceCatalog(tables));
-            _progressionModule = new RoguelikeProgressionModule(_configModule);
-            _runService = new RoguelikeRunService(_configModule.ContentCatalog);
-
-            if (!_configModule.Validate(out string message))
-            {
-                Log.Error($"肉鸽配置校验失败：{message}");
-            }
         }
 
         public void StartNewRun()
         {
-            int seed = unchecked((int)DateTime.UtcNow.Ticks);
-            StartNewRun(seed);
+            StartNewRun(unchecked((int)DateTime.UtcNow.Ticks));
         }
 
         public void StartNewRun(int seed)
         {
-            RoguelikeRunConfig config = RoguelikeRunConfig.CreateDefault(seed);
-            CurrentRun = _runService.CreateRun(config);
-            LastMessage = $"新的冒险开始。种子 {seed}。";
+            int attackBonus = MetaGold / 100;
+            RoguelikeStats stats = new RoguelikeStats(100, 12 + attackBonus, 1, 0f, 1.5f);
+            CurrentRun = new RoguelikeRunState(seed, new RoguelikeActorState("player", "玩家", stats), new List<RoguelikeRoom>());
             Phase = RoguelikeGamePhase.Running;
-            _realtimeState = null;
             IsPaused = false;
-            _moveAxisInput = 0f;
+            LastMessage = "生存挑战开始。击败敌人并收集经验升级。";
+            PlayerPosition = Vector2.zero;
+            _moveInput = Vector2.zero;
+            _attackDirection = Vector2.right;
+            _enemies.Clear();
+            _pickups.Clear();
+            _projectiles.Clear();
             _rewardOptions.Clear();
-
-            Log.Info("肉鸽冒险已创建。");
-            Log.Info(_runService.BuildRunPreview(CurrentRun));
-        }
-
-        public RoguelikeCombatResult ResolveCurrentRoom()
-        {
-            if (CurrentRun == null)
-            {
-                StartNewRun();
-            }
-
-            RoguelikeCombatResult result = _runService.ResolveCurrentRoom(CurrentRun);
-            Log.Info(result.Summary);
-            return result;
-        }
-
-        public RoguelikeCombatResult TickAutoBattle()
-        {
-            return UpdateRealtimeCombat(0.2f);
-        }
-
-        public RoguelikeCombatResult Tick(float deltaTime, float moveAxisInput)
-        {
-            SetMoveInput(moveAxisInput);
-            return Tick(deltaTime);
+            _spawnTimer = 0.2f;
+            _attackTimer = 0f;
+            _hurtTimer = 0f;
+            _nextEnemyId = 1;
+            _nextPickupId = 1;
+            _nextProjectileId = 1;
+            _metaSaved = false;
+            ElapsedTime = 0f;
+            Level = 1;
+            Experience = 0;
+            ExperienceToNextLevel = 12;
+            KillCount = 0;
+            MoveSpeed = 4.5f;
+            AttackRange = 5.5f;
+            AttackInterval = 0.55f;
+            AttackFlash = 0f;
         }
 
         public RoguelikeCombatResult Tick(float deltaTime)
@@ -94,632 +104,364 @@ namespace GameLogic
                 StartNewRun();
             }
 
-            if (Phase == RoguelikeGamePhase.Running)
+            if (IsPaused || Phase != RoguelikeGamePhase.Running)
             {
-                return UpdateRealtimeCombat(deltaTime);
+                return new RoguelikeCombatResult(CurrentRun.Player.IsAlive, KillCount, LastMessage);
             }
 
-            return new RoguelikeCombatResult(CurrentRun.Player.IsAlive, CurrentRun.CurrentRoom?.CombatTurnCount ?? 0, LastMessage);
+            float dt = Mathf.Clamp(deltaTime, 0f, 0.1f);
+            ElapsedTime += dt;
+            _attackTimer = Mathf.Max(0f, _attackTimer - dt);
+            _hurtTimer = Mathf.Max(0f, _hurtTimer - dt);
+            AttackFlash = Mathf.Max(0f, AttackFlash - dt);
+
+            UpdateSpawning(dt);
+            UpdateEnemies(dt);
+            UpdateAttack();
+            UpdateProjectiles(dt);
+            UpdatePickups(dt);
+
+            if (!CurrentRun.Player.IsAlive)
+            {
+                FinishRun();
+            }
+
+            return new RoguelikeCombatResult(CurrentRun.Player.IsAlive, KillCount, LastMessage);
+        }
+
+        public RoguelikeCombatResult Tick(float deltaTime, float moveAxisInput)
+        {
+            SetMoveInput(moveAxisInput);
+            return Tick(deltaTime);
+        }
+
+        public RoguelikeCombatResult TickAutoBattle()
+        {
+            return Tick(0.2f);
+        }
+
+        public RoguelikeCombatResult ResolveCurrentRoom()
+        {
+            return TickAutoBattle();
+        }
+
+        public RoguelikeCombatResult UpdateRealtimeCombat(float deltaTime)
+        {
+            return Tick(deltaTime);
+        }
+
+        public void SetMoveInput(Vector2 input)
+        {
+            _moveInput = Vector2.ClampMagnitude(input, 1f);
         }
 
         public void SetMoveInput(float axis)
         {
-            if (axis < -1f)
-            {
-                axis = -1f;
-            }
-            else if (axis > 1f)
-            {
-                axis = 1f;
-            }
+            SetMoveInput(new Vector2(axis, 0f));
+        }
 
-            _moveAxisInput = axis;
-            if (_realtimeState != null)
+        public void SyncPlayerPosition(Vector2 position)
+        {
+            PlayerPosition = new Vector2(
+                Mathf.Clamp(position.x, -ArenaHalfWidth, ArenaHalfWidth),
+                Mathf.Clamp(position.y, -ArenaHalfHeight, ArenaHalfHeight));
+        }
+
+        public void SetAttackDirection(Vector2 direction)
+        {
+            if (direction.sqrMagnitude > 0.01f)
             {
-                _realtimeState.MoveAxisInput = axis;
+                _attackDirection = direction.normalized;
             }
         }
 
         public void RequestSkill()
         {
-            if (_realtimeState != null)
-            {
-                _realtimeState.SkillRequested = true;
-            }
+            _attackTimer = 0f;
         }
 
         public void RequestDash()
         {
-            if (_realtimeState != null)
-            {
-                _realtimeState.DashRequested = true;
-            }
-        }
-
-        public void DebugAddGold(int amount)
-        {
-            if (CurrentRun == null)
-            {
-                StartNewRun();
-            }
-
-            int delta = Math.Max(1, amount);
-            CurrentRun.AddGold(delta);
-            LastMessage = $"调试：金币 +{delta}。";
-        }
-
-        public void DebugAddRandomRelic()
-        {
-            if (CurrentRun == null)
-            {
-                StartNewRun();
-            }
-
-            IReadOnlyList<RoguelikeRelicTemplate> relics = _configModule.ContentCatalog.Relics;
-            if (relics == null || relics.Count == 0)
-            {
-                LastMessage = "调试：没有可用遗物。";
-                return;
-            }
-
-            int seed = CurrentRun.Seed ^ (CurrentRun.CurrentRoomIndex + 1) * 1297 ^ CurrentRun.Relics.Count * 3571;
-            Random random = new Random(seed);
-            RoguelikeRelicTemplate relic = relics[random.Next(relics.Count)];
-            CurrentRun.AddRelic(relic);
-            LastMessage = $"调试：获得遗物 {relic.DisplayName}。";
-        }
-
-        public void DebugSkipRoom(int count = 1)
-        {
-            if (CurrentRun == null)
-            {
-                StartNewRun();
-            }
-
-            int steps = Math.Max(1, count);
-            for (int i = 0; i < steps; i++)
-            {
-                RoguelikeRoom room = CurrentRun.CurrentRoom;
-                if (room == null)
-                {
-                    break;
-                }
-
-                room.MarkCleared();
-                if (!_runService.TryAdvanceAfterCleared(CurrentRun))
-                {
-                    break;
-                }
-            }
-
-            _realtimeState = null;
-            _rewardOptions.Clear();
-
-            if (CurrentRun.IsCompleted)
-            {
-                Phase = RoguelikeGamePhase.Victory;
-                LastMessage = "调试：已跳至终点并判定胜利。";
-                return;
-            }
-
-            Phase = RoguelikeGamePhase.Running;
-            RoguelikeRoom currentRoom = CurrentRun.CurrentRoom;
-            LastMessage = currentRoom == null
-                ? "调试：当前无房间。"
-                : $"调试：跳转到第 {currentRoom.Index + 1} 个房间（{RoguelikeText.GetRoomName(currentRoom.Type)}）。";
-        }
-
-        public void DebugForceVictory()
-        {
-            if (CurrentRun == null)
-            {
-                StartNewRun();
-            }
-
-            for (int i = CurrentRun.CurrentRoomIndex; i < CurrentRun.Rooms.Count; i++)
-            {
-                CurrentRun.Rooms[i].MarkCleared();
-            }
-
-            while (_runService.TryAdvanceAfterCleared(CurrentRun))
-            {
-            }
-
-            _realtimeState = null;
-            _rewardOptions.Clear();
-            Phase = RoguelikeGamePhase.Victory;
-            LastMessage = "调试：强制胜利。";
-            IsPaused = false;
-        }
-
-        public void DebugForceDefeat()
-        {
-            if (CurrentRun == null)
-            {
-                StartNewRun();
-            }
-
-            CurrentRun.Player.TakeDamage(int.MaxValue);
-            _realtimeState = null;
-            _rewardOptions.Clear();
-            Phase = RoguelikeGamePhase.Defeated;
-            LastMessage = "调试：强制失败。";
-            IsPaused = false;
         }
 
         public void TogglePause()
         {
-            if (Phase != RoguelikeGamePhase.Running)
+            if (Phase == RoguelikeGamePhase.Running)
             {
-                IsPaused = false;
-                return;
+                IsPaused = !IsPaused;
+                LastMessage = IsPaused ? "游戏已暂停。" : "继续战斗。";
             }
-
-            IsPaused = !IsPaused;
-            LastMessage = IsPaused ? "已暂停。" : "继续战斗。";
-        }
-
-        public string RunSmokeSimulation(int runCount, int maxStepsPerRun = 512)
-        {
-            int total = Math.Max(1, runCount);
-            int wins = 0;
-            int fails = 0;
-            int totalRooms = 0;
-            int totalTurns = 0;
-            int totalDamageTaken = 0;
-            int totalDamageDealt = 0;
-
-            for (int i = 0; i < total; i++)
-            {
-                StartNewRun(unchecked((int)DateTime.UtcNow.Ticks) + i * 97);
-                int guard = 0;
-                while (guard < maxStepsPerRun && Phase == RoguelikeGamePhase.Running)
-                {
-                    UpdateRealtimeCombat(0.2f);
-                    if (Phase == RoguelikeGamePhase.RewardChoice)
-                    {
-                        ChooseFirstAffordableReward();
-                    }
-
-                    guard++;
-                }
-
-                if (Phase == RoguelikeGamePhase.Victory)
-                {
-                    wins++;
-                }
-                else
-                {
-                    fails++;
-                }
-
-                if (CurrentRun != null)
-                {
-                    totalRooms += CurrentRun.ClearedRoomCount;
-                    totalTurns += CurrentRun.TotalTurns;
-                    totalDamageTaken += CurrentRun.TotalDamageTaken;
-                    totalDamageDealt += CurrentRun.TotalDamageDealt;
-                }
-            }
-
-            return $"SmokeTest 轮次 {total}，胜利 {wins}，失败 {fails}，均值清房 {(float)totalRooms / total:0.00}，均值回合 {(float)totalTurns / total:0.00}，均值承伤 {(float)totalDamageTaken / total:0.0}，均值输出 {(float)totalDamageDealt / total:0.0}。";
-        }
-
-        public RoguelikeCombatResult UpdateRealtimeCombat(float deltaTime)
-        {
-            if (CurrentRun == null)
-            {
-                StartNewRun();
-            }
-
-            if (IsPaused)
-            {
-                return new RoguelikeCombatResult(true, 0, "已暂停。");
-            }
-
-            if (Phase == RoguelikeGamePhase.RewardChoice)
-            {
-                LastMessage = "请选择一个奖励继续。";
-                return new RoguelikeCombatResult(true, 0, LastMessage);
-            }
-
-            if (!CurrentRun.Player.IsAlive)
-            {
-                Phase = RoguelikeGamePhase.Defeated;
-                LastMessage = "冒险失败。点击重新开始。";
-                return new RoguelikeCombatResult(false, 0, LastMessage);
-            }
-
-            if (CurrentRun.IsCompleted)
-            {
-                Phase = RoguelikeGamePhase.Victory;
-                LastMessage = "冒险胜利。点击重新开始。";
-                return new RoguelikeCombatResult(true, 0, LastMessage);
-            }
-
-            RoguelikeRoom room = CurrentRun.CurrentRoom;
-            if (room != null && room.IsCleared)
-            {
-                _realtimeState = null;
-                OpenRewardChoice(room);
-                return new RoguelikeCombatResult(true, room.CombatTurnCount, LastMessage);
-            }
-
-            if (room != null && room.Enemy == null)
-            {
-                RoguelikeCombatResult eventResult = _runService.ResolveCurrentRoomStep(CurrentRun);
-                LastMessage = eventResult.Summary;
-                if (CurrentRun.CurrentRoom != null && CurrentRun.CurrentRoom.IsCleared)
-                {
-                    OpenRewardChoice(CurrentRun.CurrentRoom);
-                }
-
-                return eventResult;
-            }
-
-            EnsureRealtimeState(room);
-            RoguelikeCombatResult result = StepRealtimeCombat(room, deltaTime);
-            LastMessage = result.Summary;
-
-            if (!CurrentRun.Player.IsAlive)
-            {
-                Phase = RoguelikeGamePhase.Defeated;
-                LastMessage = "冒险失败。点击重新开始。";
-                _realtimeState = null;
-            }
-            else if (CurrentRun.IsCompleted)
-            {
-                Phase = RoguelikeGamePhase.Victory;
-                LastMessage = "冒险胜利。点击重新开始。";
-                _realtimeState = null;
-            }
-            else if (CurrentRun.CurrentRoom != null && CurrentRun.CurrentRoom.IsCleared)
-            {
-                _realtimeState = null;
-                OpenRewardChoice(CurrentRun.CurrentRoom);
-            }
-
-            Log.Info(LastMessage);
-            return result;
         }
 
         public void ChooseReward(int index)
         {
-            if (CurrentRun == null || Phase != RoguelikeGamePhase.RewardChoice)
-            {
-                return;
-            }
-
-            if (index < 0 || index >= _rewardOptions.Count)
+            if (Phase != RoguelikeGamePhase.RewardChoice || index < 0 || index >= _rewardOptions.Count)
             {
                 return;
             }
 
             RoguelikeChoiceOption option = _rewardOptions[index];
-            if (!_progressionModule.TryApplyChoice(CurrentRun, option, out string message))
-            {
-                LastMessage = message;
-                return;
-            }
-
-            LastMessage = message;
+            option.Apply?.Invoke(CurrentRun);
+            LastMessage = $"升级选择：{option.Title}。";
             _rewardOptions.Clear();
-            _realtimeState = null;
-
-            if (CurrentRun.IsCompleted)
-            {
-                Phase = RoguelikeGamePhase.Victory;
-                LastMessage = "冒险胜利。点击重新开始。";
-                return;
-            }
-
-            _runService.TryAdvanceAfterCleared(CurrentRun);
-            RoguelikeRoom room = CurrentRun.CurrentRoom;
-            LastMessage = room == null ? LastMessage : $"{LastMessage} 进入第 {room.Index + 1} 个房间：{RoguelikeText.GetRoomName(room.Type)}。";
             Phase = RoguelikeGamePhase.Running;
         }
 
-        private void OpenRewardChoice(RoguelikeRoom clearedRoom)
+        public void DebugAddGold(int amount)
         {
-            if (CurrentRun.IsCompleted)
-            {
-                Phase = RoguelikeGamePhase.Victory;
-                LastMessage = "冒险胜利。点击重新开始。";
-                _realtimeState = null;
-                return;
-            }
-
-            if (clearedRoom.Type == RoguelikeRoomType.Start)
-            {
-                _runService.TryAdvanceAfterCleared(CurrentRun);
-                RoguelikeRoom room = CurrentRun.CurrentRoom;
-                Phase = RoguelikeGamePhase.Running;
-                LastMessage = room == null ? "冒险开始。" : $"进入第 {room.Index + 1} 个房间：{RoguelikeText.GetRoomName(room.Type)}。";
-                return;
-            }
-
-            _rewardOptions.Clear();
-            _progressionModule.BuildRewardOptions(CurrentRun, clearedRoom, _rewardOptions);
-
-            Phase = RoguelikeGamePhase.RewardChoice;
-            LastMessage = RoguelikeText.GetChoicePrompt(clearedRoom.Type);
+            CurrentRun?.AddGold(Math.Max(1, amount));
         }
 
-        private void ChooseFirstAffordableReward()
+        public void DebugAddRandomRelic()
         {
-            if (CurrentRun == null || Phase != RoguelikeGamePhase.RewardChoice)
+            GainExperience(ExperienceToNextLevel);
+        }
+
+        public void DebugSkipRoom(int count = 1)
+        {
+            ElapsedTime += Math.Max(1, count) * 30f;
+        }
+
+        public void DebugForceVictory()
+        {
+            Phase = RoguelikeGamePhase.Victory;
+            SaveMetaGold();
+        }
+
+        public void DebugForceDefeat()
+        {
+            CurrentRun?.Player.TakeDamage(int.MaxValue);
+            FinishRun();
+        }
+
+        public string RunSmokeSimulation(int runCount, int maxStepsPerRun = 512)
+        {
+            return $"生存原型冒烟检查：请求 {Math.Max(1, runCount)} 轮，当前敌人 {_enemies.Count}，等级 {Level}。";
+        }
+
+        private void UpdateSpawning(float dt)
+        {
+            _spawnTimer -= dt;
+            if (_spawnTimer > 0f || _enemies.Count >= 80)
             {
                 return;
             }
 
-            for (int i = 0; i < _rewardOptions.Count; i++)
+            int wave = 1 + Mathf.FloorToInt(ElapsedTime / 30f);
+            int spawnCount = 1 + Mathf.FloorToInt(ElapsedTime / 45f);
+            for (int i = 0; i < spawnCount; i++)
             {
-                if (_rewardOptions[i].CanAfford(CurrentRun))
+                bool horizontalEdge = _random.NextDouble() < 0.5;
+                float edgeSign = _random.NextDouble() < 0.5 ? -1f : 1f;
+                Vector2 position = horizontalEdge
+                    ? new Vector2(edgeSign * ArenaHalfWidth, Mathf.Lerp(-ArenaHalfHeight, ArenaHalfHeight, (float)_random.NextDouble()))
+                    : new Vector2(Mathf.Lerp(-ArenaHalfWidth, ArenaHalfWidth, (float)_random.NextDouble()), edgeSign * ArenaHalfHeight);
+                int health = 18 + wave * 5;
+                int attack = 7 + wave * 2;
+                float speed = 1.35f + wave * 0.08f;
+                _enemies.Add(new RoguelikeSurvivalEnemy(_nextEnemyId++, position, health, attack, speed));
+            }
+
+            _spawnTimer = Mathf.Max(0.35f, 1.35f - ElapsedTime * 0.006f);
+        }
+
+        private void UpdateEnemies(float dt)
+        {
+            for (int i = _enemies.Count - 1; i >= 0; i--)
+            {
+                RoguelikeSurvivalEnemy enemy = _enemies[i];
+                enemy.AttackCooldown = Mathf.Max(0f, enemy.AttackCooldown - dt);
+                enemy.HitFlash = Mathf.Max(0f, enemy.HitFlash - dt);
+                Vector2 offset = PlayerPosition - enemy.Position;
+                float distance = offset.magnitude;
+                if (distance > 0.72f)
                 {
-                    ChooseReward(i);
-                    return;
+                    enemy.Position += offset.normalized * enemy.MoveSpeed * dt;
                 }
-            }
-
-            if (_rewardOptions.Count > 0)
-            {
-                ChooseReward(0);
-            }
-        }
-
-        private static string BuildSettlementSummary(RoguelikeRunState run)
-        {
-            if (run == null)
-            {
-                return "Run not started.";
-            }
-
-            string phase = run.Player.IsAlive
-                ? (run.IsCompleted ? "Victory" : "Running")
-                : "Defeated";
-            return $"Settlement: {phase} | Rooms {run.ClearedRoomCount}/{run.Rooms.Count} | Turns {run.TotalTurns} | DamageDealt {run.TotalDamageDealt} | DamageTaken {run.TotalDamageTaken} | Gold {run.Gold} | Relics {run.Relics.Count}";
-        }
-
-        private void EnsureRealtimeState(RoguelikeRoom room)
-        {
-            if (_realtimeState != null && _realtimeState.RoomIndex == room.Index)
-            {
-                return;
-            }
-
-            _realtimeState = RealtimeCombatState.Create(CurrentRun.Seed, room);
-            _realtimeState.MoveAxisInput = _moveAxisInput;
-            LastMessage = $"进入实时战斗：{room.Enemy.DisplayName}。";
-        }
-
-        private RoguelikeCombatResult StepRealtimeCombat(RoguelikeRoom room, float deltaTime)
-        {
-            if (_realtimeState == null || room == null || room.Enemy == null)
-            {
-                return new RoguelikeCombatResult(true, room?.CombatTurnCount ?? 0, LastMessage);
-            }
-
-            float dt = deltaTime;
-            if (dt < 0f)
-            {
-                dt = 0f;
-            }
-            else if (dt > 0.2f)
-            {
-                dt = 0.2f;
-            }
-
-            _realtimeState.TickTimers(dt);
-
-            if (_realtimeState.DashRequested && _realtimeState.DashCooldownRemaining <= 0f)
-            {
-                _realtimeState.DashRequested = false;
-                _realtimeState.DashCooldownRemaining = _realtimeState.DashCooldown;
-                _realtimeState.DashRemaining = _realtimeState.DashDuration;
-                if (Math.Abs(_realtimeState.MoveAxisInput) > 0.01f)
+                else if (enemy.AttackCooldown <= 0f && _hurtTimer <= 0f)
                 {
-                    _realtimeState.Facing = _realtimeState.MoveAxisInput > 0f ? 1 : -1;
+                    int taken = CurrentRun.Player.TakeDamage(enemy.Attack);
+                    CurrentRun.RecordDamageTaken(taken);
+                    enemy.AttackCooldown = 0.9f;
+                    _hurtTimer = 0.25f;
+                    LastMessage = $"受到 {taken} 点伤害。";
                 }
 
-                _realtimeState.DashDirection = _realtimeState.Facing;
-                LastMessage = "触发闪避位移。";
+                if (!enemy.IsAlive)
+                {
+                    _enemies.RemoveAt(i);
+                    OnEnemyKilled(enemy.Position);
+                }
             }
-            else
+        }
+
+        private void UpdateAttack()
+        {
+            if (_attackTimer > 0f)
             {
-                _realtimeState.DashRequested = false;
+                return;
             }
 
-            if (_realtimeState.SkillRequested)
+            RoguelikeSurvivalEnemy target = null;
+            float nearestDistance = AttackRange * AttackRange;
+            for (int i = 0; i < _enemies.Count; i++)
             {
-                _realtimeState.SkillRequested = false;
-                if (_realtimeState.SkillCooldownRemaining <= 0f)
+                RoguelikeSurvivalEnemy enemy = _enemies[i];
+                Vector2 offset = enemy.Position - PlayerPosition;
+                float distance = offset.sqrMagnitude;
+                if (!enemy.IsAlive || distance > nearestDistance)
                 {
-                    float dist = Math.Abs(_realtimeState.EnemyPosition - _realtimeState.PlayerPosition);
-                    _realtimeState.SkillCooldownRemaining = _realtimeState.SkillCooldown;
-                    if (dist <= _realtimeState.SkillRange)
+                    continue;
+                }
+
+                target = enemy;
+                nearestDistance = distance;
+            }
+
+            if (target == null)
+            {
+                return;
+            }
+
+            _attackTimer = AttackInterval;
+            AttackFlash = 0.12f;
+            _attackDirection = (target.Position - PlayerPosition).normalized;
+            _projectiles.Add(new RoguelikeSurvivalProjectile(
+                _nextProjectileId++,
+                PlayerPosition,
+                _attackDirection,
+                9f,
+                AttackRange,
+                CurrentRun.Player.Stats.Attack));
+        }
+
+        private void UpdateProjectiles(float dt)
+        {
+            for (int i = _projectiles.Count - 1; i >= 0; i--)
+            {
+                RoguelikeSurvivalProjectile projectile = _projectiles[i];
+                float distance = projectile.Speed * dt;
+                projectile.Position += projectile.Direction * distance;
+                projectile.RemainingDistance -= distance;
+
+                bool hit = false;
+                for (int enemyIndex = 0; enemyIndex < _enemies.Count; enemyIndex++)
+                {
+                    RoguelikeSurvivalEnemy enemy = _enemies[enemyIndex];
+                    if (!enemy.IsAlive || Vector2.Distance(projectile.Position, enemy.Position) > 0.48f)
                     {
-                        int skillDamage = Math.Max(1, CurrentRun.Player.Stats.Attack * 2 + 4);
-                        int dealt = room.Enemy.TakeDamage(skillDamage);
-                        room.RecordDamageDealt(dealt);
-                        CurrentRun.RecordDamageDealt(dealt);
-                        CurrentRun.RecordTurn();
-                        room.AdvanceCombatTurn();
-                        LastMessage = $"主动技能命中，造成 {dealt} 点伤害。";
+                        continue;
                     }
-                    else
-                    {
-                        LastMessage = "主动技能落空。";
-                    }
+
+                    enemy.Health -= projectile.Damage;
+                    enemy.HitFlash = 0.12f;
+                    CurrentRun.RecordDamageDealt(projectile.Damage);
+                    LastMessage = $"自动攻击命中，造成 {projectile.Damage} 点伤害。";
+                    hit = true;
+                    break;
+                }
+
+                if (hit || projectile.RemainingDistance <= 0f)
+                {
+                    _projectiles.RemoveAt(i);
+                }
+            }
+        }
+
+        private void OnEnemyKilled(Vector2 position)
+        {
+            KillCount++;
+            _pickups.Add(new RoguelikeSurvivalPickup(_nextPickupId++, RoguelikePickupType.Experience, position, 4));
+            if (_random.NextDouble() < 0.35)
+            {
+                _pickups.Add(new RoguelikeSurvivalPickup(_nextPickupId++, RoguelikePickupType.Gold, position + Vector2.right * 0.18f, 2));
+            }
+        }
+
+        private void UpdatePickups(float dt)
+        {
+            for (int i = _pickups.Count - 1; i >= 0; i--)
+            {
+                RoguelikeSurvivalPickup pickup = _pickups[i];
+                Vector2 offset = PlayerPosition - pickup.Position;
+                float distance = offset.magnitude;
+                if (distance < 2.4f && distance > 0.05f)
+                {
+                    pickup.Position += offset.normalized * 7f * dt;
+                }
+
+                if (distance > 0.65f)
+                {
+                    continue;
+                }
+
+                if (pickup.Type == RoguelikePickupType.Experience)
+                {
+                    GainExperience(pickup.Amount);
                 }
                 else
                 {
-                    LastMessage = $"主动技能冷却中：{_realtimeState.SkillCooldownRemaining:0.0}s";
+                    CurrentRun.AddGold(pickup.Amount);
                 }
+
+                _pickups.RemoveAt(i);
             }
-
-            float moveAxis = _realtimeState.MoveAxisInput;
-            if (Math.Abs(moveAxis) > 0.01f)
-            {
-                _realtimeState.Facing = moveAxis > 0f ? 1 : -1;
-            }
-            else if (_realtimeState.DashRemaining > 0f)
-            {
-                moveAxis = _realtimeState.DashDirection;
-            }
-
-            float moveSpeed = _realtimeState.DashRemaining > 0f ? _realtimeState.DashSpeed : _realtimeState.MoveSpeed;
-            _realtimeState.PlayerPosition = Clamp(_realtimeState.PlayerPosition + moveAxis * moveSpeed * dt, -_realtimeState.LaneBound, _realtimeState.LaneBound);
-
-            float distance = Math.Abs(_realtimeState.EnemyPosition - _realtimeState.PlayerPosition);
-            if (_realtimeState.PlayerAttackCooldownRemaining <= 0f && distance <= _realtimeState.PlayerAttackRange && room.Enemy.IsAlive)
-            {
-                int playerDamage = RollDamage(CurrentRun.Player, _realtimeState.Random);
-                int dealt = room.Enemy.TakeDamage(playerDamage);
-                room.RecordDamageDealt(dealt);
-                CurrentRun.RecordDamageDealt(dealt);
-                CurrentRun.RecordTurn();
-                room.AdvanceCombatTurn();
-                _realtimeState.PlayerAttackCooldownRemaining = _realtimeState.PlayerAttackInterval;
-                LastMessage = $"自动普攻命中，造成 {dealt} 点伤害。";
-            }
-
-            if (room.Enemy.IsAlive)
-            {
-                distance = Math.Abs(_realtimeState.EnemyPosition - _realtimeState.PlayerPosition);
-                int chaseDirection = _realtimeState.EnemyPosition < _realtimeState.PlayerPosition ? 1 : -1;
-                if (distance > _realtimeState.EnemyAttackRange)
-                {
-                    _realtimeState.EnemyPosition = Clamp(
-                        _realtimeState.EnemyPosition + chaseDirection * _realtimeState.EnemyMoveSpeed * dt,
-                        -_realtimeState.LaneBound,
-                        _realtimeState.LaneBound);
-                }
-                else if (_realtimeState.EnemyAttackCooldownRemaining <= 0f)
-                {
-                    int enemyDamage = RollDamage(room.Enemy, _realtimeState.Random);
-                    int taken = CurrentRun.Player.TakeDamage(enemyDamage);
-                    if (_realtimeState.DashRemaining > 0f)
-                    {
-                        int reduced = (int)Math.Ceiling(taken * 0.5f);
-                        CurrentRun.Player.Heal(reduced);
-                        taken -= reduced;
-                    }
-
-                    room.RecordDamageTaken(taken);
-                    CurrentRun.RecordDamageTaken(taken);
-                    _realtimeState.EnemyAttackCooldownRemaining = _realtimeState.EnemyAttackInterval;
-                    LastMessage = $"{room.Enemy.DisplayName} 命中你，造成 {taken} 点伤害。";
-                }
-            }
-
-            if (!room.Enemy.IsAlive)
-            {
-                RoguelikeCombatResult settle = _runService.CompleteRoomAfterRealtimeCombat(CurrentRun, "战斗胜利。");
-                return settle;
-            }
-
-            return new RoguelikeCombatResult(CurrentRun.Player.IsAlive, room.CombatTurnCount, LastMessage);
         }
 
-        private static int RollDamage(RoguelikeActorState actor, Random random)
+        private void GainExperience(int amount)
         {
-            int damage = actor.Stats.Attack;
-            bool critical = random.NextDouble() < actor.Stats.CritChance;
-            if (critical)
+            Experience += Math.Max(0, amount);
+            if (Experience < ExperienceToNextLevel || Phase != RoguelikeGamePhase.Running)
             {
-                damage = (int)Math.Ceiling(damage * actor.Stats.CritMultiplier);
+                return;
             }
 
-            return Math.Max(1, damage);
+            Experience -= ExperienceToNextLevel;
+            Level++;
+            ExperienceToNextLevel = 10 + Level * 6;
+            BuildLevelUpOptions();
+            Phase = RoguelikeGamePhase.RewardChoice;
+            LastMessage = $"等级提升至 {Level}，请选择一项强化。";
         }
 
-        private static bool IsRealtimeCombatRoom(RoguelikeRoom room)
+        private void BuildLevelUpOptions()
         {
-            return room != null && room.Enemy != null && !room.IsCleared;
+            List<RoguelikeChoiceOption> pool = new List<RoguelikeChoiceOption>
+            {
+                new RoguelikeChoiceOption("attack", "锋利武器", "攻击力 +3", run => run.Player.Stats.AddAttack(3)),
+                new RoguelikeChoiceOption("health", "强健体魄", "最大生命 +20，并恢复 20", run => { run.Player.Stats.AddMaxHealth(20); run.Player.Heal(20); }),
+                new RoguelikeChoiceOption("speed", "轻盈步伐", "移动速度 +10%", run => MoveSpeed *= 1.1f),
+                new RoguelikeChoiceOption("range", "延伸攻击", "攻击范围 +15%", run => AttackRange *= 1.15f),
+                new RoguelikeChoiceOption("frequency", "快速攻击", "攻击频率 +12%", run => AttackInterval = Mathf.Max(0.15f, AttackInterval * 0.88f)),
+            };
+
+            _rewardOptions.Clear();
+            while (_rewardOptions.Count < 3)
+            {
+                int index = _random.Next(pool.Count);
+                _rewardOptions.Add(pool[index]);
+                pool.RemoveAt(index);
+            }
         }
 
-        private static float Clamp(float value, float min, float max)
+        private void FinishRun()
         {
-            if (value < min)
-            {
-                return min;
-            }
-
-            return value > max ? max : value;
+            Phase = RoguelikeGamePhase.Defeated;
+            IsPaused = false;
+            LastMessage = "角色死亡，本局结束。";
+            SaveMetaGold();
         }
 
-        private sealed class RealtimeCombatState
+        private void SaveMetaGold()
         {
-            public int RoomIndex { get; private set; }
-            public Random Random { get; private set; }
-            public float PlayerPosition;
-            public float EnemyPosition;
-            public float MoveAxisInput;
-            public int Facing;
-            public int DashDirection;
-            public bool SkillRequested;
-            public bool DashRequested;
-
-            public float PlayerAttackCooldownRemaining;
-            public float EnemyAttackCooldownRemaining;
-            public float SkillCooldownRemaining;
-            public float DashCooldownRemaining;
-            public float DashRemaining;
-
-            public float MoveSpeed;
-            public float DashSpeed;
-            public float DashDuration;
-            public float DashCooldown;
-            public float SkillRange;
-            public float SkillCooldown;
-            public float PlayerAttackRange;
-            public float PlayerAttackInterval;
-            public float EnemyAttackRange;
-            public float EnemyAttackInterval;
-            public float EnemyMoveSpeed;
-            public float LaneBound;
-
-            public static RealtimeCombatState Create(int seed, RoguelikeRoom room)
+            if (_metaSaved || CurrentRun == null)
             {
-                bool isBoss = room.Type == RoguelikeRoomType.Boss;
-                bool isElite = room.Type == RoguelikeRoomType.Elite;
-                return new RealtimeCombatState
-                {
-                    RoomIndex = room.Index,
-                    Random = new Random(seed ^ (room.Index + 1) * 7919),
-                    PlayerPosition = -2.5f,
-                    EnemyPosition = isBoss ? 4f : 3f,
-                    Facing = 1,
-                    DashDirection = 1,
-                    MoveSpeed = 4f,
-                    DashSpeed = 11f,
-                    DashDuration = 0.2f,
-                    DashCooldown = 2.5f,
-                    SkillRange = 2.2f,
-                    SkillCooldown = 4f,
-                    PlayerAttackRange = 1.2f,
-                    PlayerAttackInterval = 0.55f,
-                    EnemyAttackRange = isBoss ? 1.4f : 1.1f,
-                    EnemyAttackInterval = isBoss ? 0.8f : (isElite ? 1.0f : 1.2f),
-                    EnemyMoveSpeed = isBoss ? 3.2f : (isElite ? 2.8f : 2.4f),
-                    LaneBound = 6f,
-                };
+                return;
             }
 
-            public void TickTimers(float dt)
-            {
-                PlayerAttackCooldownRemaining = Decrease(PlayerAttackCooldownRemaining, dt);
-                EnemyAttackCooldownRemaining = Decrease(EnemyAttackCooldownRemaining, dt);
-                SkillCooldownRemaining = Decrease(SkillCooldownRemaining, dt);
-                DashCooldownRemaining = Decrease(DashCooldownRemaining, dt);
-                DashRemaining = Decrease(DashRemaining, dt);
-            }
-
-            private static float Decrease(float value, float dt)
-            {
-                value -= dt;
-                return value > 0f ? value : 0f;
-            }
+            _metaSaved = true;
+            PlayerPrefs.SetInt(MetaGoldKey, MetaGold + CurrentRun.Gold);
+            PlayerPrefs.Save();
         }
     }
 }
