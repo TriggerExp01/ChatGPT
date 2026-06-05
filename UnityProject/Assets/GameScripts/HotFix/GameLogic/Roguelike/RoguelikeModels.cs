@@ -395,6 +395,32 @@ namespace GameLogic
         Gold,
     }
 
+    public enum RoguelikeWeaponType
+    {
+        MagicBolt,
+        SpinningBlade,
+    }
+
+    public sealed class RoguelikeSurvivalWeapon
+    {
+        public RoguelikeWeaponType Type { get; }
+        public string DisplayName { get; }
+        public int Level { get; private set; }
+        public float CooldownRemaining;
+
+        public RoguelikeSurvivalWeapon(RoguelikeWeaponType type, string displayName, int level)
+        {
+            Type = type;
+            DisplayName = displayName;
+            Level = Math.Max(1, level);
+        }
+
+        public void LevelUp()
+        {
+            Level++;
+        }
+    }
+
     public sealed class RoguelikeSurvivalPickup
     {
         public int Id { get; }
@@ -414,15 +440,17 @@ namespace GameLogic
     public sealed class RoguelikeSurvivalProjectile
     {
         public int Id { get; }
+        public RoguelikeWeaponType WeaponType { get; }
         public Vector2 Position;
         public Vector2 Direction;
         public float Speed;
         public float RemainingDistance;
         public int Damage;
 
-        public RoguelikeSurvivalProjectile(int id, Vector2 position, Vector2 direction, float speed, float distance, int damage)
+        public RoguelikeSurvivalProjectile(int id, RoguelikeWeaponType weaponType, Vector2 position, Vector2 direction, float speed, float distance, int damage)
         {
             Id = id;
+            WeaponType = weaponType;
             Position = position;
             Direction = direction;
             Speed = speed;

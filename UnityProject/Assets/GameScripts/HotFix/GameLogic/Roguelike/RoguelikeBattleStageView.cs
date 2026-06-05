@@ -189,7 +189,13 @@ namespace GameLogic
                 active.Add(projectile.Id);
                 if (!_projectileViews.TryGetValue(projectile.Id, out Transform view))
                 {
-                    view = CreateSprite($"投射物_{projectile.Id}", projectile.Position, new Vector3(0.28f, 0.14f, 1f), new Color(1f, 0.82f, 0.24f, 1f), 11);
+                    Vector3 scale = projectile.WeaponType == RoguelikeWeaponType.SpinningBlade
+                        ? new Vector3(0.34f, 0.10f, 1f)
+                        : new Vector3(0.28f, 0.14f, 1f);
+                    Color color = projectile.WeaponType == RoguelikeWeaponType.SpinningBlade
+                        ? new Color(0.72f, 0.95f, 1f, 1f)
+                        : new Color(1f, 0.82f, 0.24f, 1f);
+                    view = CreateSprite($"投射物_{projectile.Id}", projectile.Position, scale, color, 11);
                     _projectileViews.Add(projectile.Id, view);
                 }
 

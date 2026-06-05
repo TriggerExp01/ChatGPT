@@ -14,6 +14,7 @@ namespace GameLogic
         private readonly List<RoguelikeSurvivalEnemy> _enemies = new List<RoguelikeSurvivalEnemy>();
         private readonly List<RoguelikeSurvivalPickup> _pickups = new List<RoguelikeSurvivalPickup>();
         private readonly List<RoguelikeSurvivalProjectile> _projectiles = new List<RoguelikeSurvivalProjectile>();
+        private readonly List<RoguelikeSurvivalWeapon> _weapons = new List<RoguelikeSurvivalWeapon>();
         private readonly List<RoguelikeChoiceOption> _rewardOptions = new List<RoguelikeChoiceOption>(3);
         private readonly System.Random _random = new System.Random();
         private Vector2 _moveInput;
@@ -34,6 +35,7 @@ namespace GameLogic
         public IReadOnlyList<RoguelikeSurvivalEnemy> Enemies => _enemies;
         public IReadOnlyList<RoguelikeSurvivalPickup> Pickups => _pickups;
         public IReadOnlyList<RoguelikeSurvivalProjectile> Projectiles => _projectiles;
+        public IReadOnlyList<RoguelikeSurvivalWeapon> Weapons => _weapons;
         public Vector2 PlayerPosition { get; private set; }
         public Vector2 MoveInput => _moveInput;
         public Vector2 AttackDirection => _attackDirection;
@@ -52,6 +54,7 @@ namespace GameLogic
         public float PlayerLanePosition => PlayerPosition.x;
         public float EnemyLanePosition => _enemies.Count > 0 ? _enemies[0].Position.x : 0f;
         public bool InRealtimeCombat => Phase == RoguelikeGamePhase.Running;
+        public string WeaponSummary => BuildWeaponSummary();
         public string SettlementSummary =>
             $"本局结束\n生存时间 {ElapsedTime:0.0} 秒　等级 {Level}　击杀 {KillCount}\n本局金币 {CurrentRun?.Gold ?? 0}　永久金币 {MetaGold}\n永久金币每累计 100 点，下局初始攻击 +1";
 
@@ -78,6 +81,8 @@ namespace GameLogic
             _enemies.Clear();
             _pickups.Clear();
             _projectiles.Clear();
+            _weapons.Clear();
+            _weapons.Add(new RoguelikeSurvivalWeapon(RoguelikeWeaponType.MagicBolt, "追踪魔弹", 1));
             _rewardOptions.Clear();
             _spawnTimer = 0.2f;
             _attackTimer = 0f;
@@ -117,7 +122,7 @@ namespace GameLogic
 
             UpdateSpawning(dt);
             UpdateEnemies(dt);
-            UpdateAttack();
+            UpdateWeapons(dt);
             UpdateProjectiles(dt);
             UpdatePickups(dt);
 
@@ -295,13 +300,39 @@ namespace GameLogic
             }
         }
 
-        private void UpdateAttack()
+        private void UpdateWeapons(float dt)
         {
-            if (_attackTimer > 0f)
+            for (int i = 0; i < _weapons.Count; i++)
             {
-                return;
+                RoguelikeSurvivalWeapon weapon = _weapons[i];
+                weapon.CooldownRemaining = Mathf.Max(0f, weapon.CooldownRemaining - dt);
+                if (weapon.CooldownRemaining > 0f)
+                {
+                    continue;
+                }
+
+                bool fired = false;
+                switch (weapon.Type)
+                {
+                    case RoguelikeWeaponType.MagicBolt:
+                        fired = FireMagicBolt(weapon);
+                        break;
+                    case RoguelikeWeaponType.SpinningBlade:
+                        fired = FireSpinningBlade(weapon);
+                        break;
+                }
+
+                if (fired)
+                {
+                    weapon.CooldownRemaining = GetWeaponInterval(weapon);
+                }
             }
 
+            _attackTimer = GetPrimaryCooldown();
+        }
+
+        private bool FireMagicBolt(RoguelikeSurvivalWeapon weapon)
+        {
             RoguelikeSurvivalEnemy target = null;
             float nearestDistance = AttackRange * AttackRange;
             for (int i = 0; i < _enemies.Count; i++)
@@ -320,19 +351,50 @@ namespace GameLogic
 
             if (target == null)
             {
-                return;
+                return false;
             }
 
-            _attackTimer = AttackInterval;
             AttackFlash = 0.12f;
             _attackDirection = (target.Position - PlayerPosition).normalized;
             _projectiles.Add(new RoguelikeSurvivalProjectile(
                 _nextProjectileId++,
+                RoguelikeWeaponType.MagicBolt,
                 PlayerPosition,
                 _attackDirection,
-                9f,
-                AttackRange,
-                CurrentRun.Player.Stats.Attack));
+                9f + weapon.Level * 0.4f,
+                AttackRange + (weapon.Level - 1) * 0.35f,
+                CurrentRun.Player.Stats.Attack + (weapon.Level - 1) * 2));
+            return true;
+        }
+
+        private bool FireSpinningBlade(RoguelikeSurvivalWeapon weapon)
+        {
+            if (_enemies.Count <= 0)
+            {
+                return false;
+            }
+
+            int bladeCount = 4 + weapon.Level;
+            int damage = Mathf.Max(1, Mathf.RoundToInt(CurrentRun.Player.Stats.Attack * 0.55f) + weapon.Level);
+            float range = 2.2f + weapon.Level * 0.12f;
+            float angleOffset = (float)_random.NextDouble() * 360f;
+            for (int i = 0; i < bladeCount; i++)
+            {
+                float angle = angleOffset + 360f * i / bladeCount;
+                Vector2 direction = new Vector2(Mathf.Cos(angle * Mathf.Deg2Rad), Mathf.Sin(angle * Mathf.Deg2Rad));
+                _projectiles.Add(new RoguelikeSurvivalProjectile(
+                    _nextProjectileId++,
+                    RoguelikeWeaponType.SpinningBlade,
+                    PlayerPosition,
+                    direction,
+                    6.5f,
+                    range,
+                    damage));
+            }
+
+            AttackFlash = 0.10f;
+            LastMessage = $"旋刃齐射，发射 {bladeCount} 枚刀刃。";
+            return true;
         }
 
         private void UpdateProjectiles(float dt)
@@ -356,7 +418,8 @@ namespace GameLogic
                     enemy.Health -= projectile.Damage;
                     enemy.HitFlash = 0.12f;
                     CurrentRun.RecordDamageDealt(projectile.Damage);
-                    LastMessage = $"自动攻击命中，造成 {projectile.Damage} 点伤害。";
+                    string weaponName = projectile.WeaponType == RoguelikeWeaponType.SpinningBlade ? "旋刃" : "魔弹";
+                    LastMessage = $"{weaponName}命中，造成 {projectile.Damage} 点伤害。";
                     hit = true;
                     break;
                 }
@@ -434,6 +497,8 @@ namespace GameLogic
                 new RoguelikeChoiceOption("range", "延伸攻击", "攻击范围 +15%", run => AttackRange *= 1.15f),
                 new RoguelikeChoiceOption("frequency", "快速攻击", "攻击频率 +12%", run => AttackInterval = Mathf.Max(0.15f, AttackInterval * 0.88f)),
             };
+            AddWeaponChoice(pool, RoguelikeWeaponType.MagicBolt);
+            AddWeaponChoice(pool, RoguelikeWeaponType.SpinningBlade);
 
             _rewardOptions.Clear();
             while (_rewardOptions.Count < 3)
@@ -442,6 +507,95 @@ namespace GameLogic
                 _rewardOptions.Add(pool[index]);
                 pool.RemoveAt(index);
             }
+        }
+
+        private void AddWeaponChoice(List<RoguelikeChoiceOption> pool, RoguelikeWeaponType type)
+        {
+            RoguelikeSurvivalWeapon weapon = FindWeapon(type);
+            if (weapon == null)
+            {
+                if (type == RoguelikeWeaponType.SpinningBlade)
+                {
+                    pool.Add(new RoguelikeChoiceOption("weapon_spinning_blade_unlock", "解锁旋刃", "新增环形齐射武器", run => AddOrUpgradeWeapon(type)));
+                }
+
+                return;
+            }
+
+            if (type == RoguelikeWeaponType.MagicBolt)
+            {
+                pool.Add(new RoguelikeChoiceOption("weapon_magic_bolt_upgrade", "魔弹升级", $"追踪魔弹升至 {weapon.Level + 1} 级", run => AddOrUpgradeWeapon(type)));
+            }
+            else if (type == RoguelikeWeaponType.SpinningBlade)
+            {
+                pool.Add(new RoguelikeChoiceOption("weapon_spinning_blade_upgrade", "旋刃升级", $"旋刃升至 {weapon.Level + 1} 级", run => AddOrUpgradeWeapon(type)));
+            }
+        }
+
+        private void AddOrUpgradeWeapon(RoguelikeWeaponType type)
+        {
+            RoguelikeSurvivalWeapon weapon = FindWeapon(type);
+            if (weapon != null)
+            {
+                weapon.LevelUp();
+                LastMessage = $"{weapon.DisplayName}提升至 {weapon.Level} 级。";
+                return;
+            }
+
+            if (type == RoguelikeWeaponType.SpinningBlade)
+            {
+                _weapons.Add(new RoguelikeSurvivalWeapon(type, "旋刃", 1));
+                LastMessage = "获得新武器：旋刃。";
+            }
+        }
+
+        private RoguelikeSurvivalWeapon FindWeapon(RoguelikeWeaponType type)
+        {
+            for (int i = 0; i < _weapons.Count; i++)
+            {
+                if (_weapons[i].Type == type)
+                {
+                    return _weapons[i];
+                }
+            }
+
+            return null;
+        }
+
+        private float GetWeaponInterval(RoguelikeSurvivalWeapon weapon)
+        {
+            switch (weapon.Type)
+            {
+                case RoguelikeWeaponType.MagicBolt:
+                    return Mathf.Max(0.12f, AttackInterval * Mathf.Pow(0.94f, weapon.Level - 1));
+                case RoguelikeWeaponType.SpinningBlade:
+                    return Mathf.Max(0.65f, 2.2f - weapon.Level * 0.16f);
+                default:
+                    return AttackInterval;
+            }
+        }
+
+        private float GetPrimaryCooldown()
+        {
+            RoguelikeSurvivalWeapon weapon = FindWeapon(RoguelikeWeaponType.MagicBolt);
+            return weapon == null ? 0f : weapon.CooldownRemaining;
+        }
+
+        private string BuildWeaponSummary()
+        {
+            if (_weapons.Count <= 0)
+            {
+                return "无武器";
+            }
+
+            List<string> names = new List<string>(_weapons.Count);
+            for (int i = 0; i < _weapons.Count; i++)
+            {
+                RoguelikeSurvivalWeapon weapon = _weapons[i];
+                names.Add($"{weapon.DisplayName} Lv.{weapon.Level}");
+            }
+
+            return string.Join(" / ", names);
         }
 
         private void FinishRun()
