@@ -3,7 +3,8 @@
     "rootNamespace": "GameLogic.Tests",
     "references": [
         "GameLogic",
-        "TEngine.Runtime"
+        "TEngine.Runtime",
+        "GameProto"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

@@ -29,6 +29,7 @@ namespace GameLogic
         private float _pickupAttractRadius = BasePickupAttractRadius;
         private float _projectileDamageMultiplier = 1f;
         private bool _metaSaved;
+        private GameConfig.Tables _configTables;
 
         public RoguelikeRunState CurrentRun { get; private set; }
         public RoguelikeGamePhase Phase { get; private set; }
@@ -58,6 +59,7 @@ namespace GameLogic
         public float PlayerLanePosition => PlayerPosition.x;
         public float EnemyLanePosition => _enemies.Count > 0 ? _enemies[0].Position.x : 0f;
         public bool InRealtimeCombat => Phase == RoguelikeGamePhase.Running;
+        public bool IsUsingLubanConfig => _configTables != null;
         public string WeaponSummary => BuildWeaponSummary();
         public string PassiveSummary => BuildPassiveSummary();
         public string SettlementSummary =>
@@ -266,9 +268,10 @@ namespace GameLogic
                 Vector2 position = horizontalEdge
                     ? new Vector2(edgeSign * ArenaHalfWidth, Mathf.Lerp(-ArenaHalfHeight, ArenaHalfHeight, (float)_random.NextDouble()))
                     : new Vector2(Mathf.Lerp(-ArenaHalfWidth, ArenaHalfWidth, (float)_random.NextDouble()), edgeSign * ArenaHalfHeight);
-                int health = 18 + wave * 5;
-                int attack = 7 + wave * 2;
-                float speed = 1.35f + wave * 0.08f;
+                GameConfig.roguelike.RoguelikeEnemy config = PickEnemyConfig(wave);
+                int health = config != null ? Mathf.Max(1, config.MaxHealth + (wave - 1) * 5) : 18 + wave * 5;
+                int attack = config != null ? Mathf.Max(1, config.Attack + (wave - 1) * 2) : 7 + wave * 2;
+                float speed = config != null ? GetEnemyMoveSpeed(config, wave) : 1.35f + wave * 0.08f;
                 _enemies.Add(CreateEnemy(_nextEnemyId++, position, health, attack, speed));
             }
 
@@ -565,14 +568,17 @@ namespace GameLogic
 
         private void BuildLevelUpOptions()
         {
-            List<RoguelikeChoiceOption> pool = new List<RoguelikeChoiceOption>
+            List<RoguelikeChoiceOption> pool = new List<RoguelikeChoiceOption>();
+            if (!AddConfiguredRewardChoices(pool))
             {
-                new RoguelikeChoiceOption("attack", "锋利武器", "攻击力 +3", run => run.Player.Stats.AddAttack(3)),
-                new RoguelikeChoiceOption("health", "强健体魄", "最大生命 +20，并恢复 20", run => { run.Player.Stats.AddMaxHealth(20); run.Player.Heal(20); }),
-                new RoguelikeChoiceOption("speed", "轻盈步伐", "移动速度 +10%", run => MoveSpeed *= 1.1f),
-                new RoguelikeChoiceOption("range", "延伸攻击", "攻击范围 +15%", run => AttackRange *= 1.15f),
-                new RoguelikeChoiceOption("frequency", "快速攻击", "攻击频率 +12%", run => AttackInterval = Mathf.Max(0.15f, AttackInterval * 0.88f)),
-            };
+                pool.Add(new RoguelikeChoiceOption("attack", "锋利武器", "攻击力 +3", run => run.Player.Stats.AddAttack(3)));
+                pool.Add(new RoguelikeChoiceOption("health", "强健体魄", "最大生命 +20，并恢复 20", run => { run.Player.Stats.AddMaxHealth(20); run.Player.Heal(20); }));
+            }
+
+            pool.Add(new RoguelikeChoiceOption("speed", "轻盈步伐", "移动速度 +10%", run => MoveSpeed *= 1.1f));
+            pool.Add(new RoguelikeChoiceOption("range", "延伸攻击", "攻击范围 +15%", run => AttackRange *= 1.15f));
+            pool.Add(new RoguelikeChoiceOption("frequency", "快速攻击", "攻击频率 +12%", run => AttackInterval = Mathf.Max(0.15f, AttackInterval * 0.88f)));
+
             AddWeaponChoice(pool, RoguelikeWeaponType.MagicBolt);
             AddWeaponChoice(pool, RoguelikeWeaponType.SpinningBlade);
             AddPassiveChoices(pool);
@@ -583,6 +589,105 @@ namespace GameLogic
                 int index = _random.Next(pool.Count);
                 _rewardOptions.Add(pool[index]);
                 pool.RemoveAt(index);
+            }
+        }
+
+        private bool AddConfiguredRewardChoices(List<RoguelikeChoiceOption> pool)
+        {
+            GameConfig.Tables tables = TryGetConfigTables();
+            List<GameConfig.roguelike.RoguelikeChoice> choices = tables?.TbRoguelikeChoice?.DataList;
+            if (choices == null || choices.Count <= 0)
+            {
+                return false;
+            }
+
+            int added = 0;
+            for (int i = 0; i < choices.Count; i++)
+            {
+                GameConfig.roguelike.RoguelikeChoice config = choices[i];
+                if (config.PoolType != GameConfig.roguelike.EChoicePool.Reward || !TryGetChoiceText(config.Id, out string title, out string description))
+                {
+                    continue;
+                }
+
+                pool.Add(new RoguelikeChoiceOption(
+                    config.Id,
+                    title,
+                    description,
+                    run => ApplyConfigEffects(run, config.Effects),
+                    config.Cost));
+                added++;
+            }
+
+            return added > 0;
+        }
+
+        private void ApplyConfigEffects(RoguelikeRunState run, IReadOnlyList<GameConfig.roguelike.Effect> effects)
+        {
+            if (run == null || effects == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < effects.Count; i++)
+            {
+                GameConfig.roguelike.Effect effect = effects[i];
+                switch (effect.Type)
+                {
+                    case GameConfig.roguelike.EEffectType.AddAttack:
+                        run.Player.Stats.AddAttack(Mathf.RoundToInt(effect.Value));
+                        break;
+                    case GameConfig.roguelike.EEffectType.AddDefense:
+                        run.Player.Stats.AddDefense(Mathf.RoundToInt(effect.Value));
+                        break;
+                    case GameConfig.roguelike.EEffectType.Heal:
+                        run.Player.Heal(Mathf.RoundToInt(effect.Value));
+                        break;
+                    case GameConfig.roguelike.EEffectType.AddMaxHealth:
+                        run.Player.Stats.AddMaxHealth(Mathf.RoundToInt(effect.Value));
+                        break;
+                    case GameConfig.roguelike.EEffectType.AddCritChance:
+                        run.Player.Stats.AddCritChance(effect.Value);
+                        break;
+                    case GameConfig.roguelike.EEffectType.AddGold:
+                        run.AddGold(Mathf.RoundToInt(effect.Value));
+                        break;
+                }
+            }
+        }
+
+        private static bool TryGetChoiceText(string id, out string title, out string description)
+        {
+            switch (id)
+            {
+                case "atk_2":
+                    title = "锋利武器";
+                    description = "攻击力 +2";
+                    return true;
+                case "def_1":
+                    title = "护甲加固";
+                    description = "防御 +1";
+                    return true;
+                case "heal_25":
+                    title = "战地急救";
+                    description = "恢复 25 生命";
+                    return true;
+                case "max_hp_10":
+                    title = "强健体魄";
+                    description = "最大生命 +10，并恢复 10";
+                    return true;
+                case "crit_5":
+                    title = "精准打击";
+                    description = "暴击率 +5%";
+                    return true;
+                case "gold_25":
+                    title = "金币袋";
+                    description = "金币 +25";
+                    return true;
+                default:
+                    title = null;
+                    description = null;
+                    return false;
             }
         }
 
@@ -685,6 +790,66 @@ namespace GameLogic
         private int ScaleProjectileDamage(int baseDamage)
         {
             return Mathf.Max(1, Mathf.RoundToInt(baseDamage * _projectileDamageMultiplier));
+        }
+
+        private GameConfig.roguelike.RoguelikeEnemy PickEnemyConfig(int wave)
+        {
+            GameConfig.Tables tables = TryGetConfigTables();
+            List<GameConfig.roguelike.RoguelikeEnemy> enemies = tables?.TbRoguelikeEnemy?.DataList;
+            if (enemies == null || enemies.Count <= 0)
+            {
+                return null;
+            }
+
+            GameConfig.roguelike.EEnemyTier maxTier = wave >= 8
+                ? GameConfig.roguelike.EEnemyTier.Boss
+                : wave >= 4
+                    ? GameConfig.roguelike.EEnemyTier.Elite
+                    : GameConfig.roguelike.EEnemyTier.Common;
+            List<GameConfig.roguelike.RoguelikeEnemy> candidates = new List<GameConfig.roguelike.RoguelikeEnemy>();
+            for (int i = 0; i < enemies.Count; i++)
+            {
+                if ((int)enemies[i].Tier <= (int)maxTier)
+                {
+                    candidates.Add(enemies[i]);
+                }
+            }
+
+            return candidates.Count > 0 ? candidates[_random.Next(candidates.Count)] : enemies[_random.Next(enemies.Count)];
+        }
+
+        private static float GetEnemyMoveSpeed(GameConfig.roguelike.RoguelikeEnemy config, int wave)
+        {
+            float baseSpeed = config.Tier == GameConfig.roguelike.EEnemyTier.Boss
+                ? 1.18f
+                : config.Tier == GameConfig.roguelike.EEnemyTier.Elite
+                    ? 1.28f
+                    : 1.35f;
+            if (config.Id.Contains("bat"))
+            {
+                baseSpeed += 0.24f;
+            }
+
+            return baseSpeed + wave * 0.08f;
+        }
+
+        private GameConfig.Tables TryGetConfigTables()
+        {
+            if (_configTables != null)
+            {
+                return _configTables;
+            }
+
+            try
+            {
+                _configTables = global::ConfigSystem.Instance.Tables;
+            }
+            catch (Exception)
+            {
+                _configTables = null;
+            }
+
+            return _configTables;
         }
 
         private string BuildWeaponSummary()
