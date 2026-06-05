@@ -53,7 +53,7 @@ namespace GameLogic
             RoguelikeActorState player = run.Player;
             RoguelikeUIFactory.SetText(_titleText, $"2D 生存肉鸽　{game.ElapsedTime:0.0} 秒　敌人 {game.Enemies.Count}　掉落 {game.Pickups.Count}");
             RoguelikeUIFactory.SetText(_statsText, $"等级 {game.Level}　击杀 {game.KillCount}　金币 {run.Gold}　永久金币 {game.MetaGold}\n生命 {player.Health}/{player.Stats.MaxHealth}　攻击 {player.Stats.Attack}　移动 {game.MoveSpeed:0.0}");
-            RoguelikeUIFactory.SetText(_messageText, $"{game.LastMessage}\n武器 {game.WeaponSummary}\n范围 {game.AttackRange:0.0}　攻击间隔 {game.AttackInterval:0.00} 秒　经验 {game.Experience}/{game.ExperienceToNextLevel}");
+            RoguelikeUIFactory.SetText(_messageText, $"{game.LastMessage}\n武器 {game.WeaponSummary}\n被动 {game.PassiveSummary}\n范围 {game.AttackRange:0.0}　攻击间隔 {game.AttackInterval:0.00} 秒　经验 {game.Experience}/{game.ExperienceToNextLevel}");
             RoguelikeUIFactory.SetSlider(_hpSlider, player.Health, player.Stats.MaxHealth);
             RoguelikeUIFactory.SetSlider(_expSlider, game.Experience, game.ExperienceToNextLevel);
         }

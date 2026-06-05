@@ -8,6 +8,7 @@ namespace GameLogic
     public sealed class RoguelikeGame : Singleton<RoguelikeGame>
     {
         private const string MetaGoldKey = "Roguelike.MetaGold";
+        private const float BasePickupAttractRadius = 2.4f;
         public const float ArenaHalfWidth = 7.5f;
         public const float ArenaHalfHeight = 4.2f;
 
@@ -25,6 +26,8 @@ namespace GameLogic
         private int _nextEnemyId;
         private int _nextPickupId;
         private int _nextProjectileId;
+        private float _pickupAttractRadius = BasePickupAttractRadius;
+        private float _projectileDamageMultiplier = 1f;
         private bool _metaSaved;
 
         public RoguelikeRunState CurrentRun { get; private set; }
@@ -48,6 +51,7 @@ namespace GameLogic
         public float MoveSpeed { get; private set; }
         public float AttackRange { get; private set; }
         public float AttackInterval { get; private set; }
+        public float PickupAttractRadius => _pickupAttractRadius;
         public float AttackFlash { get; private set; }
         public float SkillCooldownRemaining => _attackTimer;
         public float DashCooldownRemaining => 0f;
@@ -55,6 +59,7 @@ namespace GameLogic
         public float EnemyLanePosition => _enemies.Count > 0 ? _enemies[0].Position.x : 0f;
         public bool InRealtimeCombat => Phase == RoguelikeGamePhase.Running;
         public string WeaponSummary => BuildWeaponSummary();
+        public string PassiveSummary => BuildPassiveSummary();
         public string SettlementSummary =>
             $"本局结束\n生存时间 {ElapsedTime:0.0} 秒　等级 {Level}　击杀 {KillCount}\n本局金币 {CurrentRun?.Gold ?? 0}　永久金币 {MetaGold}\n永久金币每累计 100 点，下局初始攻击 +1";
 
@@ -90,6 +95,8 @@ namespace GameLogic
             _nextEnemyId = 1;
             _nextPickupId = 1;
             _nextProjectileId = 1;
+            _pickupAttractRadius = BasePickupAttractRadius;
+            _projectileDamageMultiplier = 1f;
             _metaSaved = false;
             ElapsedTime = 0f;
             Level = 1;
@@ -363,7 +370,7 @@ namespace GameLogic
                 _attackDirection,
                 9f + weapon.Level * 0.4f,
                 AttackRange + (weapon.Level - 1) * 0.35f,
-                CurrentRun.Player.Stats.Attack + (weapon.Level - 1) * 2));
+                ScaleProjectileDamage(CurrentRun.Player.Stats.Attack + (weapon.Level - 1) * 2)));
             return true;
         }
 
@@ -375,7 +382,7 @@ namespace GameLogic
             }
 
             int bladeCount = 4 + weapon.Level;
-            int damage = Mathf.Max(1, Mathf.RoundToInt(CurrentRun.Player.Stats.Attack * 0.55f) + weapon.Level);
+            int damage = ScaleProjectileDamage(Mathf.Max(1, Mathf.RoundToInt(CurrentRun.Player.Stats.Attack * 0.55f) + weapon.Level));
             float range = 2.2f + weapon.Level * 0.12f;
             float angleOffset = (float)_random.NextDouble() * 360f;
             for (int i = 0; i < bladeCount; i++)
@@ -448,7 +455,7 @@ namespace GameLogic
                 RoguelikeSurvivalPickup pickup = _pickups[i];
                 Vector2 offset = PlayerPosition - pickup.Position;
                 float distance = offset.magnitude;
-                if (distance < 2.4f && distance > 0.05f)
+                if (distance < _pickupAttractRadius && distance > 0.05f)
                 {
                     pickup.Position += offset.normalized * 7f * dt;
                 }
@@ -499,6 +506,7 @@ namespace GameLogic
             };
             AddWeaponChoice(pool, RoguelikeWeaponType.MagicBolt);
             AddWeaponChoice(pool, RoguelikeWeaponType.SpinningBlade);
+            AddPassiveChoices(pool);
 
             _rewardOptions.Clear();
             while (_rewardOptions.Count < 3)
@@ -530,6 +538,30 @@ namespace GameLogic
             {
                 pool.Add(new RoguelikeChoiceOption("weapon_spinning_blade_upgrade", "旋刃升级", $"旋刃升至 {weapon.Level + 1} 级", run => AddOrUpgradeWeapon(type)));
             }
+        }
+
+        private void AddPassiveChoices(List<RoguelikeChoiceOption> pool)
+        {
+            pool.Add(new RoguelikeChoiceOption(
+                "passive_magnet_core",
+                "磁力核心",
+                "拾取吸附范围 +0.8",
+                run => AddPassive(run, "passive_magnet_core", "磁力核心", "拾取吸附范围提升。", _ => _pickupAttractRadius += 0.8f)));
+            pool.Add(new RoguelikeChoiceOption(
+                "passive_focus_charm",
+                "聚能护符",
+                "所有投射物伤害 +12%",
+                run => AddPassive(run, "passive_focus_charm", "聚能护符", "投射物伤害提升。", _ => _projectileDamageMultiplier += 0.12f)));
+            pool.Add(new RoguelikeChoiceOption(
+                "passive_wind_boots",
+                "疾风靴",
+                "移动速度 +8%",
+                run => AddPassive(run, "passive_wind_boots", "疾风靴", "移动速度提升。", _ => MoveSpeed *= 1.08f)));
+        }
+
+        private void AddPassive(RoguelikeRunState run, string id, string displayName, string description, Action<RoguelikeRunState> apply)
+        {
+            run?.AddRelic(new RoguelikeRelicTemplate(id, displayName, description, apply));
         }
 
         private void AddOrUpgradeWeapon(RoguelikeWeaponType type)
@@ -581,6 +613,11 @@ namespace GameLogic
             return weapon == null ? 0f : weapon.CooldownRemaining;
         }
 
+        private int ScaleProjectileDamage(int baseDamage)
+        {
+            return Mathf.Max(1, Mathf.RoundToInt(baseDamage * _projectileDamageMultiplier));
+        }
+
         private string BuildWeaponSummary()
         {
             if (_weapons.Count <= 0)
@@ -593,6 +630,34 @@ namespace GameLogic
             {
                 RoguelikeSurvivalWeapon weapon = _weapons[i];
                 names.Add($"{weapon.DisplayName} Lv.{weapon.Level}");
+            }
+
+            return string.Join(" / ", names);
+        }
+
+        private string BuildPassiveSummary()
+        {
+            if (CurrentRun == null || CurrentRun.Relics.Count <= 0)
+            {
+                return "无被动";
+            }
+
+            Dictionary<string, int> counts = new Dictionary<string, int>();
+            for (int i = 0; i < CurrentRun.Relics.Count; i++)
+            {
+                RoguelikeRelicTemplate relic = CurrentRun.Relics[i];
+                if (!counts.ContainsKey(relic.DisplayName))
+                {
+                    counts.Add(relic.DisplayName, 0);
+                }
+
+                counts[relic.DisplayName]++;
+            }
+
+            List<string> names = new List<string>(counts.Count);
+            foreach (KeyValuePair<string, int> pair in counts)
+            {
+                names.Add(pair.Value > 1 ? $"{pair.Key} x{pair.Value}" : pair.Key);
             }
 
             return string.Join(" / ", names);
