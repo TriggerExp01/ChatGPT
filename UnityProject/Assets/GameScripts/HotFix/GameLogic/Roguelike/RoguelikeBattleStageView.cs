@@ -9,18 +9,27 @@ namespace GameLogic
         private readonly Dictionary<int, Transform> _enemyViews = new Dictionary<int, Transform>();
         private readonly Dictionary<int, Transform> _pickupViews = new Dictionary<int, Transform>();
         private readonly Dictionary<int, Transform> _projectileViews = new Dictionary<int, Transform>();
+        private readonly Stack<Transform> _enemyViewPool = new Stack<Transform>();
+        private readonly Stack<Transform> _pickupViewPool = new Stack<Transform>();
+        private readonly Stack<Transform> _projectileViewPool = new Stack<Transform>();
         private Transform _player;
         private Transform _attackView;
         private Camera _camera;
         private RoguelikePlayerMotor _playerMotor;
         private static Sprite _whiteSprite;
 
+        public int EnemyViewPoolCount => _enemyViewPool.Count;
+        public int PickupViewPoolCount => _pickupViewPool.Count;
+        public int ProjectileViewPoolCount => _projectileViewPool.Count;
+        public int ViewReuseCount { get; private set; }
+
         public static RoguelikeBattleStageView Ensure()
         {
             GameObject existing = GameObject.Find(StageName);
             if (existing != null)
             {
-                return existing.GetComponent<RoguelikeBattleStageView>() ?? existing.AddComponent<RoguelikeBattleStageView>();
+                RoguelikeBattleStageView existingView = existing.GetComponent<RoguelikeBattleStageView>();
+                return existingView != null ? existingView : existing.AddComponent<RoguelikeBattleStageView>();
             }
 
             GameObject root = new GameObject(StageName);
@@ -65,6 +74,9 @@ namespace GameLogic
             _enemyViews.Clear();
             _pickupViews.Clear();
             _projectileViews.Clear();
+            _enemyViewPool.Clear();
+            _pickupViewPool.Clear();
+            _projectileViewPool.Clear();
             if (_camera == null)
             {
                 GameObject cameraObject = new GameObject("MainCamera");
@@ -79,8 +91,11 @@ namespace GameLogic
             _camera.orthographicSize = 5.4f;
             _camera.clearFlags = CameraClearFlags.SolidColor;
             _camera.backgroundColor = new Color(0.025f, 0.045f, 0.065f, 1f);
-            RoguelikeCameraFollow cameraFollow = _camera.GetComponent<RoguelikeCameraFollow>() ??
-                                                 _camera.gameObject.AddComponent<RoguelikeCameraFollow>();
+            RoguelikeCameraFollow cameraFollow = _camera.GetComponent<RoguelikeCameraFollow>();
+            if (cameraFollow == null)
+            {
+                cameraFollow = _camera.gameObject.AddComponent<RoguelikeCameraFollow>();
+            }
 
             CreateSprite("地图底色", Vector3.zero, new Vector3(16f, 9f, 1f), new Color(0.08f, 0.14f, 0.15f, 1f), 0);
             for (int x = -7; x <= 7; x += 2)
@@ -112,12 +127,7 @@ namespace GameLogic
                 active.Add(enemy.Id);
                 if (!_enemyViews.TryGetValue(enemy.Id, out Transform view))
                 {
-                    view = CreateActor($"敌人_{enemy.Id}", enemy.Position, new Color(0.95f, 0.26f, 0.20f, 1f), 9);
-                    Rigidbody2D body = view.gameObject.AddComponent<Rigidbody2D>();
-                    body.bodyType = RigidbodyType2D.Kinematic;
-                    body.interpolation = RigidbodyInterpolation2D.Interpolate;
-                    view.gameObject.AddComponent<CircleCollider2D>().isTrigger = true;
-                    view.gameObject.AddComponent<RoguelikeEnemyMotor>().SetTarget(enemy.Position);
+                    view = SpawnEnemyView($"敌人_{enemy.Id}", enemy.Position);
                     _enemyViews.Add(enemy.Id, view);
                 }
 
@@ -133,7 +143,7 @@ namespace GameLogic
             {
                 if (!active.Contains(pair.Key))
                 {
-                    Destroy(pair.Value.gameObject);
+                    RecycleView(pair.Value, _enemyViewPool);
                     removed.Add(pair.Key);
                 }
             }
@@ -156,7 +166,7 @@ namespace GameLogic
                     Color color = pickup.Type == RoguelikePickupType.Experience
                         ? new Color(0.25f, 0.72f, 1f, 1f)
                         : new Color(1f, 0.78f, 0.16f, 1f);
-                    view = CreateSprite($"掉落_{pickup.Id}", pickup.Position, new Vector3(0.22f, 0.22f, 1f), color, 7);
+                    view = SpawnSpriteView(_pickupViewPool, $"掉落_{pickup.Id}", pickup.Position, new Vector3(0.22f, 0.22f, 1f), color, 7);
                     view.localRotation = Quaternion.Euler(0f, 0f, 45f);
                     _pickupViews.Add(pickup.Id, view);
                 }
@@ -169,7 +179,7 @@ namespace GameLogic
             {
                 if (!active.Contains(pair.Key))
                 {
-                    Destroy(pair.Value.gameObject);
+                    RecycleView(pair.Value, _pickupViewPool);
                     removed.Add(pair.Key);
                 }
             }
@@ -195,7 +205,7 @@ namespace GameLogic
                     Color color = projectile.WeaponType == RoguelikeWeaponType.SpinningBlade
                         ? new Color(0.72f, 0.95f, 1f, 1f)
                         : new Color(1f, 0.82f, 0.24f, 1f);
-                    view = CreateSprite($"投射物_{projectile.Id}", projectile.Position, scale, color, 11);
+                    view = SpawnSpriteView(_projectileViewPool, $"投射物_{projectile.Id}", projectile.Position, scale, color, 11);
                     _projectileViews.Add(projectile.Id, view);
                 }
 
@@ -209,7 +219,7 @@ namespace GameLogic
             {
                 if (!active.Contains(pair.Key))
                 {
-                    Destroy(pair.Value.gameObject);
+                    RecycleView(pair.Value, _projectileViewPool);
                     removed.Add(pair.Key);
                 }
             }
@@ -227,6 +237,115 @@ namespace GameLogic
             CreateSprite("眼睛左", new Vector3(-0.10f, 0.08f, -0.2f), new Vector3(0.06f, 0.06f, 1f), Color.black, order + 2, body);
             CreateSprite("眼睛右", new Vector3(0.10f, 0.08f, -0.2f), new Vector3(0.06f, 0.06f, 1f), Color.black, order + 2, body);
             return body;
+        }
+
+        private Transform SpawnEnemyView(string name, Vector3 position)
+        {
+            Transform view = TakeFromPool(_enemyViewPool);
+            if (view == null)
+            {
+                view = CreateActor(name, position, new Color(0.95f, 0.26f, 0.20f, 1f), 9);
+            }
+            else
+            {
+                PreparePooledView(view, name, position, Vector3.one, Quaternion.identity);
+                PrepareSpriteRenderer(view, new Color(0.95f, 0.26f, 0.20f, 1f), 9);
+            }
+
+            Rigidbody2D body = view.GetComponent<Rigidbody2D>();
+            if (body == null)
+            {
+                body = view.gameObject.AddComponent<Rigidbody2D>();
+            }
+
+            body.bodyType = RigidbodyType2D.Kinematic;
+            body.gravityScale = 0f;
+            body.freezeRotation = true;
+            body.interpolation = RigidbodyInterpolation2D.Interpolate;
+            body.position = (Vector2)position;
+
+            CircleCollider2D collider = view.GetComponent<CircleCollider2D>();
+            if (collider == null)
+            {
+                collider = view.gameObject.AddComponent<CircleCollider2D>();
+            }
+
+            collider.radius = 0.5f;
+            collider.isTrigger = true;
+
+            RoguelikeEnemyMotor motor = view.GetComponent<RoguelikeEnemyMotor>();
+            if (motor == null)
+            {
+                motor = view.gameObject.AddComponent<RoguelikeEnemyMotor>();
+            }
+
+            motor.SetTarget((Vector2)position);
+            return view;
+        }
+
+        private Transform SpawnSpriteView(Stack<Transform> pool, string name, Vector3 position, Vector3 scale, Color color, int order)
+        {
+            Transform view = TakeFromPool(pool);
+            if (view == null)
+            {
+                return CreateSprite(name, position, scale, color, order);
+            }
+
+            PreparePooledView(view, name, position, scale, Quaternion.identity);
+            PrepareSpriteRenderer(view, color, order);
+            return view;
+        }
+
+        private Transform TakeFromPool(Stack<Transform> pool)
+        {
+            while (pool.Count > 0)
+            {
+                Transform view = pool.Pop();
+                if (view == null)
+                {
+                    continue;
+                }
+
+                ViewReuseCount++;
+                return view;
+            }
+
+            return null;
+        }
+
+        private void RecycleView(Transform view, Stack<Transform> pool)
+        {
+            if (view == null)
+            {
+                return;
+            }
+
+            view.gameObject.SetActive(false);
+            view.SetParent(transform, false);
+            pool.Push(view);
+        }
+
+        private void PreparePooledView(Transform view, string name, Vector3 position, Vector3 scale, Quaternion rotation)
+        {
+            view.name = name;
+            view.SetParent(transform, false);
+            view.localPosition = position;
+            view.localRotation = rotation;
+            view.localScale = scale;
+            view.gameObject.SetActive(true);
+        }
+
+        private static void PrepareSpriteRenderer(Transform view, Color color, int order)
+        {
+            SpriteRenderer renderer = view.GetComponent<SpriteRenderer>();
+            if (renderer == null)
+            {
+                renderer = view.gameObject.AddComponent<SpriteRenderer>();
+            }
+
+            renderer.sprite = GetWhiteSprite();
+            renderer.color = color;
+            renderer.sortingOrder = order;
         }
 
         private Transform CreateSprite(string name, Vector3 position, Vector3 scale, Color color, int order, Transform parent = null)
@@ -344,16 +463,44 @@ namespace GameLogic
         public void SetTarget(Vector2 target)
         {
             _target = target;
-            if (_body == null)
+            Rigidbody2D body = GetBody();
+            if (body != null)
             {
-                _body = GetComponent<Rigidbody2D>();
-                _body.position = target;
+                body.position = target;
             }
+            else
+            {
+                transform.localPosition = target;
+            }
+        }
+
+        private void Awake()
+        {
+            GetBody();
         }
 
         private void FixedUpdate()
         {
-            _body.MovePosition(_target);
+            Rigidbody2D body = GetBody();
+            if (body != null)
+            {
+                body.MovePosition(_target);
+            }
+            else
+            {
+                transform.localPosition = _target;
+            }
+        }
+
+        private Rigidbody2D GetBody()
+        {
+            if (_body != null)
+            {
+                return _body;
+            }
+
+            _body = GetComponent<Rigidbody2D>();
+            return _body;
         }
     }
 }

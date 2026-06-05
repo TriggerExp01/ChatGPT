@@ -83,9 +83,7 @@ namespace GameLogic
             PlayerPosition = Vector2.zero;
             _moveInput = Vector2.zero;
             _attackDirection = Vector2.right;
-            _enemies.Clear();
-            _pickups.Clear();
-            _projectiles.Clear();
+            ReleaseSurvivalObjects();
             _weapons.Clear();
             _weapons.Add(new RoguelikeSurvivalWeapon(RoguelikeWeaponType.MagicBolt, "追踪魔弹", 1));
             _rewardOptions.Clear();
@@ -271,7 +269,7 @@ namespace GameLogic
                 int health = 18 + wave * 5;
                 int attack = 7 + wave * 2;
                 float speed = 1.35f + wave * 0.08f;
-                _enemies.Add(new RoguelikeSurvivalEnemy(_nextEnemyId++, position, health, attack, speed));
+                _enemies.Add(CreateEnemy(_nextEnemyId++, position, health, attack, speed));
             }
 
             _spawnTimer = Mathf.Max(0.35f, 1.35f - ElapsedTime * 0.006f);
@@ -301,8 +299,10 @@ namespace GameLogic
 
                 if (!enemy.IsAlive)
                 {
+                    Vector2 killedPosition = enemy.Position;
                     _enemies.RemoveAt(i);
-                    OnEnemyKilled(enemy.Position);
+                    ReleaseEnemy(enemy);
+                    OnEnemyKilled(killedPosition);
                 }
             }
         }
@@ -363,7 +363,7 @@ namespace GameLogic
 
             AttackFlash = 0.12f;
             _attackDirection = (target.Position - PlayerPosition).normalized;
-            _projectiles.Add(new RoguelikeSurvivalProjectile(
+            _projectiles.Add(CreateProjectile(
                 _nextProjectileId++,
                 RoguelikeWeaponType.MagicBolt,
                 PlayerPosition,
@@ -389,7 +389,7 @@ namespace GameLogic
             {
                 float angle = angleOffset + 360f * i / bladeCount;
                 Vector2 direction = new Vector2(Mathf.Cos(angle * Mathf.Deg2Rad), Mathf.Sin(angle * Mathf.Deg2Rad));
-                _projectiles.Add(new RoguelikeSurvivalProjectile(
+                _projectiles.Add(CreateProjectile(
                     _nextProjectileId++,
                     RoguelikeWeaponType.SpinningBlade,
                     PlayerPosition,
@@ -434,6 +434,7 @@ namespace GameLogic
                 if (hit || projectile.RemainingDistance <= 0f)
                 {
                     _projectiles.RemoveAt(i);
+                    ReleaseProjectile(projectile);
                 }
             }
         }
@@ -441,10 +442,10 @@ namespace GameLogic
         private void OnEnemyKilled(Vector2 position)
         {
             KillCount++;
-            _pickups.Add(new RoguelikeSurvivalPickup(_nextPickupId++, RoguelikePickupType.Experience, position, 4));
+            _pickups.Add(CreatePickup(_nextPickupId++, RoguelikePickupType.Experience, position, 4));
             if (_random.NextDouble() < 0.35)
             {
-                _pickups.Add(new RoguelikeSurvivalPickup(_nextPickupId++, RoguelikePickupType.Gold, position + Vector2.right * 0.18f, 2));
+                _pickups.Add(CreatePickup(_nextPickupId++, RoguelikePickupType.Gold, position + Vector2.right * 0.18f, 2));
             }
         }
 
@@ -475,6 +476,74 @@ namespace GameLogic
                 }
 
                 _pickups.RemoveAt(i);
+                ReleasePickup(pickup);
+            }
+        }
+
+        private static RoguelikeSurvivalEnemy CreateEnemy(int id, Vector2 position, int health, int attack, float moveSpeed)
+        {
+            RoguelikeSurvivalEnemy enemy = MemoryPool.Acquire<RoguelikeSurvivalEnemy>();
+            enemy.Init(id, position, health, attack, moveSpeed);
+            return enemy;
+        }
+
+        private static RoguelikeSurvivalPickup CreatePickup(int id, RoguelikePickupType type, Vector2 position, int amount)
+        {
+            RoguelikeSurvivalPickup pickup = MemoryPool.Acquire<RoguelikeSurvivalPickup>();
+            pickup.Init(id, type, position, amount);
+            return pickup;
+        }
+
+        private static RoguelikeSurvivalProjectile CreateProjectile(int id, RoguelikeWeaponType weaponType, Vector2 position, Vector2 direction, float speed, float distance, int damage)
+        {
+            RoguelikeSurvivalProjectile projectile = MemoryPool.Acquire<RoguelikeSurvivalProjectile>();
+            projectile.Init(id, weaponType, position, direction, speed, distance, damage);
+            return projectile;
+        }
+
+        private void ReleaseSurvivalObjects()
+        {
+            for (int i = 0; i < _enemies.Count; i++)
+            {
+                ReleaseEnemy(_enemies[i]);
+            }
+
+            for (int i = 0; i < _pickups.Count; i++)
+            {
+                ReleasePickup(_pickups[i]);
+            }
+
+            for (int i = 0; i < _projectiles.Count; i++)
+            {
+                ReleaseProjectile(_projectiles[i]);
+            }
+
+            _enemies.Clear();
+            _pickups.Clear();
+            _projectiles.Clear();
+        }
+
+        private static void ReleaseEnemy(RoguelikeSurvivalEnemy enemy)
+        {
+            if (enemy != null && enemy.IsPoolManaged)
+            {
+                MemoryPool.Release(enemy);
+            }
+        }
+
+        private static void ReleasePickup(RoguelikeSurvivalPickup pickup)
+        {
+            if (pickup != null && pickup.IsPoolManaged)
+            {
+                MemoryPool.Release(pickup);
+            }
+        }
+
+        private static void ReleaseProjectile(RoguelikeSurvivalProjectile projectile)
+        {
+            if (projectile != null && projectile.IsPoolManaged)
+            {
+                MemoryPool.Release(projectile);
             }
         }
 

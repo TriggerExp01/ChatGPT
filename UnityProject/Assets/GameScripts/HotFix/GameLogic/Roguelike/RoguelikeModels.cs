@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using TEngine;
 using UnityEngine;
 
 namespace GameLogic
@@ -365,9 +366,9 @@ namespace GameLogic
         }
     }
 
-    public sealed class RoguelikeSurvivalEnemy
+    public sealed class RoguelikeSurvivalEnemy : IMemory
     {
-        public int Id { get; }
+        public int Id { get; private set; }
         public Vector2 Position;
         public int Health;
         public int MaxHealth;
@@ -375,10 +376,20 @@ namespace GameLogic
         public float MoveSpeed;
         public float AttackCooldown;
         public float HitFlash;
+        public bool IsPoolManaged { get; private set; }
 
         public bool IsAlive => Health > 0;
 
+        public RoguelikeSurvivalEnemy()
+        {
+        }
+
         public RoguelikeSurvivalEnemy(int id, Vector2 position, int health, int attack, float moveSpeed)
+        {
+            Init(id, position, health, attack, moveSpeed, false);
+        }
+
+        public void Init(int id, Vector2 position, int health, int attack, float moveSpeed, bool poolManaged = true)
         {
             Id = id;
             Position = position;
@@ -386,6 +397,22 @@ namespace GameLogic
             MaxHealth = health;
             Attack = attack;
             MoveSpeed = moveSpeed;
+            AttackCooldown = 0f;
+            HitFlash = 0f;
+            IsPoolManaged = poolManaged;
+        }
+
+        public void Clear()
+        {
+            Id = 0;
+            Position = Vector2.zero;
+            Health = 0;
+            MaxHealth = 0;
+            Attack = 0;
+            MoveSpeed = 0f;
+            AttackCooldown = 0f;
+            HitFlash = 0f;
+            IsPoolManaged = false;
         }
     }
 
@@ -421,33 +448,63 @@ namespace GameLogic
         }
     }
 
-    public sealed class RoguelikeSurvivalPickup
+    public sealed class RoguelikeSurvivalPickup : IMemory
     {
-        public int Id { get; }
-        public RoguelikePickupType Type { get; }
+        public int Id { get; private set; }
+        public RoguelikePickupType Type { get; private set; }
         public Vector2 Position;
-        public int Amount { get; }
+        public int Amount { get; private set; }
+        public bool IsPoolManaged { get; private set; }
+
+        public RoguelikeSurvivalPickup()
+        {
+        }
 
         public RoguelikeSurvivalPickup(int id, RoguelikePickupType type, Vector2 position, int amount)
+        {
+            Init(id, type, position, amount, false);
+        }
+
+        public void Init(int id, RoguelikePickupType type, Vector2 position, int amount, bool poolManaged = true)
         {
             Id = id;
             Type = type;
             Position = position;
             Amount = amount;
+            IsPoolManaged = poolManaged;
+        }
+
+        public void Clear()
+        {
+            Id = 0;
+            Type = RoguelikePickupType.Experience;
+            Position = Vector2.zero;
+            Amount = 0;
+            IsPoolManaged = false;
         }
     }
 
-    public sealed class RoguelikeSurvivalProjectile
+    public sealed class RoguelikeSurvivalProjectile : IMemory
     {
-        public int Id { get; }
-        public RoguelikeWeaponType WeaponType { get; }
+        public int Id { get; private set; }
+        public RoguelikeWeaponType WeaponType { get; private set; }
         public Vector2 Position;
         public Vector2 Direction;
         public float Speed;
         public float RemainingDistance;
         public int Damage;
+        public bool IsPoolManaged { get; private set; }
+
+        public RoguelikeSurvivalProjectile()
+        {
+        }
 
         public RoguelikeSurvivalProjectile(int id, RoguelikeWeaponType weaponType, Vector2 position, Vector2 direction, float speed, float distance, int damage)
+        {
+            Init(id, weaponType, position, direction, speed, distance, damage, false);
+        }
+
+        public void Init(int id, RoguelikeWeaponType weaponType, Vector2 position, Vector2 direction, float speed, float distance, int damage, bool poolManaged = true)
         {
             Id = id;
             WeaponType = weaponType;
@@ -456,6 +513,19 @@ namespace GameLogic
             Speed = speed;
             RemainingDistance = distance;
             Damage = damage;
+            IsPoolManaged = poolManaged;
+        }
+
+        public void Clear()
+        {
+            Id = 0;
+            WeaponType = RoguelikeWeaponType.MagicBolt;
+            Position = Vector2.zero;
+            Direction = Vector2.zero;
+            Speed = 0f;
+            RemainingDistance = 0f;
+            Damage = 0;
+            IsPoolManaged = false;
         }
     }
 }
