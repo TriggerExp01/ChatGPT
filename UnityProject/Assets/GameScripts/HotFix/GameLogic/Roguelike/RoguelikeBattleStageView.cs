@@ -14,7 +14,9 @@ namespace GameLogic
         private readonly Stack<Transform> _projectileViewPool = new Stack<Transform>();
         private Transform _player;
         private Transform _attackView;
+        private Transform _pickupPulseView;
         private Camera _camera;
+        private RoguelikeCameraFollow _cameraFollow;
         private RoguelikePlayerMotor _playerMotor;
         private static Sprite _whiteSprite;
 
@@ -22,6 +24,8 @@ namespace GameLogic
         public int PickupViewPoolCount => _pickupViewPool.Count;
         public int ProjectileViewPoolCount => _projectileViewPool.Count;
         public int ViewReuseCount { get; private set; }
+        public bool PickupFeedbackVisible => _pickupPulseView != null && _pickupPulseView.gameObject.activeSelf;
+        public float LastCameraShakeMagnitude => _cameraFollow != null ? _cameraFollow.LastShakeMagnitude : 0f;
 
         public static RoguelikeBattleStageView Ensure()
         {
@@ -57,6 +61,7 @@ namespace GameLogic
             _attackView.localRotation = Quaternion.Euler(0f, 0f, angle);
             _attackView.localScale = new Vector3(0.9f, 0.25f, 1f);
             _attackView.gameObject.SetActive(game.AttackFlash > 0f);
+            UpdateFeedbackViews(game);
             SyncEnemies(game.Enemies);
             SyncProjectiles(game.Projectiles);
             SyncPickups(game.Pickups);
@@ -91,10 +96,10 @@ namespace GameLogic
             _camera.orthographicSize = 5.4f;
             _camera.clearFlags = CameraClearFlags.SolidColor;
             _camera.backgroundColor = new Color(0.025f, 0.045f, 0.065f, 1f);
-            RoguelikeCameraFollow cameraFollow = _camera.GetComponent<RoguelikeCameraFollow>();
-            if (cameraFollow == null)
+            _cameraFollow = _camera.GetComponent<RoguelikeCameraFollow>();
+            if (_cameraFollow == null)
             {
-                cameraFollow = _camera.gameObject.AddComponent<RoguelikeCameraFollow>();
+                _cameraFollow = _camera.gameObject.AddComponent<RoguelikeCameraFollow>();
             }
 
             CreateSprite("地图底色", Vector3.zero, new Vector3(16f, 9f, 1f), new Color(0.08f, 0.14f, 0.15f, 1f), 0);
@@ -107,6 +112,8 @@ namespace GameLogic
             }
 
             _attackView = CreateSprite("攻击范围", Vector3.zero, Vector3.one, new Color(1f, 0.82f, 0.24f, 0.45f), 8);
+            _pickupPulseView = CreateSprite("拾取反馈", Vector3.zero, Vector3.one, new Color(0.35f, 0.95f, 1f, 0f), 12);
+            _pickupPulseView.gameObject.SetActive(false);
             _player = CreateActor("玩家", Vector3.zero, new Color(0.16f, 0.68f, 1f, 1f), 10);
             Rigidbody2D body = _player.gameObject.AddComponent<Rigidbody2D>();
             body.gravityScale = 0f;
@@ -115,7 +122,29 @@ namespace GameLogic
             _player.gameObject.AddComponent<CircleCollider2D>().radius = 0.48f;
             _playerMotor = _player.gameObject.AddComponent<RoguelikePlayerMotor>();
             _playerMotor.SetGame(RoguelikeGame.Instance);
-            cameraFollow.SetTarget(_player);
+            _cameraFollow.SetTarget(_player);
+        }
+
+        private void UpdateFeedbackViews(RoguelikeGame game)
+        {
+            if (_pickupPulseView != null)
+            {
+                bool visible = game.PickupFlash > 0f;
+                _pickupPulseView.gameObject.SetActive(visible);
+                if (visible)
+                {
+                    float progress = 1f - Mathf.Clamp01(game.PickupFlash / 0.14f);
+                    _pickupPulseView.localPosition = _player.localPosition;
+                    _pickupPulseView.localScale = Vector3.one * Mathf.Lerp(0.75f, 1.75f, progress);
+                    SpriteRenderer renderer = _pickupPulseView.GetComponent<SpriteRenderer>();
+                    renderer.color = new Color(0.35f, 0.95f, 1f, Mathf.Lerp(0.45f, 0.05f, progress));
+                }
+            }
+
+            if (_cameraFollow != null)
+            {
+                _cameraFollow.SetShake(game.CameraShake);
+            }
         }
 
         private void SyncEnemies(IReadOnlyList<RoguelikeSurvivalEnemy> enemies)
@@ -437,10 +466,19 @@ namespace GameLogic
     public sealed class RoguelikeCameraFollow : MonoBehaviour
     {
         private Transform _target;
+        private float _shake;
+
+        public float LastShakeMagnitude { get; private set; }
 
         public void SetTarget(Transform target)
         {
             _target = target;
+        }
+
+        public void SetShake(float shake)
+        {
+            _shake = shake;
+            LastShakeMagnitude = CalculateShakeMagnitude(_shake);
         }
 
         private void LateUpdate()
@@ -451,7 +489,19 @@ namespace GameLogic
             }
 
             Vector3 targetPosition = new Vector3(_target.position.x, _target.position.y, -10f);
+            LastShakeMagnitude = CalculateShakeMagnitude(_shake);
+            if (LastShakeMagnitude > 0f)
+            {
+                float phase = Time.time * 55f;
+                targetPosition += new Vector3(Mathf.Sin(phase), Mathf.Cos(phase * 1.3f), 0f) * LastShakeMagnitude;
+            }
+
             transform.position = Vector3.Lerp(transform.position, targetPosition, 10f * Time.deltaTime);
+        }
+
+        private static float CalculateShakeMagnitude(float shake)
+        {
+            return Mathf.Clamp01(shake / 0.16f) * 0.08f;
         }
     }
 

@@ -54,6 +54,8 @@ namespace GameLogic
         public float AttackInterval { get; private set; }
         public float PickupAttractRadius => _pickupAttractRadius;
         public float AttackFlash { get; private set; }
+        public float PickupFlash { get; private set; }
+        public float CameraShake { get; private set; }
         public float SkillCooldownRemaining => _attackTimer;
         public float DashCooldownRemaining => 0f;
         public float PlayerLanePosition => PlayerPosition.x;
@@ -107,6 +109,8 @@ namespace GameLogic
             AttackRange = 5.5f;
             AttackInterval = 0.55f;
             AttackFlash = 0f;
+            PickupFlash = 0f;
+            CameraShake = 0f;
         }
 
         public RoguelikeCombatResult Tick(float deltaTime)
@@ -126,6 +130,8 @@ namespace GameLogic
             _attackTimer = Mathf.Max(0f, _attackTimer - dt);
             _hurtTimer = Mathf.Max(0f, _hurtTimer - dt);
             AttackFlash = Mathf.Max(0f, AttackFlash - dt);
+            PickupFlash = Mathf.Max(0f, PickupFlash - dt);
+            CameraShake = Mathf.Max(0f, CameraShake - dt);
 
             UpdateSpawning(dt);
             UpdateEnemies(dt);
@@ -427,6 +433,7 @@ namespace GameLogic
 
                     enemy.Health -= projectile.Damage;
                     enemy.HitFlash = 0.12f;
+                    TriggerCameraShake(0.08f);
                     CurrentRun.RecordDamageDealt(projectile.Damage);
                     string weaponName = projectile.WeaponType == RoguelikeWeaponType.SpinningBlade ? "旋刃" : "魔弹";
                     LastMessage = $"{weaponName}命中，造成 {projectile.Damage} 点伤害。";
@@ -450,6 +457,8 @@ namespace GameLogic
             {
                 _pickups.Add(CreatePickup(_nextPickupId++, RoguelikePickupType.Gold, position + Vector2.right * 0.18f, 2));
             }
+
+            TriggerCameraShake(0.12f);
         }
 
         private void UpdatePickups(float dt)
@@ -478,9 +487,16 @@ namespace GameLogic
                     CurrentRun.AddGold(pickup.Amount);
                 }
 
+                PickupFlash = 0.14f;
+                TriggerCameraShake(0.04f);
                 _pickups.RemoveAt(i);
                 ReleasePickup(pickup);
             }
+        }
+
+        private void TriggerCameraShake(float duration)
+        {
+            CameraShake = Mathf.Max(CameraShake, duration);
         }
 
         private static RoguelikeSurvivalEnemy CreateEnemy(int id, Vector2 position, int health, int attack, float moveSpeed)
