@@ -122,7 +122,16 @@ git diff --check
 - 控制台无新增 Error。
 - Play Mode 验证当前阶段核心行为。
 
-如果无法实际执行 Unity Play Mode，必须在最终回复中明确说明，并给出手动验收步骤。
+Unity 验收优先级：
+
+1. 优先使用 Unity MCP 读取 `editor/state`、检查控制台并执行 Play Mode 验收。
+2. Unity MCP 必须是真实可用连接：仅 `codex mcp list` 显示 enabled 不算通过；必须至少能读取 `mcpforunity://editor/state`，并且关键操作工具如 `read_console`、`manage_editor`、`find_gameobjects` 或 `manage_camera` 能实际执行。
+3. 如果当前 Codex 线程没有 Unity MCP 工具，必须先尝试按 `Doc/Unity MCP 在 Codex 中连接固化说明.md` 恢复或连接 MCP。
+4. 如果 Unity MCP 只能读取资源但操作型工具持续返回取消或不可用，视为 MCP 未满足验收条件，必须停止阶段推进并报告卡点。
+5. 在 Unity MCP 未恢复前，不使用自建 Editor 验收器、batchmode、桌面按键模拟等方式替代项目既定验收。
+6. 如果仍无法实际执行 Unity Play Mode，必须在最终回复中明确说明失败原因，并停止进入下一阶段。
+
+每个阶段完成代码修改并通过验收后，必须执行一次 `git commit`，提交信息使用中文并说明阶段编号与核心改动。
 
 ## 9. 文档维护
 
