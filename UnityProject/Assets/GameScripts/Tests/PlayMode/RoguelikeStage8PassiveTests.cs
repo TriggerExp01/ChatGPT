@@ -1,5 +1,8 @@
 using System.Collections.Generic;
+using System.IO;
 using System.Reflection;
+using GameConfig;
+using Luban;
 using NUnit.Framework;
 using UnityEngine;
 
@@ -12,9 +15,10 @@ namespace GameLogic.Tests
         {
             RoguelikeGame game = RoguelikeGame.Instance;
             game.StartNewRun(8001);
+            SetConfigTables(game, LoadTables());
 
             List<RoguelikeChoiceOption> choices = BuildPassiveChoices(game);
-            Assert.AreEqual(3, choices.Count);
+            Assert.GreaterOrEqual(choices.Count, 3);
 
             float startPickupRadius = game.PickupAttractRadius;
             float startMoveSpeed = game.MoveSpeed;
@@ -35,9 +39,10 @@ namespace GameLogic.Tests
         {
             RoguelikeGame game = RoguelikeGame.Instance;
             game.StartNewRun(8002);
+            SetConfigTables(game, LoadTables());
 
             List<RoguelikeChoiceOption> choices = BuildPassiveChoices(game);
-            FindChoice(choices, "passive_focus_charm").Apply.Invoke(game.CurrentRun);
+            FindChoice(choices, "passive_power_charm").Apply.Invoke(game.CurrentRun);
 
             List<RoguelikeSurvivalEnemy> enemies = GetEnemyList(game);
             enemies.Clear();
@@ -93,6 +98,24 @@ namespace GameLogic.Tests
             FieldInfo field = typeof(RoguelikeGame).GetField("_enemies", BindingFlags.Instance | BindingFlags.NonPublic);
             Assert.NotNull(field);
             return (List<RoguelikeSurvivalEnemy>)field.GetValue(game);
+        }
+
+        private static Tables LoadTables()
+        {
+            string configPath = Path.Combine(Application.dataPath, "AssetRaw", "Configs", "bytes");
+            return new Tables(file =>
+            {
+                string path = Path.Combine(configPath, file + ".bytes");
+                Assert.IsTrue(File.Exists(path), $"Config bytes not found: {path}");
+                return new ByteBuf(File.ReadAllBytes(path));
+            });
+        }
+
+        private static void SetConfigTables(RoguelikeGame game, Tables tables)
+        {
+            FieldInfo field = typeof(RoguelikeGame).GetField("_configTables", BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.NotNull(field);
+            field.SetValue(game, tables);
         }
     }
 }

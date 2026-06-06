@@ -18,6 +18,8 @@ namespace GameLogic.Tests
             Assert.GreaterOrEqual(tables.TbRoguelikeEnemy.DataList.Count, 3);
             Assert.GreaterOrEqual(tables.TbRoguelikeChoice.DataList.Count, 3);
             Assert.GreaterOrEqual(tables.TbRoguelikeRelic.DataList.Count, 1);
+            Assert.GreaterOrEqual(tables.TbRoguelikeWeapon.DataList.Count, 2);
+            Assert.GreaterOrEqual(tables.TbRoguelikeSpawnStage.DataList.Count, 1);
         }
 
         [Test]
@@ -36,7 +38,7 @@ namespace GameLogic.Tests
             attack.Apply.Invoke(game.CurrentRun);
 
             Assert.AreEqual(startAttack + 2, game.CurrentRun.Player.Stats.Attack);
-            Assert.That(attack.Title, Does.Contain("锋利"));
+            Assert.That(attack.Title, Does.Contain("磨砺"));
         }
 
         [Test]

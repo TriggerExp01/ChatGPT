@@ -228,12 +228,9 @@ namespace GameLogic
                 active.Add(projectile.Id);
                 if (!_projectileViews.TryGetValue(projectile.Id, out Transform view))
                 {
-                    Vector3 scale = projectile.WeaponType == RoguelikeWeaponType.SpinningBlade
-                        ? new Vector3(0.34f, 0.10f, 1f)
-                        : new Vector3(0.28f, 0.14f, 1f);
-                    Color color = projectile.WeaponType == RoguelikeWeaponType.SpinningBlade
-                        ? new Color(0.72f, 0.95f, 1f, 1f)
-                        : new Color(1f, 0.82f, 0.24f, 1f);
+                    Vector3 scale;
+                    Color color;
+                    GetProjectilePresentation(projectile.WeaponType, out scale, out color);
                     view = SpawnSpriteView(_projectileViewPool, $"投射物_{projectile.Id}", projectile.Position, scale, color, 11);
                     _projectileViews.Add(projectile.Id, view);
                 }
@@ -256,6 +253,25 @@ namespace GameLogic
             for (int i = 0; i < removed.Count; i++)
             {
                 _projectileViews.Remove(removed[i]);
+            }
+        }
+
+        private static void GetProjectilePresentation(RoguelikeWeaponType weaponType, out Vector3 scale, out Color color)
+        {
+            switch (weaponType)
+            {
+                case RoguelikeWeaponType.SpinningBlade:
+                    scale = new Vector3(0.34f, 0.10f, 1f);
+                    color = new Color(0.72f, 0.95f, 1f, 1f);
+                    break;
+                case RoguelikeWeaponType.PiercingDart:
+                    scale = new Vector3(0.44f, 0.09f, 1f);
+                    color = new Color(0.95f, 0.62f, 1f, 1f);
+                    break;
+                default:
+                    scale = new Vector3(0.28f, 0.14f, 1f);
+                    color = new Color(1f, 0.82f, 0.24f, 1f);
+                    break;
             }
         }
 

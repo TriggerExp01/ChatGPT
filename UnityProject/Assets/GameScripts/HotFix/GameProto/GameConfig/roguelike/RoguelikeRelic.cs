@@ -32,15 +32,15 @@ public sealed partial class RoguelikeRelic : Luban.BeanBase
     /// </summary>
     public readonly string Id;
     /// <summary>
-    /// ???
+    /// 显示名称
     /// </summary>
     public readonly string DisplayName;
     /// <summary>
-    /// ??
+    /// 描述
     /// </summary>
     public readonly string Desc;
     /// <summary>
-    /// ????
+    /// 效果列表
     /// </summary>
     public readonly System.Collections.Generic.List<roguelike.Effect> Effects;
    

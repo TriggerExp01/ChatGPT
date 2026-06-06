@@ -34,23 +34,23 @@ public sealed partial class RoguelikeChoice : Luban.BeanBase
     /// </summary>
     public readonly string Id;
     /// <summary>
-    /// ??
+    /// 标题
     /// </summary>
     public readonly string Title;
     /// <summary>
-    /// ??
+    /// 描述
     /// </summary>
     public readonly string Desc;
     /// <summary>
-    /// ????
+    /// 奖励池
     /// </summary>
     public readonly roguelike.EChoicePool PoolType;
     /// <summary>
-    /// ??
+    /// 费用
     /// </summary>
     public readonly int Cost;
     /// <summary>
-    /// ????
+    /// 效果列表
     /// </summary>
     public readonly System.Collections.Generic.List<roguelike.Effect> Effects;
    

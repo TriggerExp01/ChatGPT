@@ -20,6 +20,9 @@ namespace GameConfig.roguelike
         AddMaxHealth = 4,
         AddCritChance = 5,
         AddGold = 6,
+        AddPickupRadius = 7,
+        AddProjectileDamageMultiplier = 8,
+        AddMoveSpeed = 9,
     }
 
 } 

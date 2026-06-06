@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using GameConfig.roguelike;
 using TEngine;
 using UnityEngine;
 
@@ -9,6 +10,9 @@ namespace GameLogic
     {
         private const string MetaGoldKey = "Roguelike.MetaGold";
         private const float BasePickupAttractRadius = 2.4f;
+        private const string HitSoundPath = "Roguelike_Hit";
+        private const string PickupSoundPath = "Roguelike_Pickup";
+        private const string LevelUpSoundPath = "Roguelike_LevelUp";
         public const float ArenaHalfWidth = 7.5f;
         public const float ArenaHalfHeight = 4.2f;
 
@@ -28,6 +32,7 @@ namespace GameLogic
         private int _nextProjectileId;
         private float _pickupAttractRadius = BasePickupAttractRadius;
         private float _projectileDamageMultiplier = 1f;
+        private float _soundCooldown;
         private bool _metaSaved;
         private GameConfig.Tables _configTables;
 
@@ -89,7 +94,7 @@ namespace GameLogic
             _attackDirection = Vector2.right;
             ReleaseSurvivalObjects();
             _weapons.Clear();
-            _weapons.Add(new RoguelikeSurvivalWeapon(RoguelikeWeaponType.MagicBolt, "追踪魔弹", 1));
+            _weapons.Add(CreateWeapon(RoguelikeWeaponType.MagicBolt));
             _rewardOptions.Clear();
             _spawnTimer = 0.2f;
             _attackTimer = 0f;
@@ -99,6 +104,7 @@ namespace GameLogic
             _nextProjectileId = 1;
             _pickupAttractRadius = BasePickupAttractRadius;
             _projectileDamageMultiplier = 1f;
+            _soundCooldown = 0f;
             _metaSaved = false;
             ElapsedTime = 0f;
             Level = 1;
@@ -129,6 +135,7 @@ namespace GameLogic
             ElapsedTime += dt;
             _attackTimer = Mathf.Max(0f, _attackTimer - dt);
             _hurtTimer = Mathf.Max(0f, _hurtTimer - dt);
+            _soundCooldown = Mathf.Max(0f, _soundCooldown - dt);
             AttackFlash = Mathf.Max(0f, AttackFlash - dt);
             PickupFlash = Mathf.Max(0f, PickupFlash - dt);
             CameraShake = Mathf.Max(0f, CameraShake - dt);
@@ -266,7 +273,10 @@ namespace GameLogic
             }
 
             int wave = 1 + Mathf.FloorToInt(ElapsedTime / 30f);
-            int spawnCount = 1 + Mathf.FloorToInt(ElapsedTime / 45f);
+            RoguelikeSpawnStage spawnStage = GetActiveSpawnStage();
+            int spawnCount = spawnStage != null
+                ? Mathf.Max(1, spawnStage.CommonSpawnCount)
+                : 1 + Mathf.FloorToInt(ElapsedTime / 45f);
             for (int i = 0; i < spawnCount; i++)
             {
                 bool horizontalEdge = _random.NextDouble() < 0.5;
@@ -274,8 +284,11 @@ namespace GameLogic
                 Vector2 position = horizontalEdge
                     ? new Vector2(edgeSign * ArenaHalfWidth, Mathf.Lerp(-ArenaHalfHeight, ArenaHalfHeight, (float)_random.NextDouble()))
                     : new Vector2(Mathf.Lerp(-ArenaHalfWidth, ArenaHalfWidth, (float)_random.NextDouble()), edgeSign * ArenaHalfHeight);
-                GameConfig.roguelike.RoguelikeEnemy config = PickEnemyConfig(wave);
-                int health = config != null ? Mathf.Max(1, config.MaxHealth + (wave - 1) * 5) : 18 + wave * 5;
+                GameConfig.roguelike.RoguelikeEnemy config = PickEnemyConfig(wave, spawnStage);
+                int healthGrowth = spawnStage != null
+                    ? Mathf.FloorToInt(ElapsedTime / 60f) * Mathf.Max(0, spawnStage.HealthGrowthPerMinute)
+                    : (wave - 1) * 5;
+                int health = config != null ? Mathf.Max(1, config.MaxHealth + healthGrowth) : 18 + wave * 5;
                 int attack = config != null ? Mathf.Max(1, config.Attack + (wave - 1) * 2) : 7 + wave * 2;
                 float speed = config != null ? GetEnemyMoveSpeed(config, wave) : 1.35f + wave * 0.08f;
                 _enemies.Add(CreateEnemy(_nextEnemyId++, position, health, attack, speed));
@@ -336,6 +349,9 @@ namespace GameLogic
                     case RoguelikeWeaponType.SpinningBlade:
                         fired = FireSpinningBlade(weapon);
                         break;
+                    case RoguelikeWeaponType.PiercingDart:
+                        fired = FirePiercingDart(weapon);
+                        break;
                 }
 
                 if (fired)
@@ -377,9 +393,9 @@ namespace GameLogic
                 RoguelikeWeaponType.MagicBolt,
                 PlayerPosition,
                 _attackDirection,
-                9f + weapon.Level * 0.4f,
-                AttackRange + (weapon.Level - 1) * 0.35f,
-                ScaleProjectileDamage(CurrentRun.Player.Stats.Attack + (weapon.Level - 1) * 2)));
+                GetWeaponSpeed(weapon, 9f + weapon.Level * 0.4f),
+                GetWeaponRange(weapon, AttackRange + (weapon.Level - 1) * 0.35f),
+                ScaleProjectileDamage(GetWeaponDamage(weapon, CurrentRun.Player.Stats.Attack + (weapon.Level - 1) * 2))));
             return true;
         }
 
@@ -391,8 +407,8 @@ namespace GameLogic
             }
 
             int bladeCount = 4 + weapon.Level;
-            int damage = ScaleProjectileDamage(Mathf.Max(1, Mathf.RoundToInt(CurrentRun.Player.Stats.Attack * 0.55f) + weapon.Level));
-            float range = 2.2f + weapon.Level * 0.12f;
+            int damage = ScaleProjectileDamage(GetWeaponDamage(weapon, Mathf.Max(1, Mathf.RoundToInt(CurrentRun.Player.Stats.Attack * 0.55f) + weapon.Level)));
+            float range = GetWeaponRange(weapon, 2.2f + weapon.Level * 0.12f);
             float angleOffset = (float)_random.NextDouble() * 360f;
             for (int i = 0; i < bladeCount; i++)
             {
@@ -403,13 +419,50 @@ namespace GameLogic
                     RoguelikeWeaponType.SpinningBlade,
                     PlayerPosition,
                     direction,
-                    6.5f,
+                    GetWeaponSpeed(weapon, 6.5f),
                     range,
                     damage));
             }
 
             AttackFlash = 0.10f;
             LastMessage = $"旋刃齐射，发射 {bladeCount} 枚刀刃。";
+            return true;
+        }
+
+        private bool FirePiercingDart(RoguelikeSurvivalWeapon weapon)
+        {
+            RoguelikeSurvivalEnemy target = null;
+            float nearestDistance = AttackRange * AttackRange * 1.8f;
+            for (int i = 0; i < _enemies.Count; i++)
+            {
+                RoguelikeSurvivalEnemy enemy = _enemies[i];
+                Vector2 offset = enemy.Position - PlayerPosition;
+                float distance = offset.sqrMagnitude;
+                if (!enemy.IsAlive || distance > nearestDistance)
+                {
+                    continue;
+                }
+
+                target = enemy;
+                nearestDistance = distance;
+            }
+
+            if (target == null)
+            {
+                return false;
+            }
+
+            _attackDirection = (target.Position - PlayerPosition).normalized;
+            _projectiles.Add(CreateProjectile(
+                _nextProjectileId++,
+                RoguelikeWeaponType.PiercingDart,
+                PlayerPosition,
+                _attackDirection,
+                GetWeaponSpeed(weapon, 10f),
+                GetWeaponRange(weapon, AttackRange * 1.25f),
+                ScaleProjectileDamage(GetWeaponDamage(weapon, Mathf.Max(1, CurrentRun.Player.Stats.Attack - 1 + weapon.Level)))));
+            AttackFlash = 0.10f;
+            LastMessage = "穿透飞镖出手。";
             return true;
         }
 
@@ -426,22 +479,27 @@ namespace GameLogic
                 for (int enemyIndex = 0; enemyIndex < _enemies.Count; enemyIndex++)
                 {
                     RoguelikeSurvivalEnemy enemy = _enemies[enemyIndex];
-                    if (!enemy.IsAlive || Vector2.Distance(projectile.Position, enemy.Position) > 0.48f)
+                    if (!enemy.IsAlive || projectile.HasHitEnemy(enemy.Id) || Vector2.Distance(projectile.Position, enemy.Position) > 0.48f)
                     {
                         continue;
                     }
 
                     enemy.Health -= projectile.Damage;
+                    projectile.RecordHitEnemy(enemy.Id);
                     enemy.HitFlash = 0.12f;
                     TriggerCameraShake(0.08f);
                     CurrentRun.RecordDamageDealt(projectile.Damage);
-                    string weaponName = projectile.WeaponType == RoguelikeWeaponType.SpinningBlade ? "旋刃" : "魔弹";
+                    PlaySound(HitSoundPath, 0.35f);
+                    string weaponName = GetWeaponDisplayName(projectile.WeaponType);
                     LastMessage = $"{weaponName}命中，造成 {projectile.Damage} 点伤害。";
                     hit = true;
-                    break;
+                    if (projectile.WeaponType != RoguelikeWeaponType.PiercingDart)
+                    {
+                        break;
+                    }
                 }
 
-                if (hit || projectile.RemainingDistance <= 0f)
+                if ((hit && projectile.WeaponType != RoguelikeWeaponType.PiercingDart) || projectile.RemainingDistance <= 0f)
                 {
                     _projectiles.RemoveAt(i);
                     ReleaseProjectile(projectile);
@@ -487,6 +545,7 @@ namespace GameLogic
                     CurrentRun.AddGold(pickup.Amount);
                 }
 
+                PlaySound(PickupSoundPath, 0.3f);
                 PickupFlash = 0.14f;
                 TriggerCameraShake(0.04f);
                 _pickups.RemoveAt(i);
@@ -497,6 +556,24 @@ namespace GameLogic
         private void TriggerCameraShake(float duration)
         {
             CameraShake = Mathf.Max(CameraShake, duration);
+        }
+
+        private void PlaySound(string path, float volume)
+        {
+            if (string.IsNullOrEmpty(path) || _soundCooldown > 0f)
+            {
+                return;
+            }
+
+            try
+            {
+                GameModule.Audio.Play(TEngine.AudioType.Sound, path, false, Mathf.Clamp01(volume), true);
+                _soundCooldown = 0.04f;
+            }
+            catch (Exception)
+            {
+                _soundCooldown = 0.2f;
+            }
         }
 
         private static RoguelikeSurvivalEnemy CreateEnemy(int id, Vector2 position, int health, int attack, float moveSpeed)
@@ -580,6 +657,7 @@ namespace GameLogic
             BuildLevelUpOptions();
             Phase = RoguelikeGamePhase.RewardChoice;
             LastMessage = $"等级提升至 {Level}，请选择一项强化。";
+            PlaySound(LevelUpSoundPath, 0.45f);
         }
 
         private void BuildLevelUpOptions()
@@ -597,6 +675,7 @@ namespace GameLogic
 
             AddWeaponChoice(pool, RoguelikeWeaponType.MagicBolt);
             AddWeaponChoice(pool, RoguelikeWeaponType.SpinningBlade);
+            AddWeaponChoice(pool, RoguelikeWeaponType.PiercingDart);
             AddPassiveChoices(pool);
 
             _rewardOptions.Clear();
@@ -621,15 +700,15 @@ namespace GameLogic
             for (int i = 0; i < choices.Count; i++)
             {
                 GameConfig.roguelike.RoguelikeChoice config = choices[i];
-                if (config.PoolType != GameConfig.roguelike.EChoicePool.Reward || !TryGetChoiceText(config.Id, out string title, out string description))
+                if (config.PoolType != GameConfig.roguelike.EChoicePool.Reward)
                 {
                     continue;
                 }
 
                 pool.Add(new RoguelikeChoiceOption(
                     config.Id,
-                    title,
-                    description,
+                    config.Title,
+                    config.Desc,
                     run => ApplyConfigEffects(run, config.Effects),
                     config.Cost));
                 added++;
@@ -668,42 +747,16 @@ namespace GameLogic
                     case GameConfig.roguelike.EEffectType.AddGold:
                         run.AddGold(Mathf.RoundToInt(effect.Value));
                         break;
+                    case GameConfig.roguelike.EEffectType.AddPickupRadius:
+                        _pickupAttractRadius += effect.Value;
+                        break;
+                    case GameConfig.roguelike.EEffectType.AddProjectileDamageMultiplier:
+                        _projectileDamageMultiplier += effect.Value;
+                        break;
+                    case GameConfig.roguelike.EEffectType.AddMoveSpeed:
+                        MoveSpeed += effect.Value;
+                        break;
                 }
-            }
-        }
-
-        private static bool TryGetChoiceText(string id, out string title, out string description)
-        {
-            switch (id)
-            {
-                case "atk_2":
-                    title = "锋利武器";
-                    description = "攻击力 +2";
-                    return true;
-                case "def_1":
-                    title = "护甲加固";
-                    description = "防御 +1";
-                    return true;
-                case "heal_25":
-                    title = "战地急救";
-                    description = "恢复 25 生命";
-                    return true;
-                case "max_hp_10":
-                    title = "强健体魄";
-                    description = "最大生命 +10，并恢复 10";
-                    return true;
-                case "crit_5":
-                    title = "精准打击";
-                    description = "暴击率 +5%";
-                    return true;
-                case "gold_25":
-                    title = "金币袋";
-                    description = "金币 +25";
-                    return true;
-                default:
-                    title = null;
-                    description = null;
-                    return false;
             }
         }
 
@@ -712,26 +765,33 @@ namespace GameLogic
             RoguelikeSurvivalWeapon weapon = FindWeapon(type);
             if (weapon == null)
             {
-                if (type == RoguelikeWeaponType.SpinningBlade)
+                if (type != RoguelikeWeaponType.MagicBolt)
                 {
-                    pool.Add(new RoguelikeChoiceOption("weapon_spinning_blade_unlock", "解锁旋刃", "新增环形齐射武器", run => AddOrUpgradeWeapon(type)));
+                    string displayName = GetWeaponDisplayName(type);
+                    pool.Add(new RoguelikeChoiceOption(
+                        $"weapon_{GetWeaponConfigId(type)}_unlock",
+                        $"解锁{displayName}",
+                        $"新增武器：{displayName}",
+                        run => AddOrUpgradeWeapon(type)));
                 }
 
                 return;
             }
 
-            if (type == RoguelikeWeaponType.MagicBolt)
-            {
-                pool.Add(new RoguelikeChoiceOption("weapon_magic_bolt_upgrade", "魔弹升级", $"追踪魔弹升至 {weapon.Level + 1} 级", run => AddOrUpgradeWeapon(type)));
-            }
-            else if (type == RoguelikeWeaponType.SpinningBlade)
-            {
-                pool.Add(new RoguelikeChoiceOption("weapon_spinning_blade_upgrade", "旋刃升级", $"旋刃升至 {weapon.Level + 1} 级", run => AddOrUpgradeWeapon(type)));
-            }
+            pool.Add(new RoguelikeChoiceOption(
+                $"weapon_{GetWeaponConfigId(type)}_upgrade",
+                $"{weapon.DisplayName}升级",
+                $"{weapon.DisplayName}升至 {weapon.Level + 1} 级",
+                run => AddOrUpgradeWeapon(type)));
         }
 
         private void AddPassiveChoices(List<RoguelikeChoiceOption> pool)
         {
+            if (AddConfiguredPassiveChoices(pool))
+            {
+                return;
+            }
+
             pool.Add(new RoguelikeChoiceOption(
                 "passive_magnet_core",
                 "磁力核心",
@@ -749,9 +809,45 @@ namespace GameLogic
                 run => AddPassive(run, "passive_wind_boots", "疾风靴", "移动速度提升。", _ => MoveSpeed *= 1.08f)));
         }
 
+        private bool AddConfiguredPassiveChoices(List<RoguelikeChoiceOption> pool)
+        {
+            GameConfig.Tables tables = TryGetConfigTables();
+            List<RoguelikeRelic> relics = tables?.TbRoguelikeRelic?.DataList;
+            if (relics == null || relics.Count <= 0)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < relics.Count; i++)
+            {
+                RoguelikeRelic relic = relics[i];
+                pool.Add(new RoguelikeChoiceOption(
+                    $"passive_{relic.Id}",
+                    relic.DisplayName,
+                    relic.Desc,
+                    run => AddPassiveFromConfig(run, relic)));
+            }
+
+            return true;
+        }
+
         private void AddPassive(RoguelikeRunState run, string id, string displayName, string description, Action<RoguelikeRunState> apply)
         {
             run?.AddRelic(new RoguelikeRelicTemplate(id, displayName, description, apply));
+        }
+
+        private void AddPassiveFromConfig(RoguelikeRunState run, RoguelikeRelic relic)
+        {
+            if (relic == null)
+            {
+                return;
+            }
+
+            run?.AddRelic(new RoguelikeRelicTemplate(
+                relic.Id,
+                relic.DisplayName,
+                relic.Desc,
+                state => ApplyConfigEffects(state, relic.Effects)));
         }
 
         private void AddOrUpgradeWeapon(RoguelikeWeaponType type)
@@ -764,11 +860,17 @@ namespace GameLogic
                 return;
             }
 
-            if (type == RoguelikeWeaponType.SpinningBlade)
+            if (type != RoguelikeWeaponType.MagicBolt)
             {
-                _weapons.Add(new RoguelikeSurvivalWeapon(type, "旋刃", 1));
-                LastMessage = "获得新武器：旋刃。";
+                weapon = CreateWeapon(type);
+                _weapons.Add(weapon);
+                LastMessage = $"获得新武器：{weapon.DisplayName}。";
             }
+        }
+
+        private RoguelikeSurvivalWeapon CreateWeapon(RoguelikeWeaponType type)
+        {
+            return new RoguelikeSurvivalWeapon(type, GetWeaponDisplayName(type), 1);
         }
 
         private RoguelikeSurvivalWeapon FindWeapon(RoguelikeWeaponType type)
@@ -786,14 +888,104 @@ namespace GameLogic
 
         private float GetWeaponInterval(RoguelikeSurvivalWeapon weapon)
         {
+            RoguelikeWeapon config = GetWeaponConfig(weapon.Type);
+            if (config != null)
+            {
+                return Mathf.Max(0.12f, config.BaseInterval - (weapon.Level - 1) * config.IntervalGrowth);
+            }
+
             switch (weapon.Type)
             {
                 case RoguelikeWeaponType.MagicBolt:
                     return Mathf.Max(0.12f, AttackInterval * Mathf.Pow(0.94f, weapon.Level - 1));
                 case RoguelikeWeaponType.SpinningBlade:
                     return Mathf.Max(0.65f, 2.2f - weapon.Level * 0.16f);
+                case RoguelikeWeaponType.PiercingDart:
+                    return Mathf.Max(0.35f, 1.7f - weapon.Level * 0.10f);
                 default:
                     return AttackInterval;
+            }
+        }
+
+        private int GetWeaponDamage(RoguelikeSurvivalWeapon weapon, int fallback)
+        {
+            RoguelikeWeapon config = GetWeaponConfig(weapon.Type);
+            if (config == null)
+            {
+                return fallback;
+            }
+
+            return Mathf.Max(1, config.BaseDamage + (weapon.Level - 1) * config.DamageGrowth);
+        }
+
+        private float GetWeaponRange(RoguelikeSurvivalWeapon weapon, float fallback)
+        {
+            RoguelikeWeapon config = GetWeaponConfig(weapon.Type);
+            if (config == null)
+            {
+                return fallback;
+            }
+
+            return Mathf.Max(0.5f, config.BaseRange + (weapon.Level - 1) * 0.25f);
+        }
+
+        private float GetWeaponSpeed(RoguelikeSurvivalWeapon weapon, float fallback)
+        {
+            RoguelikeWeapon config = GetWeaponConfig(weapon.Type);
+            return config == null ? fallback : Mathf.Max(0.5f, config.ProjectileSpeed);
+        }
+
+        private RoguelikeWeapon GetWeaponConfig(RoguelikeWeaponType type)
+        {
+            GameConfig.Tables tables = TryGetConfigTables();
+            List<RoguelikeWeapon> weapons = tables?.TbRoguelikeWeapon?.DataList;
+            if (weapons == null || weapons.Count <= 0)
+            {
+                return null;
+            }
+
+            string typeName = type.ToString();
+            for (int i = 0; i < weapons.Count; i++)
+            {
+                RoguelikeWeapon weapon = weapons[i];
+                if (weapon != null && string.Equals(weapon.WeaponType, typeName, StringComparison.Ordinal))
+                {
+                    return weapon;
+                }
+            }
+
+            return null;
+        }
+
+        private string GetWeaponDisplayName(RoguelikeWeaponType type)
+        {
+            RoguelikeWeapon config = GetWeaponConfig(type);
+            if (config != null && !string.IsNullOrEmpty(config.DisplayName))
+            {
+                return config.DisplayName;
+            }
+
+            switch (type)
+            {
+                case RoguelikeWeaponType.SpinningBlade:
+                    return "旋刃";
+                case RoguelikeWeaponType.PiercingDart:
+                    return "穿透飞镖";
+                default:
+                    return "追踪魔弹";
+            }
+        }
+
+        private static string GetWeaponConfigId(RoguelikeWeaponType type)
+        {
+            switch (type)
+            {
+                case RoguelikeWeaponType.SpinningBlade:
+                    return "spinning_blade";
+                case RoguelikeWeaponType.PiercingDart:
+                    return "piercing_dart";
+                default:
+                    return "magic_bolt";
             }
         }
 
@@ -808,13 +1000,62 @@ namespace GameLogic
             return Mathf.Max(1, Mathf.RoundToInt(baseDamage * _projectileDamageMultiplier));
         }
 
-        private GameConfig.roguelike.RoguelikeEnemy PickEnemyConfig(int wave)
+        private RoguelikeSpawnStage GetActiveSpawnStage()
+        {
+            GameConfig.Tables tables = TryGetConfigTables();
+            List<RoguelikeSpawnStage> stages = tables?.TbRoguelikeSpawnStage?.DataList;
+            if (stages == null || stages.Count <= 0)
+            {
+                return null;
+            }
+
+            RoguelikeSpawnStage active = null;
+            for (int i = 0; i < stages.Count; i++)
+            {
+                RoguelikeSpawnStage stage = stages[i];
+                if (stage != null && ElapsedTime >= stage.StartTime && (active == null || stage.StartTime > active.StartTime))
+                {
+                    active = stage;
+                }
+            }
+
+            return active;
+        }
+
+        private GameConfig.roguelike.RoguelikeEnemy PickEnemyConfig(int wave, RoguelikeSpawnStage spawnStage)
         {
             GameConfig.Tables tables = TryGetConfigTables();
             List<GameConfig.roguelike.RoguelikeEnemy> enemies = tables?.TbRoguelikeEnemy?.DataList;
             if (enemies == null || enemies.Count <= 0)
             {
                 return null;
+            }
+
+            if (spawnStage != null)
+            {
+                if (!string.IsNullOrEmpty(spawnStage.BossEnemyId) && ElapsedTime >= spawnStage.BossStartTime && _random.NextDouble() < 0.08)
+                {
+                    GameConfig.roguelike.RoguelikeEnemy boss = tables.TbRoguelikeEnemy.GetOrDefault(spawnStage.BossEnemyId);
+                    if (boss != null)
+                    {
+                        return boss;
+                    }
+                }
+
+                if (!string.IsNullOrEmpty(spawnStage.EliteEnemyId) && ElapsedTime >= spawnStage.EliteStartTime && _random.NextDouble() < 0.18)
+                {
+                    GameConfig.roguelike.RoguelikeEnemy elite = tables.TbRoguelikeEnemy.GetOrDefault(spawnStage.EliteEnemyId);
+                    if (elite != null)
+                    {
+                        return elite;
+                    }
+                }
+
+                GameConfig.roguelike.RoguelikeEnemy weighted = PickWeightedEnemy(tables, spawnStage);
+                if (weighted != null)
+                {
+                    return weighted;
+                }
             }
 
             GameConfig.roguelike.EEnemyTier maxTier = wave >= 8
@@ -832,6 +1073,40 @@ namespace GameLogic
             }
 
             return candidates.Count > 0 ? candidates[_random.Next(candidates.Count)] : enemies[_random.Next(enemies.Count)];
+        }
+
+        private GameConfig.roguelike.RoguelikeEnemy PickWeightedEnemy(GameConfig.Tables tables, RoguelikeSpawnStage spawnStage)
+        {
+            if (tables == null || spawnStage.CommonEnemyIds == null || spawnStage.CommonEnemyIds.Count <= 0)
+            {
+                return null;
+            }
+
+            int totalWeight = 0;
+            for (int i = 0; i < spawnStage.CommonEnemyIds.Count; i++)
+            {
+                int weight = spawnStage.CommonWeights != null && i < spawnStage.CommonWeights.Count ? spawnStage.CommonWeights[i] : 1;
+                totalWeight += Mathf.Max(1, weight);
+            }
+
+            int roll = _random.Next(Mathf.Max(1, totalWeight));
+            for (int i = 0; i < spawnStage.CommonEnemyIds.Count; i++)
+            {
+                int weight = spawnStage.CommonWeights != null && i < spawnStage.CommonWeights.Count ? spawnStage.CommonWeights[i] : 1;
+                roll -= Mathf.Max(1, weight);
+                if (roll >= 0)
+                {
+                    continue;
+                }
+
+                GameConfig.roguelike.RoguelikeEnemy enemy = tables.TbRoguelikeEnemy.GetOrDefault(spawnStage.CommonEnemyIds[i]);
+                if (enemy != null)
+                {
+                    return enemy;
+                }
+            }
+
+            return null;
         }
 
         private static float GetEnemyMoveSpeed(GameConfig.roguelike.RoguelikeEnemy config, int wave)

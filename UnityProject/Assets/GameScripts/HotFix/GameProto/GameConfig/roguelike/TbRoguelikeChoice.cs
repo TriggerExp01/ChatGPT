@@ -12,6 +12,9 @@ using Luban;
 
 namespace GameConfig.roguelike
 {
+/// <summary>
+/// 肉鸽奖励选项配置
+/// </summary>
 public partial class TbRoguelikeChoice
 {
     private readonly System.Collections.Generic.Dictionary<string, roguelike.RoguelikeChoice> _dataMap;

@@ -426,6 +426,7 @@ namespace GameLogic
     {
         MagicBolt,
         SpinningBlade,
+        PiercingDart,
     }
 
     public sealed class RoguelikeSurvivalWeapon
@@ -486,6 +487,8 @@ namespace GameLogic
 
     public sealed class RoguelikeSurvivalProjectile : IMemory
     {
+        private readonly HashSet<int> _hitEnemyIds = new HashSet<int>();
+
         public int Id { get; private set; }
         public RoguelikeWeaponType WeaponType { get; private set; }
         public Vector2 Position;
@@ -514,6 +517,17 @@ namespace GameLogic
             RemainingDistance = distance;
             Damage = damage;
             IsPoolManaged = poolManaged;
+            _hitEnemyIds.Clear();
+        }
+
+        public bool HasHitEnemy(int enemyId)
+        {
+            return _hitEnemyIds.Contains(enemyId);
+        }
+
+        public void RecordHitEnemy(int enemyId)
+        {
+            _hitEnemyIds.Add(enemyId);
         }
 
         public void Clear()
@@ -526,6 +540,7 @@ namespace GameLogic
             RemainingDistance = 0f;
             Damage = 0;
             IsPoolManaged = false;
+            _hitEnemyIds.Clear();
         }
     }
 }

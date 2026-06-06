@@ -12,6 +12,9 @@ using Luban;
 
 namespace GameConfig.roguelike
 {
+/// <summary>
+/// 肉鸽敌人配置
+/// </summary>
 public partial class TbRoguelikeEnemy
 {
     private readonly System.Collections.Generic.Dictionary<string, roguelike.RoguelikeEnemy> _dataMap;

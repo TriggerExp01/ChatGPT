@@ -109,6 +109,11 @@ namespace GameLogic
 
         private static string ResolveText(Dictionary<string, string> values, string id, string fallback)
         {
+            if (!string.IsNullOrWhiteSpace(fallback) && !fallback.Contains("?"))
+            {
+                return fallback;
+            }
+
             return !string.IsNullOrEmpty(id) && values.TryGetValue(id, out string value) ? value : fallback;
         }
 

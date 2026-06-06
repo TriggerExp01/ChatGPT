@@ -36,31 +36,31 @@ public sealed partial class RoguelikeEnemy : Luban.BeanBase
     /// </summary>
     public readonly string Id;
     /// <summary>
-    /// ???
+    /// 显示名称
     /// </summary>
     public readonly string DisplayName;
     /// <summary>
-    /// ????
+    /// 敌人层级
     /// </summary>
     public readonly roguelike.EEnemyTier Tier;
     /// <summary>
-    /// ??
+    /// 最大生命
     /// </summary>
     public readonly int MaxHealth;
     /// <summary>
-    /// ??
+    /// 攻击
     /// </summary>
     public readonly int Attack;
     /// <summary>
-    /// ??
+    /// 防御
     /// </summary>
     public readonly int Defense;
     /// <summary>
-    /// ????
+    /// 暴击率
     /// </summary>
     public readonly float CritChance;
     /// <summary>
-    /// ????
+    /// 暴击倍率
     /// </summary>
     public readonly float CritMultiplier;
    

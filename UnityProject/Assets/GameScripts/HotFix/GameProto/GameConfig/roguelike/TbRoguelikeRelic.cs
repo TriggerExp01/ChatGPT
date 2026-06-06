@@ -12,6 +12,9 @@ using Luban;
 
 namespace GameConfig.roguelike
 {
+/// <summary>
+/// 肉鸽被动遗物配置
+/// </summary>
 public partial class TbRoguelikeRelic
 {
     private readonly System.Collections.Generic.Dictionary<string, roguelike.RoguelikeRelic> _dataMap;
