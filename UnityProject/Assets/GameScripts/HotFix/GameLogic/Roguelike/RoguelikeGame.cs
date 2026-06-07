@@ -144,6 +144,17 @@ namespace GameLogic
 
             UpdateSpawning(dt);
             UpdateEnemies(dt);
+            if (!CurrentRun.Player.IsAlive)
+            {
+                FinishRun();
+                return new RoguelikeCombatResult(CurrentRun.Player.IsAlive, KillCount, LastMessage);
+            }
+
+            if (Phase != RoguelikeGamePhase.Running)
+            {
+                return new RoguelikeCombatResult(CurrentRun.Player.IsAlive, KillCount, LastMessage);
+            }
+
             UpdateWeapons(dt);
             UpdateProjectiles(dt);
             UpdatePickups(dt);
@@ -300,7 +311,14 @@ namespace GameLogic
                 int health = config != null ? Mathf.Max(1, config.MaxHealth + healthGrowth) : 18 + wave * 5;
                 int attack = config != null ? Mathf.Max(1, config.Attack + (wave - 1) * 2) : 7 + wave * 2;
                 float speed = config != null ? GetEnemyMoveSpeed(config, wave) : 1.35f + wave * 0.08f;
-                _enemies.Add(CreateEnemy(_nextEnemyId++, position, health, attack, speed));
+                _enemies.Add(CreateEnemy(
+                    _nextEnemyId++,
+                    position,
+                    health,
+                    attack,
+                    speed,
+                    config?.Id,
+                    config != null && config.Tier == GameConfig.roguelike.EEnemyTier.Boss));
             }
 
             _spawnTimer = Mathf.Max(0.35f, 1.35f - ElapsedTime * 0.006f);
@@ -331,9 +349,10 @@ namespace GameLogic
                 if (!enemy.IsAlive)
                 {
                     Vector2 killedPosition = enemy.Position;
+                    bool killedBoss = enemy.IsBoss;
                     _enemies.RemoveAt(i);
                     ReleaseEnemy(enemy);
-                    OnEnemyKilled(killedPosition);
+                    OnEnemyKilled(killedPosition, killedBoss);
                 }
             }
         }
@@ -549,9 +568,15 @@ namespace GameLogic
             }
         }
 
-        private void OnEnemyKilled(Vector2 position)
+        private void OnEnemyKilled(Vector2 position, bool killedBoss = false)
         {
             KillCount++;
+            if (killedBoss)
+            {
+                CompleteRunByBossKill();
+                return;
+            }
+
             _pickups.Add(CreatePickup(_nextPickupId++, RoguelikePickupType.Experience, position, 4));
             if (_random.NextDouble() < 0.35)
             {
@@ -618,10 +643,10 @@ namespace GameLogic
             }
         }
 
-        private static RoguelikeSurvivalEnemy CreateEnemy(int id, Vector2 position, int health, int attack, float moveSpeed)
+        private static RoguelikeSurvivalEnemy CreateEnemy(int id, Vector2 position, int health, int attack, float moveSpeed, string configId = null, bool isBoss = false)
         {
             RoguelikeSurvivalEnemy enemy = MemoryPool.Acquire<RoguelikeSurvivalEnemy>();
-            enemy.Init(id, position, health, attack, moveSpeed);
+            enemy.Init(id, position, health, attack, moveSpeed, true, configId, isBoss);
             return enemy;
         }
 
@@ -1244,6 +1269,14 @@ namespace GameLogic
             Phase = RoguelikeGamePhase.Defeated;
             IsPaused = false;
             LastMessage = "角色死亡，本局结束。";
+            SaveMetaGold();
+        }
+
+        private void CompleteRunByBossKill()
+        {
+            Phase = RoguelikeGamePhase.Victory;
+            IsPaused = false;
+            LastMessage = "击败地牢之心，生存目标达成。";
             SaveMetaGold();
         }
 

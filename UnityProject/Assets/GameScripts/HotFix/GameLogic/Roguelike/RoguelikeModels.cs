@@ -376,6 +376,8 @@ namespace GameLogic
         public float MoveSpeed;
         public float AttackCooldown;
         public float HitFlash;
+        public string ConfigId { get; private set; }
+        public bool IsBoss { get; private set; }
         public bool IsPoolManaged { get; private set; }
 
         public bool IsAlive => Health > 0;
@@ -389,7 +391,7 @@ namespace GameLogic
             Init(id, position, health, attack, moveSpeed, false);
         }
 
-        public void Init(int id, Vector2 position, int health, int attack, float moveSpeed, bool poolManaged = true)
+        public void Init(int id, Vector2 position, int health, int attack, float moveSpeed, bool poolManaged = true, string configId = null, bool isBoss = false)
         {
             Id = id;
             Position = position;
@@ -399,6 +401,8 @@ namespace GameLogic
             MoveSpeed = moveSpeed;
             AttackCooldown = 0f;
             HitFlash = 0f;
+            ConfigId = configId ?? string.Empty;
+            IsBoss = isBoss;
             IsPoolManaged = poolManaged;
         }
 
@@ -412,6 +416,8 @@ namespace GameLogic
             MoveSpeed = 0f;
             AttackCooldown = 0f;
             HitFlash = 0f;
+            ConfigId = string.Empty;
+            IsBoss = false;
             IsPoolManaged = false;
         }
     }
