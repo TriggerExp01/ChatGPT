@@ -495,21 +495,24 @@ namespace GameLogic
 
     public sealed class RoguelikeSurvivalWeapon
     {
+        public const int MaxLevel = 5;
+
         public RoguelikeWeaponType Type { get; }
         public string DisplayName { get; }
         public int Level { get; private set; }
         public float CooldownRemaining;
+        public bool IsMaxLevel => Level >= MaxLevel;
 
         public RoguelikeSurvivalWeapon(RoguelikeWeaponType type, string displayName, int level)
         {
             Type = type;
             DisplayName = displayName;
-            Level = Math.Max(1, level);
+            Level = Math.Min(MaxLevel, Math.Max(1, level));
         }
 
         public void LevelUp()
         {
-            Level++;
+            Level = Math.Min(MaxLevel, Level + 1);
         }
     }
 

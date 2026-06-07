@@ -897,6 +897,11 @@ namespace GameLogic
                 return;
             }
 
+            if (weapon.IsMaxLevel)
+            {
+                return;
+            }
+
             pool.Add(new RoguelikeChoiceOption(
                 $"weapon_{GetWeaponConfigId(type)}_upgrade",
                 $"{weapon.DisplayName}升级",
@@ -974,6 +979,12 @@ namespace GameLogic
             RoguelikeSurvivalWeapon weapon = FindWeapon(type);
             if (weapon != null)
             {
+                if (weapon.IsMaxLevel)
+                {
+                    LastMessage = $"{weapon.DisplayName}已达到当前阶段满级。";
+                    return;
+                }
+
                 weapon.LevelUp();
                 LastMessage = $"{weapon.DisplayName}提升至 {weapon.Level} 级。";
                 return;
