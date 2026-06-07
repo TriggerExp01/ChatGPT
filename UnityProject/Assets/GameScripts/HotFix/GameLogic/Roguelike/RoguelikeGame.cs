@@ -10,9 +10,21 @@ namespace GameLogic
     {
         private const string MetaGoldKey = "Roguelike.MetaGold";
         private const float BasePickupAttractRadius = 2.4f;
-        private const string HitSoundPath = "Roguelike_Hit";
-        private const string PickupSoundPath = "Roguelike_Pickup";
-        private const string LevelUpSoundPath = "Roguelike_LevelUp";
+        public const string HitSoundPath = "Roguelike_Hit";
+        public const string PickupSoundPath = "Roguelike_Pickup";
+        public const string LevelUpSoundPath = "Roguelike_LevelUp";
+        public const string BossSoundPath = "Roguelike_Boss";
+        public const string UiConfirmSoundPath = "Roguelike_UIConfirm";
+        public const float HitSoundVolume = 0.42f;
+        public const float PickupSoundVolume = 0.34f;
+        public const float LevelUpSoundVolume = 0.52f;
+        public const float BossSoundVolume = 0.62f;
+        public const float UiConfirmSoundVolume = 0.30f;
+        public const float HitSoundCooldown = 0.04f;
+        public const float PickupSoundCooldown = 0.03f;
+        public const float LevelUpSoundCooldown = 0.12f;
+        public const float BossSoundCooldown = 0.45f;
+        public const float UiConfirmSoundCooldown = 0.08f;
         private const int BossKillGoldReward = 25;
         public const int MetaGoldPerAttackBonus = 100;
         private const float PlayerCollisionRadius = 0.48f;
@@ -42,7 +54,7 @@ namespace GameLogic
         private int _nextProjectileId;
         private float _pickupAttractRadius = BasePickupAttractRadius;
         private float _projectileDamageMultiplier = 1f;
-        private float _soundCooldown;
+        private readonly Dictionary<string, float> _soundCooldowns = new Dictionary<string, float>();
         private bool _metaSaved;
         private bool _bossSpawned;
         private GameConfig.Tables _configTables;
@@ -120,7 +132,7 @@ namespace GameLogic
             _nextProjectileId = 1;
             _pickupAttractRadius = BasePickupAttractRadius;
             _projectileDamageMultiplier = 1f;
-            _soundCooldown = 0f;
+            _soundCooldowns.Clear();
             _metaSaved = false;
             _bossSpawned = false;
             ElapsedTime = 0f;
@@ -152,7 +164,7 @@ namespace GameLogic
             ElapsedTime += dt;
             _attackTimer = Mathf.Max(0f, _attackTimer - dt);
             _hurtTimer = Mathf.Max(0f, _hurtTimer - dt);
-            _soundCooldown = Mathf.Max(0f, _soundCooldown - dt);
+            UpdateSoundCooldowns(dt);
             AttackFlash = Mathf.Max(0f, AttackFlash - dt);
             PickupFlash = Mathf.Max(0f, PickupFlash - dt);
             CameraShake = Mathf.Max(0f, CameraShake - dt);
@@ -339,6 +351,7 @@ namespace GameLogic
                 if (isBoss)
                 {
                     LastMessage = "地牢之心出现，击败它完成本局目标。";
+                    PlayBossSound();
                     TriggerCameraShake(0.22f);
                 }
             }
@@ -579,7 +592,7 @@ namespace GameLogic
                     enemy.HitFlash = 0.12f;
                     TriggerCameraShake(0.08f);
                     CurrentRun.RecordDamageDealt(projectile.Damage);
-                    PlaySound(HitSoundPath, 0.35f);
+                    PlayHitSound();
                     string weaponName = GetWeaponDisplayName(projectile.WeaponType);
                     LastMessage = $"{weaponName}命中，造成 {projectile.Damage} 点伤害。";
                     hit = true;
@@ -641,7 +654,7 @@ namespace GameLogic
                     CurrentRun.AddGold(pickup.Amount);
                 }
 
-                PlaySound(PickupSoundPath, 0.3f);
+                PlayPickupSound();
                 PickupFlash = 0.14f;
                 TriggerCameraShake(0.04f);
                 _pickups.RemoveAt(i);
@@ -680,9 +693,34 @@ namespace GameLogic
             return false;
         }
 
-        private void PlaySound(string path, float volume)
+        public void PlayUiConfirmSound()
         {
-            if (string.IsNullOrEmpty(path) || _soundCooldown > 0f)
+            PlaySound(UiConfirmSoundPath, UiConfirmSoundVolume, UiConfirmSoundCooldown);
+        }
+
+        private void PlayHitSound()
+        {
+            PlaySound(HitSoundPath, HitSoundVolume, HitSoundCooldown);
+        }
+
+        private void PlayPickupSound()
+        {
+            PlaySound(PickupSoundPath, PickupSoundVolume, PickupSoundCooldown);
+        }
+
+        private void PlayLevelUpSound()
+        {
+            PlaySound(LevelUpSoundPath, LevelUpSoundVolume, LevelUpSoundCooldown);
+        }
+
+        private void PlayBossSound()
+        {
+            PlaySound(BossSoundPath, BossSoundVolume, BossSoundCooldown);
+        }
+
+        private void PlaySound(string path, float volume, float cooldown)
+        {
+            if (string.IsNullOrEmpty(path) || GetSoundCooldown(path) > 0f)
             {
                 return;
             }
@@ -690,12 +728,45 @@ namespace GameLogic
             try
             {
                 GameModule.Audio.Play(TEngine.AudioType.Sound, path, false, Mathf.Clamp01(volume), true);
-                _soundCooldown = 0.04f;
+                SetSoundCooldown(path, cooldown);
             }
             catch (Exception)
             {
-                _soundCooldown = 0.2f;
+                SetSoundCooldown(path, 0.2f);
             }
+        }
+
+        private void UpdateSoundCooldowns(float dt)
+        {
+            if (_soundCooldowns.Count <= 0)
+            {
+                return;
+            }
+
+            List<string> keys = new List<string>(_soundCooldowns.Keys);
+            for (int i = 0; i < keys.Count; i++)
+            {
+                string key = keys[i];
+                float remaining = Mathf.Max(0f, _soundCooldowns[key] - dt);
+                if (remaining <= 0f)
+                {
+                    _soundCooldowns.Remove(key);
+                }
+                else
+                {
+                    _soundCooldowns[key] = remaining;
+                }
+            }
+        }
+
+        private float GetSoundCooldown(string path)
+        {
+            return _soundCooldowns.TryGetValue(path, out float value) ? value : 0f;
+        }
+
+        private void SetSoundCooldown(string path, float cooldown)
+        {
+            _soundCooldowns[path] = Mathf.Max(0.01f, cooldown);
         }
 
         private static RoguelikeSurvivalEnemy CreateEnemy(int id, Vector2 position, int health, int attack, float moveSpeed, string configId = null, bool isBoss = false)
@@ -779,7 +850,7 @@ namespace GameLogic
             BuildLevelUpOptions();
             Phase = RoguelikeGamePhase.RewardChoice;
             LastMessage = $"等级提升至 {Level}，请选择一项强化。";
-            PlaySound(LevelUpSoundPath, 0.45f);
+            PlayLevelUpSound();
         }
 
         private void BuildLevelUpOptions()

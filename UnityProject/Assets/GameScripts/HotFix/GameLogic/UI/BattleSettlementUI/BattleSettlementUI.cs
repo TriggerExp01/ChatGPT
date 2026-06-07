@@ -97,6 +97,7 @@ namespace GameLogic
 
         private void OnRestart()
         {
+            RoguelikeGame.Instance.PlayUiConfirmSound();
             RoguelikeGame.Instance.StartNewRun();
             RefreshSettlement();
         }

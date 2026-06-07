@@ -68,22 +68,26 @@ namespace GameLogic
 
             if (Input.GetKeyDown(KeyCode.Escape))
             {
+                RoguelikeGame.Instance.PlayUiConfirmSound();
                 RoguelikeGame.Instance.TogglePause();
             }
 
             if (Input.GetKeyDown(KeyCode.R))
             {
+                RoguelikeGame.Instance.PlayUiConfirmSound();
                 RoguelikeGame.Instance.StartNewRun();
             }
         }
 
         private void OnPause()
         {
+            RoguelikeGame.Instance.PlayUiConfirmSound();
             RoguelikeGame.Instance.TogglePause();
         }
 
         private void OnRestart()
         {
+            RoguelikeGame.Instance.PlayUiConfirmSound();
             RoguelikeGame.Instance.StartNewRun();
         }
     }

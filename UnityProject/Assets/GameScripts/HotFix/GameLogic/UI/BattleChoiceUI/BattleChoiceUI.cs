@@ -107,6 +107,7 @@ namespace GameLogic
 
         private void ChooseReward(int index)
         {
+            RoguelikeGame.Instance.PlayUiConfirmSound();
             RoguelikeGame.Instance.ChooseReward(index);
             RefreshChoiceButtons();
         }
