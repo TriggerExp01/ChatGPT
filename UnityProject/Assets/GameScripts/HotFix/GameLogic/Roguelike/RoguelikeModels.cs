@@ -32,6 +32,29 @@ namespace GameLogic
         Defeated,
     }
 
+    public enum RoguelikeEffectCueType
+    {
+        Hit,
+        Kill,
+        Pickup,
+    }
+
+    public readonly struct RoguelikeEffectCue
+    {
+        public int Sequence { get; }
+
+        public RoguelikeEffectCueType Type { get; }
+
+        public Vector2 Position { get; }
+
+        public RoguelikeEffectCue(int sequence, RoguelikeEffectCueType type, Vector2 position)
+        {
+            Sequence = sequence;
+            Type = type;
+            Position = position;
+        }
+    }
+
     public sealed class RoguelikeStats
     {
         public int MaxHealth { get; private set; }

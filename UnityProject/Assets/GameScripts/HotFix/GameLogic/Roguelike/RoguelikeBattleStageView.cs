@@ -6,27 +6,60 @@ namespace GameLogic
     public sealed class RoguelikeBattleStageView : MonoBehaviour
     {
         private const string StageName = "Roguelike2DSurvivalStage";
+        public const string HitEffectPrefabAddress = "Roguelike_HitEffect";
+        public const string KillEffectPrefabAddress = "Roguelike_KillEffect";
+        public const string PickupEffectPrefabAddress = "Roguelike_PickupEffect";
+
         private readonly Dictionary<int, Transform> _enemyViews = new Dictionary<int, Transform>();
         private readonly Dictionary<int, Transform> _pickupViews = new Dictionary<int, Transform>();
         private readonly Dictionary<int, Transform> _projectileViews = new Dictionary<int, Transform>();
+        private readonly Dictionary<int, RoguelikeRuntimeEffectView> _activeEffectViews = new Dictionary<int, RoguelikeRuntimeEffectView>();
+        private readonly Dictionary<RoguelikeEffectCueType, Stack<Transform>> _effectViewPools = new Dictionary<RoguelikeEffectCueType, Stack<Transform>>();
+        private readonly Dictionary<RoguelikeEffectCueType, string> _effectPrefabAddressOverrides = new Dictionary<RoguelikeEffectCueType, string>();
         private readonly Stack<Transform> _enemyViewPool = new Stack<Transform>();
         private readonly Stack<Transform> _pickupViewPool = new Stack<Transform>();
         private readonly Stack<Transform> _projectileViewPool = new Stack<Transform>();
         private readonly List<Transform> _obstacleViews = new List<Transform>();
+        private readonly List<int> _expiredEffectIds = new List<int>();
         private Transform _player;
         private Transform _attackView;
         private Transform _pickupPulseView;
         private Camera _camera;
         private RoguelikeCameraFollow _cameraFollow;
         private RoguelikePlayerMotor _playerMotor;
+        private int _lastEffectCueSequence;
+        private int _effectPrefabLoadedCount;
+        private int _effectFallbackCount;
         private static Sprite _whiteSprite;
 
         public int EnemyViewPoolCount => _enemyViewPool.Count;
         public int PickupViewPoolCount => _pickupViewPool.Count;
         public int ProjectileViewPoolCount => _projectileViewPool.Count;
+        public int EffectViewPoolCount
+        {
+            get
+            {
+                int count = 0;
+                foreach (Stack<Transform> pool in _effectViewPools.Values)
+                {
+                    count += pool.Count;
+                }
+
+                return count;
+            }
+        }
+
         public int ViewReuseCount { get; private set; }
+        public int ActiveEffectViewCount => _activeEffectViews.Count;
+        public int EffectPrefabLoadedCount => _effectPrefabLoadedCount;
+        public int EffectFallbackCount => _effectFallbackCount;
         public bool PickupFeedbackVisible => _pickupPulseView != null && _pickupPulseView.gameObject.activeSelf;
         public float LastCameraShakeMagnitude => _cameraFollow != null ? _cameraFollow.LastShakeMagnitude : 0f;
+
+        public void DebugSetEffectPrefabAddressOverride(RoguelikeEffectCueType type, string address)
+        {
+            _effectPrefabAddressOverrides[type] = address;
+        }
 
         public static RoguelikeBattleStageView Ensure()
         {
@@ -66,6 +99,7 @@ namespace GameLogic
             SyncEnemies(game.Enemies);
             SyncProjectiles(game.Projectiles);
             SyncPickups(game.Pickups);
+            SyncEffectCues(game.EffectCues);
         }
 
         private void BuildStage()
@@ -80,10 +114,14 @@ namespace GameLogic
             _enemyViews.Clear();
             _pickupViews.Clear();
             _projectileViews.Clear();
+            _activeEffectViews.Clear();
             _obstacleViews.Clear();
             _enemyViewPool.Clear();
             _pickupViewPool.Clear();
             _projectileViewPool.Clear();
+            _effectViewPools.Clear();
+            _expiredEffectIds.Clear();
+            _lastEffectCueSequence = 0;
             if (_camera == null)
             {
                 GameObject cameraObject = new GameObject("MainCamera");
@@ -148,6 +186,221 @@ namespace GameLogic
                     4,
                     body);
                 _obstacleViews.Add(body);
+            }
+        }
+
+        private void SyncEffectCues(IReadOnlyList<RoguelikeEffectCue> cues)
+        {
+            if (cues != null && cues.Count > 0)
+            {
+                int newestSequence = cues[cues.Count - 1].Sequence;
+                if (newestSequence < _lastEffectCueSequence)
+                {
+                    _lastEffectCueSequence = 0;
+                }
+
+                for (int i = 0; i < cues.Count; i++)
+                {
+                    RoguelikeEffectCue cue = cues[i];
+                    if (cue.Sequence <= _lastEffectCueSequence)
+                    {
+                        continue;
+                    }
+
+                    SpawnEffectView(cue);
+                    _lastEffectCueSequence = Mathf.Max(_lastEffectCueSequence, cue.Sequence);
+                }
+            }
+
+            UpdateEffectViews();
+        }
+
+        private void SpawnEffectView(RoguelikeEffectCue cue)
+        {
+            Transform view = TakeFromPool(GetEffectViewPool(cue.Type));
+            if (view == null)
+            {
+                GameObject instance = LoadEffectGameObject(cue.Type);
+                view = instance != null ? instance.transform : null;
+            }
+
+            if (view == null)
+            {
+                view = CreateFallbackEffectView(cue.Type);
+                _effectFallbackCount++;
+            }
+
+            Vector3 baseScale = GetEffectBaseScale(cue.Type);
+            PreparePooledView(
+                view,
+                $"{GetEffectDisplayName(cue.Type)}_{cue.Sequence}",
+                new Vector3(cue.Position.x, cue.Position.y, 0f),
+                baseScale,
+                Quaternion.identity);
+
+            RoguelikeRuntimeEffectView effectView = view.GetComponent<RoguelikeRuntimeEffectView>();
+            if (effectView == null)
+            {
+                effectView = view.gameObject.AddComponent<RoguelikeRuntimeEffectView>();
+            }
+
+            effectView.Play(cue.Type, GetEffectDuration(cue.Type), baseScale);
+            _activeEffectViews[cue.Sequence] = effectView;
+        }
+
+        private void UpdateEffectViews()
+        {
+            if (_activeEffectViews.Count <= 0)
+            {
+                return;
+            }
+
+            float dt = Application.isPlaying ? Mathf.Max(Time.unscaledDeltaTime, 0.016f) : 0.016f;
+            _expiredEffectIds.Clear();
+            foreach (KeyValuePair<int, RoguelikeRuntimeEffectView> pair in _activeEffectViews)
+            {
+                RoguelikeRuntimeEffectView effectView = pair.Value;
+                if (effectView == null || !effectView.Tick(dt))
+                {
+                    _expiredEffectIds.Add(pair.Key);
+                }
+            }
+
+            for (int i = 0; i < _expiredEffectIds.Count; i++)
+            {
+                int id = _expiredEffectIds[i];
+                if (!_activeEffectViews.TryGetValue(id, out RoguelikeRuntimeEffectView effectView) || effectView == null)
+                {
+                    _activeEffectViews.Remove(id);
+                    continue;
+                }
+
+                RecycleView(effectView.transform, GetEffectViewPool(effectView.Type));
+                _activeEffectViews.Remove(id);
+            }
+        }
+
+        private GameObject LoadEffectGameObject(RoguelikeEffectCueType type)
+        {
+            string address = GetEffectPrefabAddress(type);
+            if (string.IsNullOrEmpty(address))
+            {
+                return null;
+            }
+
+            try
+            {
+                TEngine.IResourceModule resource = GameModule.Resource;
+                if (resource == null || !resource.CheckLocationValid(address))
+                {
+                    return null;
+                }
+
+                GameObject instance = resource.LoadGameObject(address, transform);
+                if (instance != null)
+                {
+                    _effectPrefabLoadedCount++;
+                }
+
+                return instance;
+            }
+            catch (System.Exception)
+            {
+                return null;
+            }
+        }
+
+        private string GetEffectPrefabAddress(RoguelikeEffectCueType type)
+        {
+            if (_effectPrefabAddressOverrides.TryGetValue(type, out string overrideAddress))
+            {
+                return overrideAddress;
+            }
+
+            switch (type)
+            {
+                case RoguelikeEffectCueType.Kill:
+                    return KillEffectPrefabAddress;
+                case RoguelikeEffectCueType.Pickup:
+                    return PickupEffectPrefabAddress;
+                default:
+                    return HitEffectPrefabAddress;
+            }
+        }
+
+        private Stack<Transform> GetEffectViewPool(RoguelikeEffectCueType type)
+        {
+            if (!_effectViewPools.TryGetValue(type, out Stack<Transform> pool))
+            {
+                pool = new Stack<Transform>();
+                _effectViewPools.Add(type, pool);
+            }
+
+            return pool;
+        }
+
+        private Transform CreateFallbackEffectView(RoguelikeEffectCueType type)
+        {
+            Transform root = new GameObject("特效回退").transform;
+            root.SetParent(transform, false);
+            switch (type)
+            {
+                case RoguelikeEffectCueType.Kill:
+                    CreateSprite("击杀光环", Vector3.zero, new Vector3(0.72f, 0.72f, 1f), new Color(1f, 0.36f, 0.62f, 0.76f), 14, root);
+                    CreateSprite("击杀星芒", Vector3.zero, new Vector3(0.92f, 0.12f, 1f), new Color(1f, 0.86f, 0.30f, 0.90f), 15, root);
+                    root.GetChild(1).localRotation = Quaternion.Euler(0f, 0f, 45f);
+                    break;
+                case RoguelikeEffectCueType.Pickup:
+                    CreateSprite("拾取星核", Vector3.zero, new Vector3(0.32f, 0.32f, 1f), new Color(0.38f, 0.94f, 1f, 0.86f), 14, root);
+                    CreateSprite("拾取星轨", Vector3.zero, new Vector3(0.72f, 0.08f, 1f), new Color(0.82f, 1f, 0.52f, 0.82f), 15, root);
+                    root.GetChild(0).localRotation = Quaternion.Euler(0f, 0f, 45f);
+                    root.GetChild(1).localRotation = Quaternion.Euler(0f, 0f, -25f);
+                    break;
+                default:
+                    CreateSprite("命中闪光", Vector3.zero, new Vector3(0.48f, 0.12f, 1f), new Color(1f, 0.92f, 0.42f, 0.92f), 14, root);
+                    CreateSprite("命中火花", Vector3.zero, new Vector3(0.12f, 0.48f, 1f), new Color(1f, 0.50f, 0.66f, 0.86f), 15, root);
+                    break;
+            }
+
+            return root;
+        }
+
+        private static string GetEffectDisplayName(RoguelikeEffectCueType type)
+        {
+            switch (type)
+            {
+                case RoguelikeEffectCueType.Kill:
+                    return "击杀特效";
+                case RoguelikeEffectCueType.Pickup:
+                    return "拾取特效";
+                default:
+                    return "命中特效";
+            }
+        }
+
+        private static float GetEffectDuration(RoguelikeEffectCueType type)
+        {
+            switch (type)
+            {
+                case RoguelikeEffectCueType.Kill:
+                    return 0.34f;
+                case RoguelikeEffectCueType.Pickup:
+                    return 0.24f;
+                default:
+                    return 0.18f;
+            }
+        }
+
+        private static Vector3 GetEffectBaseScale(RoguelikeEffectCueType type)
+        {
+            switch (type)
+            {
+                case RoguelikeEffectCueType.Kill:
+                    return Vector3.one * 0.95f;
+                case RoguelikeEffectCueType.Pickup:
+                    return Vector3.one * 0.72f;
+                default:
+                    return Vector3.one * 0.64f;
             }
         }
 
@@ -470,6 +723,89 @@ namespace GameLogic
             for (int i = transform.childCount - 1; i >= 0; i--)
             {
                 Destroy(transform.GetChild(i).gameObject);
+            }
+        }
+    }
+
+    public sealed class RoguelikeRuntimeEffectView : MonoBehaviour
+    {
+        private SpriteRenderer[] _renderers;
+        private Color[] _sourceColors;
+        private Color[] _baseColors;
+        private Vector3 _baseScale;
+        private float _duration;
+        private float _remaining;
+
+        public RoguelikeEffectCueType Type { get; private set; }
+
+        public void Play(RoguelikeEffectCueType type, float duration, Vector3 baseScale)
+        {
+            Type = type;
+            _duration = Mathf.Max(0.01f, duration);
+            _remaining = _duration;
+            _baseScale = baseScale;
+            transform.localScale = _baseScale;
+            CacheRenderers();
+            ApplyProgress(0f);
+        }
+
+        public bool Tick(float dt)
+        {
+            _remaining = Mathf.Max(0f, _remaining - Mathf.Max(0f, dt));
+            float progress = 1f - Mathf.Clamp01(_remaining / _duration);
+            ApplyProgress(progress);
+            return _remaining > 0f;
+        }
+
+        private void ApplyProgress(float progress)
+        {
+            float alpha = Mathf.Lerp(1f, 0f, progress);
+            float scale = Mathf.Lerp(1f, GetScaleEnd(), progress);
+            transform.localScale = _baseScale * scale;
+
+            for (int i = 0; i < _renderers.Length; i++)
+            {
+                if (_renderers[i] == null)
+                {
+                    continue;
+                }
+
+                Color color = _baseColors[i];
+                color.a *= alpha;
+                _renderers[i].color = color;
+            }
+        }
+
+        private float GetScaleEnd()
+        {
+            switch (Type)
+            {
+                case RoguelikeEffectCueType.Kill:
+                    return 1.85f;
+                case RoguelikeEffectCueType.Pickup:
+                    return 1.55f;
+                default:
+                    return 1.32f;
+            }
+        }
+
+        private void CacheRenderers()
+        {
+            _renderers = GetComponentsInChildren<SpriteRenderer>(true);
+            if (_sourceColors == null || _sourceColors.Length != _renderers.Length)
+            {
+                _sourceColors = new Color[_renderers.Length];
+                for (int i = 0; i < _renderers.Length; i++)
+                {
+                    _sourceColors[i] = _renderers[i].color;
+                }
+            }
+
+            _baseColors = new Color[_renderers.Length];
+            for (int i = 0; i < _renderers.Length; i++)
+            {
+                _baseColors[i] = _sourceColors[i];
+                _renderers[i].color = _sourceColors[i];
             }
         }
     }

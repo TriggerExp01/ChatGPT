@@ -36,6 +36,7 @@ namespace GameLogic
         private readonly List<RoguelikeSurvivalPickup> _pickups = new List<RoguelikeSurvivalPickup>();
         private readonly List<RoguelikeSurvivalProjectile> _projectiles = new List<RoguelikeSurvivalProjectile>();
         private readonly List<RoguelikeSurvivalWeapon> _weapons = new List<RoguelikeSurvivalWeapon>();
+        private readonly List<RoguelikeEffectCue> _effectCues = new List<RoguelikeEffectCue>(32);
         private readonly List<RoguelikeChoiceOption> _rewardOptions = new List<RoguelikeChoiceOption>(3);
         private readonly List<RoguelikeArenaObstacle> _arenaObstacles = new List<RoguelikeArenaObstacle>
         {
@@ -52,6 +53,7 @@ namespace GameLogic
         private int _nextEnemyId;
         private int _nextPickupId;
         private int _nextProjectileId;
+        private int _nextEffectCueSequence;
         private float _pickupAttractRadius = BasePickupAttractRadius;
         private float _projectileDamageMultiplier = 1f;
         private readonly Dictionary<string, float> _soundCooldowns = new Dictionary<string, float>();
@@ -68,6 +70,7 @@ namespace GameLogic
         public IReadOnlyList<RoguelikeSurvivalPickup> Pickups => _pickups;
         public IReadOnlyList<RoguelikeSurvivalProjectile> Projectiles => _projectiles;
         public IReadOnlyList<RoguelikeSurvivalWeapon> Weapons => _weapons;
+        public IReadOnlyList<RoguelikeEffectCue> EffectCues => _effectCues;
         public IReadOnlyList<RoguelikeArenaObstacle> ArenaObstacles => _arenaObstacles;
         public Vector2 PlayerPosition { get; private set; }
         public Vector2 MoveInput => _moveInput;
@@ -130,6 +133,8 @@ namespace GameLogic
             _nextEnemyId = 1;
             _nextPickupId = 1;
             _nextProjectileId = 1;
+            _nextEffectCueSequence = 1;
+            _effectCues.Clear();
             _pickupAttractRadius = BasePickupAttractRadius;
             _projectileDamageMultiplier = 1f;
             _soundCooldowns.Clear();
@@ -590,6 +595,7 @@ namespace GameLogic
                     enemy.Health -= projectile.Damage;
                     projectile.RecordHitEnemy(enemy.Id);
                     enemy.HitFlash = 0.12f;
+                    AddEffectCue(RoguelikeEffectCueType.Hit, enemy.Position);
                     TriggerCameraShake(0.08f);
                     CurrentRun.RecordDamageDealt(projectile.Damage);
                     PlayHitSound();
@@ -613,6 +619,7 @@ namespace GameLogic
         private void OnEnemyKilled(Vector2 position, bool killedBoss = false)
         {
             KillCount++;
+            AddEffectCue(RoguelikeEffectCueType.Kill, position);
             if (killedBoss)
             {
                 CompleteRunByBossKill();
@@ -656,6 +663,7 @@ namespace GameLogic
 
                 PlayPickupSound();
                 PickupFlash = 0.14f;
+                AddEffectCue(RoguelikeEffectCueType.Pickup, pickup.Position);
                 TriggerCameraShake(0.04f);
                 _pickups.RemoveAt(i);
                 ReleasePickup(pickup);
@@ -665,6 +673,15 @@ namespace GameLogic
         private void TriggerCameraShake(float duration)
         {
             CameraShake = Mathf.Max(CameraShake, duration);
+        }
+
+        private void AddEffectCue(RoguelikeEffectCueType type, Vector2 position)
+        {
+            _effectCues.Add(new RoguelikeEffectCue(_nextEffectCueSequence++, type, position));
+            if (_effectCues.Count > 96)
+            {
+                _effectCues.RemoveRange(0, _effectCues.Count - 96);
+            }
         }
 
         public Vector2 ResolveObstaclePosition(Vector2 position, float radius)
