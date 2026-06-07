@@ -6,22 +6,38 @@ namespace GameLogic
     [Window(UILayer.UI, location: "BattleHudUI")]
     class BattleHudUI : UIWindow
     {
-        private Text _titleText;
-        private Text _statsText;
+        private Text _heroText;
+        private Text _timeText;
+        private Text _buildText;
         private Text _messageText;
         private Slider _hpSlider;
         private Slider _expSlider;
+        private RectTransform _heroPanel;
+        private RectTransform _pressurePanel;
+        private RectTransform _buildPanel;
+        private RectTransform _hintPanel;
         private RoguelikeBattleStageView _stageView;
 
         protected override void ScriptGenerator()
         {
             RectTransform root = RoguelikeUIFactory.ResolveContainer(this);
-            RectTransform panel = RoguelikeUIFactory.CreatePanel("生存信息", root, new Vector2(0.02f, 0.80f), new Vector2(0.98f, 0.98f), new Color(0.02f, 0.035f, 0.055f, 0.94f));
-            _titleText = RoguelikeUIFactory.CreateText("标题", panel, 25, TextAnchor.UpperCenter, new Vector2(0.25f, 0.60f), new Vector2(0.75f, 0.96f), Vector2.zero, Vector2.zero);
-            _statsText = RoguelikeUIFactory.CreateText("属性", panel, 18, TextAnchor.UpperLeft, new Vector2(0.02f, 0.12f), new Vector2(0.48f, 0.92f), Vector2.zero, Vector2.zero);
-            _messageText = RoguelikeUIFactory.CreateText("提示", panel, 18, TextAnchor.UpperRight, new Vector2(0.52f, 0.12f), new Vector2(0.98f, 0.92f), Vector2.zero, Vector2.zero);
-            _hpSlider = RoguelikeUIFactory.CreateSlider("生命", panel, new Vector2(0.02f, 0.05f), new Vector2(0.47f, 0.14f), new Color(0.20f, 0.85f, 0.34f, 1f));
-            _expSlider = RoguelikeUIFactory.CreateSlider("经验", panel, new Vector2(0.53f, 0.05f), new Vector2(0.98f, 0.14f), new Color(0.24f, 0.62f, 1f, 1f));
+            _heroPanel = RoguelikeUIFactory.CreatePanel("角色状态面板", root, new Vector2(0.018f, 0.79f), new Vector2(0.34f, 0.975f), new Color(0.045f, 0.052f, 0.085f, 0.88f));
+            RoguelikeUIFactory.CreateImage("角色头像", _heroPanel, new Vector2(0.035f, 0.26f), new Vector2(0.22f, 0.86f), new Color(0.92f, 0.52f, 0.86f, 1f));
+            RoguelikeUIFactory.CreateImage("头像高光", _heroPanel, new Vector2(0.075f, 0.62f), new Vector2(0.18f, 0.80f), new Color(1f, 0.86f, 0.96f, 0.82f));
+            _heroText = RoguelikeUIFactory.CreateText("角色数值", _heroPanel, 17, TextAnchor.UpperLeft, new Vector2(0.26f, 0.40f), new Vector2(0.96f, 0.92f), Vector2.zero, Vector2.zero);
+            _hpSlider = RoguelikeUIFactory.CreateSlider("生命条", _heroPanel, new Vector2(0.26f, 0.24f), new Vector2(0.96f, 0.35f), new Color(0.96f, 0.32f, 0.44f, 1f));
+            _expSlider = RoguelikeUIFactory.CreateSlider("经验条", _heroPanel, new Vector2(0.26f, 0.10f), new Vector2(0.96f, 0.20f), new Color(0.38f, 0.78f, 1f, 1f));
+
+            _pressurePanel = RoguelikeUIFactory.CreatePanel("时间压力面板", root, new Vector2(0.39f, 0.885f), new Vector2(0.61f, 0.975f), new Color(0.05f, 0.04f, 0.075f, 0.82f));
+            _timeText = RoguelikeUIFactory.CreateText("时间压力", _pressurePanel, 20, TextAnchor.MiddleCenter, new Vector2(0.04f, 0.10f), new Vector2(0.96f, 0.90f), Vector2.zero, Vector2.zero);
+
+            _buildPanel = RoguelikeUIFactory.CreatePanel("构筑槽面板", root, new Vector2(0.66f, 0.79f), new Vector2(0.982f, 0.975f), new Color(0.045f, 0.052f, 0.085f, 0.88f));
+            BuildIconSlots(_buildPanel, "武器槽", 0.70f, new Color(1f, 0.74f, 0.28f, 0.92f));
+            BuildIconSlots(_buildPanel, "被动槽", 0.36f, new Color(0.55f, 0.86f, 1f, 0.92f));
+            _buildText = RoguelikeUIFactory.CreateText("构筑摘要", _buildPanel, 14, TextAnchor.UpperLeft, new Vector2(0.44f, 0.08f), new Vector2(0.96f, 0.92f), Vector2.zero, Vector2.zero);
+
+            _hintPanel = RoguelikeUIFactory.CreatePanel("战斗提示面板", root, new Vector2(0.25f, 0.025f), new Vector2(0.75f, 0.10f), new Color(0.03f, 0.035f, 0.06f, 0.72f));
+            _messageText = RoguelikeUIFactory.CreateText("战斗提示", _hintPanel, 16, TextAnchor.MiddleCenter, new Vector2(0.04f, 0.08f), new Vector2(0.96f, 0.92f), Vector2.zero, Vector2.zero);
         }
 
         protected override void OnCreate()
@@ -51,11 +67,21 @@ namespace GameLogic
 
             _stageView.Refresh(run);
             RoguelikeActorState player = run.Player;
-            RoguelikeUIFactory.SetText(_titleText, $"2D 生存肉鸽　{game.ElapsedTime:0.0} 秒　敌人 {game.Enemies.Count}　掉落 {game.Pickups.Count}");
-            RoguelikeUIFactory.SetText(_statsText, $"等级 {game.Level}　击杀 {game.KillCount}　金币 {run.Gold}　永久金币 {game.MetaGold}\n生命 {player.Health}/{player.Stats.MaxHealth}　攻击 {player.Stats.Attack}　移动 {game.MoveSpeed:0.0}");
-            RoguelikeUIFactory.SetText(_messageText, $"{game.LastMessage}\n武器 {game.WeaponSummary}\n被动 {game.PassiveSummary}\n范围 {game.AttackRange:0.0}　攻击间隔 {game.AttackInterval:0.00} 秒　经验 {game.Experience}/{game.ExperienceToNextLevel}");
+            RoguelikeUIFactory.SetText(_heroText, $"星辉旅人  Lv.{game.Level}\n生命 {player.Health}/{player.Stats.MaxHealth}  攻击 {player.Stats.Attack}\n金币 {run.Gold}  永久 {game.MetaGold}");
+            RoguelikeUIFactory.SetText(_timeText, $"{game.ElapsedTime:0.0}s\n敌人 {game.Enemies.Count}  击杀 {game.KillCount}");
+            RoguelikeUIFactory.SetText(_buildText, $"武器  {game.WeaponSummary}\n被动  {game.PassiveSummary}\n范围 {game.AttackRange:0.0}  间隔 {game.AttackInterval:0.00}s");
+            RoguelikeUIFactory.SetText(_messageText, game.LastMessage);
             RoguelikeUIFactory.SetSlider(_hpSlider, player.Health, player.Stats.MaxHealth);
             RoguelikeUIFactory.SetSlider(_expSlider, game.Experience, game.ExperienceToNextLevel);
+        }
+
+        private static void BuildIconSlots(RectTransform parent, string prefix, float yCenter, Color color)
+        {
+            for (int i = 0; i < 4; i++)
+            {
+                float xMin = 0.05f + i * 0.09f;
+                RoguelikeUIFactory.CreateImage($"{prefix}_{i + 1}", parent, new Vector2(xMin, yCenter - 0.10f), new Vector2(xMin + 0.065f, yCenter + 0.10f), color);
+            }
         }
     }
 }

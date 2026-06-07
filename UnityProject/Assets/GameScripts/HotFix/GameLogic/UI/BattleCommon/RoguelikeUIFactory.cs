@@ -34,6 +34,12 @@ namespace GameLogic
             return rect;
         }
 
+        public static RectTransform CreateImage(string name, RectTransform parent, Vector2 anchorMin, Vector2 anchorMax, Color color)
+        {
+            RectTransform rect = CreatePanel(name, parent, anchorMin, anchorMax, color);
+            return rect;
+        }
+
         public static Text CreateText(string name, RectTransform parent, int size, TextAnchor alignment, Vector2 anchorMin, Vector2 anchorMax, Vector2 offsetMin, Vector2 offsetMax)
         {
             RectTransform rect = CreateRect(name, parent, anchorMin, anchorMax, offsetMin, offsetMax);
