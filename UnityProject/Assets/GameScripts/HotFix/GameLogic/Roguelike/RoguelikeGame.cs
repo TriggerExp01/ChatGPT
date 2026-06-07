@@ -228,8 +228,15 @@ namespace GameLogic
             }
 
             RoguelikeChoiceOption option = _rewardOptions[index];
+            if (!option.CanAfford(CurrentRun))
+            {
+                LastMessage = $"金币不足：{option.Title} 需要 {option.Cost} 金币。";
+                return;
+            }
+
+            CurrentRun.TrySpendGold(option.Cost);
             option.Apply?.Invoke(CurrentRun);
-            LastMessage = $"升级选择：{option.Title}。";
+            LastMessage = option.Cost > 0 ? $"已购买：{option.Title}。" : $"升级选择：{option.Title}。";
             _rewardOptions.Clear();
             Phase = RoguelikeGamePhase.Running;
         }
@@ -707,6 +714,7 @@ namespace GameLogic
             pool.Add(new RoguelikeChoiceOption("speed", "轻盈步伐", "移动速度 +10%", run => MoveSpeed *= 1.1f));
             pool.Add(new RoguelikeChoiceOption("range", "延伸攻击", "攻击范围 +15%", run => AttackRange *= 1.15f));
             pool.Add(new RoguelikeChoiceOption("frequency", "快速攻击", "攻击频率 +12%", run => AttackInterval = Mathf.Max(0.15f, AttackInterval * 0.88f)));
+            pool.Add(new RoguelikeChoiceOption("paid_field_ration", "战地补给", "花费金币，立即恢复 35 生命", run => run.Player.Heal(35), 8));
 
             AddWeaponChoice(pool, RoguelikeWeaponType.MagicBolt);
             AddWeaponChoice(pool, RoguelikeWeaponType.SpinningBlade);
