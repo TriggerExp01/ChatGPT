@@ -57,8 +57,10 @@ namespace GameLogic
         private float _pickupAttractRadius = BasePickupAttractRadius;
         private float _projectileDamageMultiplier = 1f;
         private readonly Dictionary<string, float> _soundCooldowns = new Dictionary<string, float>();
+        private readonly List<string> _configValidationIssues = new List<string>();
         private bool _metaSaved;
         private bool _bossSpawned;
+        private bool _configValidationDone;
         private GameConfig.Tables _configTables;
 
         public RoguelikeRunState CurrentRun { get; private set; }
@@ -97,6 +99,7 @@ namespace GameLogic
         public float EnemyLanePosition => _enemies.Count > 0 ? _enemies[0].Position.x : 0f;
         public bool InRealtimeCombat => Phase == RoguelikeGamePhase.Running;
         public bool IsUsingLubanConfig => _configTables != null;
+        public IReadOnlyList<string> ConfigValidationIssues => _configValidationIssues;
         public string WeaponSummary => BuildWeaponSummary();
         public string PassiveSummary => BuildPassiveSummary();
         public string SettlementTitle => Phase == RoguelikeGamePhase.Victory ? "星辉凯旋" : "旅途暂歇";
@@ -310,6 +313,13 @@ namespace GameLogic
         {
             CurrentRun?.Player.TakeDamage(int.MaxValue);
             FinishRun();
+        }
+
+        public void DebugSetConfigTables(GameConfig.Tables tables)
+        {
+            _configTables = tables;
+            _configValidationDone = false;
+            ValidateLoadedConfigTables();
         }
 
         public string RunSmokeSimulation(int runCount, int maxStepsPerRun = 512)
@@ -1358,6 +1368,7 @@ namespace GameLogic
         {
             if (_configTables != null)
             {
+                ValidateLoadedConfigTables();
                 return _configTables;
             }
 
@@ -1370,7 +1381,25 @@ namespace GameLogic
                 _configTables = null;
             }
 
+            ValidateLoadedConfigTables();
             return _configTables;
+        }
+
+        private void ValidateLoadedConfigTables()
+        {
+            if (_configValidationDone || _configTables == null)
+            {
+                return;
+            }
+
+            _configValidationDone = true;
+            RoguelikeConfigValidator.Validate(_configTables, _configValidationIssues);
+            if (_configValidationIssues.Count <= 0)
+            {
+                return;
+            }
+
+            Log.Error($"肉鸽配置校验失败，共 {_configValidationIssues.Count} 项：{string.Join("；", _configValidationIssues)}");
         }
 
         private string BuildWeaponSummary()
