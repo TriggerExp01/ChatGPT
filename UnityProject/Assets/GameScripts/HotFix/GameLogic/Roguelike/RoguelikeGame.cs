@@ -356,6 +356,45 @@ namespace GameLogic
             return BuildPerformanceSnapshot(observedDuration, fps, stageView);
         }
 
+        public RoguelikePerformanceSnapshot DebugPopulateDenseRuntimeObjects(int enemyCount, int pickupCount, int projectileCount)
+        {
+            int safeEnemyCount = Mathf.Clamp(enemyCount, 0, 160);
+            int safePickupCount = Mathf.Clamp(pickupCount, 0, 160);
+            int safeProjectileCount = Mathf.Clamp(projectileCount, 0, 240);
+
+            ReleaseSurvivalObjects();
+            _effectCues.Clear();
+            for (int i = 0; i < safeEnemyCount; i++)
+            {
+                float x = Mathf.Lerp(-ArenaHalfWidth + 0.4f, ArenaHalfWidth - 0.4f, (i % 20) / 19f);
+                float y = Mathf.Lerp(-ArenaHalfHeight + 0.4f, ArenaHalfHeight - 0.4f, (i / 20) / 7f);
+                _enemies.Add(CreateEnemy(_nextEnemyId++, new Vector2(x, y), 30, 1, 0.8f, "dense_test", false));
+            }
+
+            for (int i = 0; i < safePickupCount; i++)
+            {
+                float x = Mathf.Lerp(-ArenaHalfWidth + 0.6f, ArenaHalfWidth - 0.6f, (i % 16) / 15f);
+                float y = Mathf.Lerp(-ArenaHalfHeight + 0.6f, ArenaHalfHeight - 0.6f, (i / 16) / 9f);
+                _pickups.Add(CreatePickup(_nextPickupId++, i % 2 == 0 ? RoguelikePickupType.Experience : RoguelikePickupType.Gold, new Vector2(x, y), 1));
+            }
+
+            for (int i = 0; i < safeProjectileCount; i++)
+            {
+                float angle = i * 137.5f * Mathf.Deg2Rad;
+                Vector2 direction = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)).normalized;
+                _projectiles.Add(CreateProjectile(
+                    _nextProjectileId++,
+                    i % 3 == 0 ? RoguelikeWeaponType.PiercingDart : RoguelikeWeaponType.MagicBolt,
+                    PlayerPosition + direction * 0.5f,
+                    direction,
+                    2.5f,
+                    4f,
+                    1));
+            }
+
+            return BuildPerformanceSnapshot(0f, 0f, null);
+        }
+
         private void UpdateSpawning(float dt)
         {
             _spawnTimer -= dt;
@@ -908,6 +947,7 @@ namespace GameLogic
                 stageView?.ViewReuseCount ?? 0,
                 GetMemoryPoolSnapshot(typeof(RoguelikeSurvivalEnemy)),
                 GetMemoryPoolSnapshot(typeof(RoguelikeSurvivalProjectile)),
+                GetMemoryPoolSnapshot(typeof(RoguelikeSurvivalPickup)),
                 GC.GetTotalMemory(false),
                 averageFps);
         }

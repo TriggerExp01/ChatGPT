@@ -436,6 +436,10 @@ namespace GameLogic
 
         public int ProjectilePoolUnusedCount { get; }
 
+        public int PickupPoolUsingCount { get; }
+
+        public int PickupPoolUnusedCount { get; }
+
         public long ManagedMemoryBytes { get; }
 
         public float AverageFps { get; }
@@ -451,6 +455,7 @@ namespace GameLogic
             int viewReuseCount,
             RoguelikeMemoryPoolSnapshot enemyPool,
             RoguelikeMemoryPoolSnapshot projectilePool,
+            RoguelikeMemoryPoolSnapshot pickupPool,
             long managedMemoryBytes,
             float averageFps)
         {
@@ -466,13 +471,15 @@ namespace GameLogic
             EnemyPoolUnusedCount = enemyPool.UnusedCount;
             ProjectilePoolUsingCount = projectilePool.UsingCount;
             ProjectilePoolUnusedCount = projectilePool.UnusedCount;
+            PickupPoolUsingCount = pickupPool.UsingCount;
+            PickupPoolUnusedCount = pickupPool.UnusedCount;
             ManagedMemoryBytes = Math.Max(0L, managedMemoryBytes);
             AverageFps = Math.Max(0f, averageFps);
         }
 
         public string ToBaselineLine()
         {
-            return $"时间 {ElapsedTime:0.0}s，敌人 {EnemyCount}，投射物 {ProjectileCount}，掉落 {PickupCount}，特效 {EffectCueCount}，活动特效视图 {ActiveEffectViewCount}，池化视图 {PooledViewCount}，视图复用 {ViewReuseCount}，敌人池 {EnemyPoolUsingCount}/{EnemyPoolUnusedCount}，投射物池 {ProjectilePoolUsingCount}/{ProjectilePoolUnusedCount}，托管内存 {ManagedMemoryBytes / 1024f:0.0}KB，平均帧率 {AverageFps:0.0}";
+            return $"时间 {ElapsedTime:0.0}s，敌人 {EnemyCount}，投射物 {ProjectileCount}，掉落 {PickupCount}，特效 {EffectCueCount}，活动特效视图 {ActiveEffectViewCount}，池化视图 {PooledViewCount}，视图复用 {ViewReuseCount}，敌人池 {EnemyPoolUsingCount}/{EnemyPoolUnusedCount}，投射物池 {ProjectilePoolUsingCount}/{ProjectilePoolUnusedCount}，掉落池 {PickupPoolUsingCount}/{PickupPoolUnusedCount}，托管内存 {ManagedMemoryBytes / 1024f:0.0}KB，平均帧率 {AverageFps:0.0}";
         }
     }
 
