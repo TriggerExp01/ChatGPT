@@ -12,6 +12,7 @@ namespace GameLogic
         private readonly Stack<Transform> _enemyViewPool = new Stack<Transform>();
         private readonly Stack<Transform> _pickupViewPool = new Stack<Transform>();
         private readonly Stack<Transform> _projectileViewPool = new Stack<Transform>();
+        private readonly List<Transform> _obstacleViews = new List<Transform>();
         private Transform _player;
         private Transform _attackView;
         private Transform _pickupPulseView;
@@ -79,6 +80,7 @@ namespace GameLogic
             _enemyViews.Clear();
             _pickupViews.Clear();
             _projectileViews.Clear();
+            _obstacleViews.Clear();
             _enemyViewPool.Clear();
             _pickupViewPool.Clear();
             _projectileViewPool.Clear();
@@ -111,6 +113,8 @@ namespace GameLogic
                 }
             }
 
+            BuildObstacleViews(RoguelikeGame.Instance.ArenaObstacles);
+
             _attackView = CreateSprite("攻击范围", Vector3.zero, Vector3.one, new Color(1f, 0.82f, 0.24f, 0.45f), 8);
             _pickupPulseView = CreateSprite("拾取反馈", Vector3.zero, Vector3.one, new Color(0.35f, 0.95f, 1f, 0f), 12);
             _pickupPulseView.gameObject.SetActive(false);
@@ -123,6 +127,28 @@ namespace GameLogic
             _playerMotor = _player.gameObject.AddComponent<RoguelikePlayerMotor>();
             _playerMotor.SetGame(RoguelikeGame.Instance);
             _cameraFollow.SetTarget(_player);
+        }
+
+        private void BuildObstacleViews(IReadOnlyList<RoguelikeArenaObstacle> obstacles)
+        {
+            for (int i = 0; i < obstacles.Count; i++)
+            {
+                RoguelikeArenaObstacle obstacle = obstacles[i];
+                Transform body = CreateSprite(
+                    $"障碍_{i + 1}",
+                    obstacle.Center,
+                    new Vector3(obstacle.Size.x, obstacle.Size.y, 1f),
+                    new Color(0.32f, 0.35f, 0.42f, 1f),
+                    3);
+                CreateSprite(
+                    "高光",
+                    new Vector3(-obstacle.Size.x * 0.18f, obstacle.Size.y * 0.18f, -0.1f),
+                    new Vector3(obstacle.Size.x * 0.35f, obstacle.Size.y * 0.16f, 1f),
+                    new Color(0.55f, 0.72f, 0.86f, 0.85f),
+                    4,
+                    body);
+                _obstacleViews.Add(body);
+            }
         }
 
         private void UpdateFeedbackViews(RoguelikeGame game)
@@ -480,6 +506,7 @@ namespace GameLogic
             Vector2 target = _body.position + _game.MoveInput.normalized * _game.MoveSpeed * Time.fixedDeltaTime;
             target.x = Mathf.Clamp(target.x, -RoguelikeGame.ArenaHalfWidth, RoguelikeGame.ArenaHalfWidth);
             target.y = Mathf.Clamp(target.y, -RoguelikeGame.ArenaHalfHeight, RoguelikeGame.ArenaHalfHeight);
+            target = _game.ResolveObstaclePosition(target, 0.48f);
             _body.MovePosition(target);
             _game.SyncPlayerPosition(target);
         }

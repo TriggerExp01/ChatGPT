@@ -422,6 +422,63 @@ namespace GameLogic
         }
     }
 
+    public sealed class RoguelikeArenaObstacle
+    {
+        public Vector2 Center { get; }
+        public Vector2 Size { get; }
+
+        public Vector2 Min => Center - Size * 0.5f;
+        public Vector2 Max => Center + Size * 0.5f;
+
+        public RoguelikeArenaObstacle(Vector2 center, Vector2 size)
+        {
+            Center = center;
+            Size = size;
+        }
+
+        public bool Contains(Vector2 position, float radius = 0f)
+        {
+            Vector2 min = Min - Vector2.one * radius;
+            Vector2 max = Max + Vector2.one * radius;
+            return position.x > min.x && position.x < max.x && position.y > min.y && position.y < max.y;
+        }
+
+        public Vector2 Resolve(Vector2 position, float radius)
+        {
+            if (!Contains(position, radius))
+            {
+                return position;
+            }
+
+            Vector2 min = Min - Vector2.one * radius;
+            Vector2 max = Max + Vector2.one * radius;
+            float left = Mathf.Abs(position.x - min.x);
+            float right = Mathf.Abs(max.x - position.x);
+            float bottom = Mathf.Abs(position.y - min.y);
+            float top = Mathf.Abs(max.y - position.y);
+            float nearest = Mathf.Min(Mathf.Min(left, right), Mathf.Min(bottom, top));
+
+            if (nearest == left)
+            {
+                position.x = min.x;
+            }
+            else if (nearest == right)
+            {
+                position.x = max.x;
+            }
+            else if (nearest == bottom)
+            {
+                position.y = min.y;
+            }
+            else
+            {
+                position.y = max.y;
+            }
+
+            return position;
+        }
+    }
+
     public enum RoguelikePickupType
     {
         Experience,

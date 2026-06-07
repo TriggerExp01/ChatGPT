@@ -14,6 +14,8 @@ namespace GameLogic
         private const string PickupSoundPath = "Roguelike_Pickup";
         private const string LevelUpSoundPath = "Roguelike_LevelUp";
         private const int BossKillGoldReward = 25;
+        private const float PlayerCollisionRadius = 0.48f;
+        private const float EnemyCollisionRadius = 0.42f;
         public const float ArenaHalfWidth = 7.5f;
         public const float ArenaHalfHeight = 4.2f;
 
@@ -22,6 +24,12 @@ namespace GameLogic
         private readonly List<RoguelikeSurvivalProjectile> _projectiles = new List<RoguelikeSurvivalProjectile>();
         private readonly List<RoguelikeSurvivalWeapon> _weapons = new List<RoguelikeSurvivalWeapon>();
         private readonly List<RoguelikeChoiceOption> _rewardOptions = new List<RoguelikeChoiceOption>(3);
+        private readonly List<RoguelikeArenaObstacle> _arenaObstacles = new List<RoguelikeArenaObstacle>
+        {
+            new RoguelikeArenaObstacle(new Vector2(-2.6f, 1.1f), new Vector2(1.15f, 0.85f)),
+            new RoguelikeArenaObstacle(new Vector2(2.8f, -1.25f), new Vector2(1.25f, 0.9f)),
+            new RoguelikeArenaObstacle(new Vector2(0.4f, 2.7f), new Vector2(1.6f, 0.55f)),
+        };
         private readonly System.Random _random = new System.Random();
         private Vector2 _moveInput;
         private Vector2 _attackDirection = Vector2.right;
@@ -47,6 +55,7 @@ namespace GameLogic
         public IReadOnlyList<RoguelikeSurvivalPickup> Pickups => _pickups;
         public IReadOnlyList<RoguelikeSurvivalProjectile> Projectiles => _projectiles;
         public IReadOnlyList<RoguelikeSurvivalWeapon> Weapons => _weapons;
+        public IReadOnlyList<RoguelikeArenaObstacle> ArenaObstacles => _arenaObstacles;
         public Vector2 PlayerPosition { get; private set; }
         public Vector2 MoveInput => _moveInput;
         public Vector2 AttackDirection => _attackDirection;
@@ -201,9 +210,10 @@ namespace GameLogic
 
         public void SyncPlayerPosition(Vector2 position)
         {
-            PlayerPosition = new Vector2(
+            Vector2 clamped = new Vector2(
                 Mathf.Clamp(position.x, -ArenaHalfWidth, ArenaHalfWidth),
                 Mathf.Clamp(position.y, -ArenaHalfHeight, ArenaHalfHeight));
+            PlayerPosition = ResolveObstaclePosition(clamped, PlayerCollisionRadius);
         }
 
         public void SetAttackDirection(Vector2 direction)
@@ -342,7 +352,8 @@ namespace GameLogic
                 float distance = offset.magnitude;
                 if (distance > 0.72f)
                 {
-                    enemy.Position += offset.normalized * enemy.MoveSpeed * dt;
+                    Vector2 nextPosition = enemy.Position + offset.normalized * enemy.MoveSpeed * dt;
+                    enemy.Position = ResolveObstaclePosition(nextPosition, EnemyCollisionRadius);
                 }
                 else if (enemy.AttackCooldown <= 0f && _hurtTimer <= 0f)
                 {
@@ -542,6 +553,12 @@ namespace GameLogic
                 float distance = projectile.Speed * dt;
                 projectile.Position += projectile.Direction * distance;
                 projectile.RemainingDistance -= distance;
+                if (IsBlockedByObstacle(projectile.Position))
+                {
+                    _projectiles.RemoveAt(i);
+                    ReleaseProjectile(projectile);
+                    continue;
+                }
 
                 bool hit = false;
                 for (int enemyIndex = 0; enemyIndex < _enemies.Count; enemyIndex++)
@@ -630,6 +647,32 @@ namespace GameLogic
         private void TriggerCameraShake(float duration)
         {
             CameraShake = Mathf.Max(CameraShake, duration);
+        }
+
+        public Vector2 ResolveObstaclePosition(Vector2 position, float radius)
+        {
+            Vector2 resolved = position;
+            for (int i = 0; i < _arenaObstacles.Count; i++)
+            {
+                resolved = _arenaObstacles[i].Resolve(resolved, radius);
+            }
+
+            resolved.x = Mathf.Clamp(resolved.x, -ArenaHalfWidth, ArenaHalfWidth);
+            resolved.y = Mathf.Clamp(resolved.y, -ArenaHalfHeight, ArenaHalfHeight);
+            return resolved;
+        }
+
+        public bool IsBlockedByObstacle(Vector2 position)
+        {
+            for (int i = 0; i < _arenaObstacles.Count; i++)
+            {
+                if (_arenaObstacles[i].Contains(position))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private void PlaySound(string path, float volume)
