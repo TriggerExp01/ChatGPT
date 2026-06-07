@@ -14,6 +14,7 @@ namespace GameLogic
         private const string PickupSoundPath = "Roguelike_Pickup";
         private const string LevelUpSoundPath = "Roguelike_LevelUp";
         private const int BossKillGoldReward = 25;
+        public const int MetaGoldPerAttackBonus = 100;
         private const float PlayerCollisionRadius = 0.48f;
         private const float EnemyCollisionRadius = 0.42f;
         public const float ArenaHalfWidth = 7.5f;
@@ -65,6 +66,9 @@ namespace GameLogic
         public int ExperienceToNextLevel { get; private set; }
         public int KillCount { get; private set; }
         public int MetaGold => PlayerPrefs.GetInt(MetaGoldKey, 0);
+        public int PermanentAttackBonus => MetaGold / MetaGoldPerAttackBonus;
+        public int PermanentGoldProgress => MetaGold % MetaGoldPerAttackBonus;
+        public int PermanentGoldToNextAttack => MetaGoldPerAttackBonus - PermanentGoldProgress;
         public float MoveSpeed { get; private set; }
         public float AttackRange { get; private set; }
         public float AttackInterval { get; private set; }
@@ -80,8 +84,9 @@ namespace GameLogic
         public bool IsUsingLubanConfig => _configTables != null;
         public string WeaponSummary => BuildWeaponSummary();
         public string PassiveSummary => BuildPassiveSummary();
+        public string SettlementTitle => Phase == RoguelikeGamePhase.Victory ? "星辉凯旋" : "旅途暂歇";
         public string SettlementSummary =>
-            $"本局结束\n生存时间 {ElapsedTime:0.0} 秒　等级 {Level}　击杀 {KillCount}\n本局金币 {CurrentRun?.Gold ?? 0}　永久金币 {MetaGold}\n永久金币每累计 100 点，下局初始攻击 +1";
+            $"{SettlementTitle}\n本局结束\n生存时间 {ElapsedTime:0.0} 秒　等级 {Level}　击杀 {KillCount}\n本局金币 {CurrentRun?.Gold ?? 0}　永久金币 {MetaGold}\n下局初始攻击 +{PermanentAttackBonus}，距离下一点攻击还需 {PermanentGoldToNextAttack} 金币";
 
         protected override void OnInit()
         {
@@ -94,7 +99,7 @@ namespace GameLogic
 
         public void StartNewRun(int seed)
         {
-            int attackBonus = MetaGold / 100;
+            int attackBonus = PermanentAttackBonus;
             RoguelikeStats stats = new RoguelikeStats(100, 12 + attackBonus, 1, 0f, 1.5f);
             CurrentRun = new RoguelikeRunState(seed, new RoguelikeActorState("player", "玩家", stats), new List<RoguelikeRoom>());
             Phase = RoguelikeGamePhase.Running;
