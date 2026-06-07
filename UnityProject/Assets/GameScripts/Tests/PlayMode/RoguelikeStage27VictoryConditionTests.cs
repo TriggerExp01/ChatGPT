@@ -35,9 +35,9 @@ namespace GameLogic.Tests
 
             Assert.That(game.Phase, Is.EqualTo(RoguelikeGamePhase.Victory));
             Assert.That(game.KillCount, Is.EqualTo(1));
-            Assert.That(game.MetaGold, Is.EqualTo(12));
+            Assert.That(game.MetaGold, Is.EqualTo(37));
             Assert.That(game.LastMessage, Does.Contain("生存目标达成"));
-            Assert.That(game.SettlementSummary, Does.Contain("永久金币 12"));
+            Assert.That(game.SettlementSummary, Does.Contain("永久金币 37"));
         }
 
         [Test]

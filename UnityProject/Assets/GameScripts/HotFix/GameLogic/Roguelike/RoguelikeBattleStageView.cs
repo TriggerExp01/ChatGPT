@@ -162,9 +162,9 @@ namespace GameLogic
 
                 view.GetComponent<RoguelikeEnemyMotor>().SetTarget(enemy.Position);
                 SpriteRenderer renderer = view.GetComponent<SpriteRenderer>();
-                renderer.color = enemy.HitFlash > 0f ? Color.white : new Color(0.95f, 0.26f, 0.20f, 1f);
+                renderer.color = enemy.HitFlash > 0f ? Color.white : GetEnemyColor(enemy);
                 float healthRate = Mathf.Clamp01((float)enemy.Health / Mathf.Max(1, enemy.MaxHealth));
-                view.localScale = Vector3.one * Mathf.Lerp(0.55f, 0.8f, healthRate);
+                view.localScale = Vector3.one * GetEnemyScale(enemy, healthRate);
             }
 
             List<int> removed = new List<int>();
@@ -330,6 +330,20 @@ namespace GameLogic
 
             motor.SetTarget((Vector2)position);
             return view;
+        }
+
+        private static Color GetEnemyColor(RoguelikeSurvivalEnemy enemy)
+        {
+            return enemy != null && enemy.IsBoss
+                ? new Color(0.72f, 0.22f, 1f, 1f)
+                : new Color(0.95f, 0.26f, 0.20f, 1f);
+        }
+
+        private static float GetEnemyScale(RoguelikeSurvivalEnemy enemy, float healthRate)
+        {
+            return enemy != null && enemy.IsBoss
+                ? Mathf.Lerp(1.2f, 1.55f, healthRate)
+                : Mathf.Lerp(0.55f, 0.8f, healthRate);
         }
 
         private Transform SpawnSpriteView(Stack<Transform> pool, string name, Vector3 position, Vector3 scale, Color color, int order)

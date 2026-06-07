@@ -13,6 +13,7 @@ namespace GameLogic
         private const string HitSoundPath = "Roguelike_Hit";
         private const string PickupSoundPath = "Roguelike_Pickup";
         private const string LevelUpSoundPath = "Roguelike_LevelUp";
+        private const int BossKillGoldReward = 25;
         public const float ArenaHalfWidth = 7.5f;
         public const float ArenaHalfHeight = 4.2f;
 
@@ -311,6 +312,7 @@ namespace GameLogic
                 int health = config != null ? Mathf.Max(1, config.MaxHealth + healthGrowth) : 18 + wave * 5;
                 int attack = config != null ? Mathf.Max(1, config.Attack + (wave - 1) * 2) : 7 + wave * 2;
                 float speed = config != null ? GetEnemyMoveSpeed(config, wave) : 1.35f + wave * 0.08f;
+                bool isBoss = config != null && config.Tier == GameConfig.roguelike.EEnemyTier.Boss;
                 _enemies.Add(CreateEnemy(
                     _nextEnemyId++,
                     position,
@@ -318,7 +320,12 @@ namespace GameLogic
                     attack,
                     speed,
                     config?.Id,
-                    config != null && config.Tier == GameConfig.roguelike.EEnemyTier.Boss));
+                    isBoss));
+                if (isBoss)
+                {
+                    LastMessage = "地牢之心出现，击败它完成本局目标。";
+                    TriggerCameraShake(0.22f);
+                }
             }
 
             _spawnTimer = Mathf.Max(0.35f, 1.35f - ElapsedTime * 0.006f);
@@ -1274,9 +1281,10 @@ namespace GameLogic
 
         private void CompleteRunByBossKill()
         {
+            CurrentRun?.AddGold(BossKillGoldReward);
             Phase = RoguelikeGamePhase.Victory;
             IsPaused = false;
-            LastMessage = "击败地牢之心，生存目标达成。";
+            LastMessage = $"击败地牢之心，生存目标达成。额外获得 {BossKillGoldReward} 金币。";
             SaveMetaGold();
         }
 
