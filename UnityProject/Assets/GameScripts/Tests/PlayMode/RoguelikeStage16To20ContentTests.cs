@@ -30,13 +30,13 @@ namespace GameLogic.Tests
             RoguelikeGame game = RoguelikeGame.Instance;
             game.StartNewRun(17001);
             SetConfigTables(game, tables);
-            game.DebugSkipRoom(5);
+            game.DebugSkipRoom(18);
 
             RoguelikeSpawnStage stage = InvokeGetActiveSpawnStage(game);
 
             Assert.NotNull(stage);
-            Assert.AreEqual(3, stage.Id);
-            Assert.AreEqual(3, stage.CommonSpawnCount);
+            Assert.AreEqual(5, stage.Id);
+            Assert.AreEqual(5, stage.CommonSpawnCount);
             Assert.That(stage.BossEnemyId, Is.EqualTo("dungeon_heart"));
         }
 

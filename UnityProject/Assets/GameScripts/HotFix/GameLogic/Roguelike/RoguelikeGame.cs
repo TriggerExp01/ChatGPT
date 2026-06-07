@@ -34,6 +34,7 @@ namespace GameLogic
         private float _projectileDamageMultiplier = 1f;
         private float _soundCooldown;
         private bool _metaSaved;
+        private bool _bossSpawned;
         private GameConfig.Tables _configTables;
 
         public RoguelikeRunState CurrentRun { get; private set; }
@@ -106,6 +107,7 @@ namespace GameLogic
             _projectileDamageMultiplier = 1f;
             _soundCooldown = 0f;
             _metaSaved = false;
+            _bossSpawned = false;
             ElapsedTime = 0f;
             Level = 1;
             Experience = 0;
@@ -1033,11 +1035,12 @@ namespace GameLogic
 
             if (spawnStage != null)
             {
-                if (!string.IsNullOrEmpty(spawnStage.BossEnemyId) && ElapsedTime >= spawnStage.BossStartTime && _random.NextDouble() < 0.08)
+                if (!_bossSpawned && !string.IsNullOrEmpty(spawnStage.BossEnemyId) && ElapsedTime >= spawnStage.BossStartTime)
                 {
                     GameConfig.roguelike.RoguelikeEnemy boss = tables.TbRoguelikeEnemy.GetOrDefault(spawnStage.BossEnemyId);
                     if (boss != null)
                     {
+                        _bossSpawned = true;
                         return boss;
                     }
                 }
