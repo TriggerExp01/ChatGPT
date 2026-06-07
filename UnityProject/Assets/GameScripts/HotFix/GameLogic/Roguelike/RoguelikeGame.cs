@@ -354,6 +354,9 @@ namespace GameLogic
                     case RoguelikeWeaponType.PiercingDart:
                         fired = FirePiercingDart(weapon);
                         break;
+                    case RoguelikeWeaponType.StarRingPulse:
+                        fired = FireStarRingPulse(weapon);
+                        break;
                 }
 
                 if (fired)
@@ -465,6 +468,36 @@ namespace GameLogic
                 ScaleProjectileDamage(GetWeaponDamage(weapon, Mathf.Max(1, CurrentRun.Player.Stats.Attack - 1 + weapon.Level)))));
             AttackFlash = 0.10f;
             LastMessage = "穿透飞镖出手。";
+            return true;
+        }
+
+        private bool FireStarRingPulse(RoguelikeSurvivalWeapon weapon)
+        {
+            if (_enemies.Count <= 0)
+            {
+                return false;
+            }
+
+            int pulseCount = 6 + weapon.Level * 2;
+            int damage = ScaleProjectileDamage(GetWeaponDamage(weapon, Mathf.Max(1, Mathf.RoundToInt(CurrentRun.Player.Stats.Attack * 0.45f) + weapon.Level)));
+            float range = GetWeaponRange(weapon, 1.8f + weapon.Level * 0.10f);
+            float angleOffset = (float)_random.NextDouble() * 360f;
+            for (int i = 0; i < pulseCount; i++)
+            {
+                float angle = angleOffset + 360f * i / pulseCount;
+                Vector2 direction = new Vector2(Mathf.Cos(angle * Mathf.Deg2Rad), Mathf.Sin(angle * Mathf.Deg2Rad));
+                _projectiles.Add(CreateProjectile(
+                    _nextProjectileId++,
+                    RoguelikeWeaponType.StarRingPulse,
+                    PlayerPosition,
+                    direction,
+                    GetWeaponSpeed(weapon, 5.6f),
+                    range,
+                    damage));
+            }
+
+            AttackFlash = 0.14f;
+            LastMessage = $"星环脉冲展开，释放 {pulseCount} 道星环。";
             return true;
         }
 
@@ -678,6 +711,7 @@ namespace GameLogic
             AddWeaponChoice(pool, RoguelikeWeaponType.MagicBolt);
             AddWeaponChoice(pool, RoguelikeWeaponType.SpinningBlade);
             AddWeaponChoice(pool, RoguelikeWeaponType.PiercingDart);
+            AddWeaponChoice(pool, RoguelikeWeaponType.StarRingPulse);
             AddPassiveChoices(pool);
 
             _rewardOptions.Clear();
@@ -904,6 +938,8 @@ namespace GameLogic
                     return Mathf.Max(0.65f, 2.2f - weapon.Level * 0.16f);
                 case RoguelikeWeaponType.PiercingDart:
                     return Mathf.Max(0.35f, 1.7f - weapon.Level * 0.10f);
+                case RoguelikeWeaponType.StarRingPulse:
+                    return Mathf.Max(0.45f, 1.15f - weapon.Level * 0.08f);
                 default:
                     return AttackInterval;
             }
@@ -973,6 +1009,8 @@ namespace GameLogic
                     return "旋刃";
                 case RoguelikeWeaponType.PiercingDart:
                     return "穿透飞镖";
+                case RoguelikeWeaponType.StarRingPulse:
+                    return "星环脉冲";
                 default:
                     return "追踪魔弹";
             }
@@ -986,6 +1024,8 @@ namespace GameLogic
                     return "spinning_blade";
                 case RoguelikeWeaponType.PiercingDart:
                     return "piercing_dart";
+                case RoguelikeWeaponType.StarRingPulse:
+                    return "star_ring_pulse";
                 default:
                     return "magic_bolt";
             }

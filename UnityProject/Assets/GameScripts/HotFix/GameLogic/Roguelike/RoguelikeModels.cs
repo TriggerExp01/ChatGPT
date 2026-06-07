@@ -427,6 +427,7 @@ namespace GameLogic
         MagicBolt,
         SpinningBlade,
         PiercingDart,
+        StarRingPulse,
     }
 
     public sealed class RoguelikeSurvivalWeapon

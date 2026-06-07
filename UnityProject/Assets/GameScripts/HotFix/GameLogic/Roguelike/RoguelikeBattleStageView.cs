@@ -268,6 +268,10 @@ namespace GameLogic
                     scale = new Vector3(0.44f, 0.09f, 1f);
                     color = new Color(0.95f, 0.62f, 1f, 1f);
                     break;
+                case RoguelikeWeaponType.StarRingPulse:
+                    scale = new Vector3(0.22f, 0.22f, 1f);
+                    color = new Color(0.42f, 1f, 0.72f, 1f);
+                    break;
                 default:
                     scale = new Vector3(0.28f, 0.14f, 1f);
                     color = new Color(1f, 0.82f, 0.24f, 1f);
