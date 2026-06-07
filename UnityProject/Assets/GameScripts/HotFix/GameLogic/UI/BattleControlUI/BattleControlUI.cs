@@ -36,8 +36,19 @@ namespace GameLogic
         protected override void OnUpdate()
         {
             HandleInput();
+            RefreshControlInfo();
+        }
+
+        protected override void OnRefresh()
+        {
+            RefreshControlInfo();
+        }
+
+        private void RefreshControlInfo()
+        {
             bool running = RoguelikeGame.Instance.Phase == RoguelikeGamePhase.Running;
             _panel.gameObject.SetActive(running);
+            RoguelikeUIFactory.SetText(_helpText, RoguelikeGame.Instance.OperationHint);
             _pauseButton.GetComponentInChildren<Text>(true).text = RoguelikeGame.Instance.IsPaused ? "继续" : "暂停";
         }
 

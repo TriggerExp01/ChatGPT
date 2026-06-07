@@ -74,7 +74,7 @@ namespace GameLogic
             }
 
             RoguelikeGame game = RoguelikeGame.Instance;
-            RoguelikeUIFactory.SetText(_promptText, $"{game.LastMessage}\n从星辉卡牌中选择一项奖励，战斗会在选择后继续。");
+            RoguelikeUIFactory.SetText(_promptText, $"{game.LastMessage}\n{game.OperationHint}");
             for (int i = 0; i < _choiceButtons.Length; i++)
             {
                 if (i < game.RewardOptions.Count)

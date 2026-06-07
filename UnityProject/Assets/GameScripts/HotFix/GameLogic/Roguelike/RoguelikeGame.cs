@@ -105,6 +105,7 @@ namespace GameLogic
         public string SettlementTitle => Phase == RoguelikeGamePhase.Victory ? "星辉凯旋" : "旅途暂歇";
         public string SettlementSummary =>
             $"{SettlementTitle}\n本局结束\n生存时间 {ElapsedTime:0.0} 秒　等级 {Level}　击杀 {KillCount}\n本局金币 {CurrentRun?.Gold ?? 0}　永久金币 {MetaGold}\n下局初始攻击 +{PermanentAttackBonus}，距离下一点攻击还需 {PermanentGoldToNextAttack} 金币";
+        public string OperationHint => BuildOperationHint();
 
         protected override void OnInit()
         {
@@ -1553,6 +1554,31 @@ namespace GameLogic
             }
 
             return string.Join(" / ", names);
+        }
+
+        private string BuildOperationHint()
+        {
+            if (Phase == RoguelikeGamePhase.RewardChoice)
+            {
+                return "升级时选择一张星辉卡牌，战斗会在选择后继续；金币不足的卡牌暂时不可选。";
+            }
+
+            if (Phase == RoguelikeGamePhase.Victory || Phase == RoguelikeGamePhase.Defeated)
+            {
+                return "结算后点击重新开始，永久金币每 100 点会提高下一局初始攻击。";
+            }
+
+            if (IsPaused)
+            {
+                return "当前已暂停，继续后保留本局进度；按 R 可以重开本局。";
+            }
+
+            if (ElapsedTime < 8f && Level <= 1)
+            {
+                return "WASD 移动躲开敌人，武器会自动攻击最近目标；拾取经验晶体后升级。";
+            }
+
+            return "保持移动、收集经验和金币，强化构筑后击败 600 秒出现的地牢之心。";
         }
 
         private void FinishRun()
