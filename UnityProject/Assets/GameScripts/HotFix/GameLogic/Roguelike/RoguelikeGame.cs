@@ -324,7 +324,36 @@ namespace GameLogic
 
         public string RunSmokeSimulation(int runCount, int maxStepsPerRun = 512)
         {
-            return $"生存原型冒烟检查：请求 {Math.Max(1, runCount)} 轮，当前敌人 {_enemies.Count}，等级 {Level}。";
+            RoguelikePerformanceSnapshot snapshot = RunPerformanceBaselineSimulation(
+                37001,
+                Math.Max(1, maxStepsPerRun),
+                0.1f,
+                null);
+            return $"生存原型冒烟检查：请求 {Math.Max(1, runCount)} 轮，{snapshot.ToBaselineLine()}。";
+        }
+
+        public RoguelikePerformanceSnapshot CapturePerformanceSnapshot(float observedDurationSeconds, RoguelikeBattleStageView stageView = null)
+        {
+            float fps = observedDurationSeconds > 0f ? Time.frameCount / observedDurationSeconds : 0f;
+            return BuildPerformanceSnapshot(observedDurationSeconds, fps, stageView);
+        }
+
+        public RoguelikePerformanceSnapshot RunPerformanceBaselineSimulation(int seed, int steps, float fixedDeltaTime, RoguelikeBattleStageView stageView = null)
+        {
+            StartNewRun(seed);
+            float dt = Mathf.Clamp(fixedDeltaTime, 0.01f, 0.1f);
+            int safeSteps = Math.Max(1, steps);
+            int executedSteps = 0;
+            for (int i = 0; i < safeSteps && Phase == RoguelikeGamePhase.Running; i++)
+            {
+                Tick(dt);
+                stageView?.Refresh(CurrentRun);
+                executedSteps++;
+            }
+
+            float observedDuration = executedSteps * dt;
+            float fps = observedDuration > 0f ? executedSteps / observedDuration : 0f;
+            return BuildPerformanceSnapshot(observedDuration, fps, stageView);
         }
 
         private void UpdateSpawning(float dt)
@@ -861,6 +890,45 @@ namespace GameLogic
             {
                 MemoryPool.Release(projectile);
             }
+        }
+
+        private RoguelikePerformanceSnapshot BuildPerformanceSnapshot(float observedDurationSeconds, float averageFps, RoguelikeBattleStageView stageView)
+        {
+            int pooledViewCount = stageView == null
+                ? 0
+                : stageView.EnemyViewPoolCount + stageView.PickupViewPoolCount + stageView.ProjectileViewPoolCount + stageView.EffectViewPoolCount;
+            return new RoguelikePerformanceSnapshot(
+                ElapsedTime,
+                _enemies.Count,
+                _projectiles.Count,
+                _pickups.Count,
+                _effectCues.Count,
+                stageView?.ActiveEffectViewCount ?? 0,
+                pooledViewCount,
+                stageView?.ViewReuseCount ?? 0,
+                GetMemoryPoolSnapshot(typeof(RoguelikeSurvivalEnemy)),
+                GetMemoryPoolSnapshot(typeof(RoguelikeSurvivalProjectile)),
+                GC.GetTotalMemory(false),
+                averageFps);
+        }
+
+        private static RoguelikeMemoryPoolSnapshot GetMemoryPoolSnapshot(Type type)
+        {
+            MemoryPoolInfo[] infos = MemoryPool.GetAllMemoryPoolInfos();
+            for (int i = 0; i < infos.Length; i++)
+            {
+                MemoryPoolInfo info = infos[i];
+                if (info.Type == type)
+                {
+                    return new RoguelikeMemoryPoolSnapshot(
+                        info.UsingMemoryCount,
+                        info.UnusedMemoryCount,
+                        info.AcquireMemoryCount,
+                        info.ReleaseMemoryCount);
+                }
+            }
+
+            return new RoguelikeMemoryPoolSnapshot(0, 0, 0, 0);
         }
 
         private void GainExperience(int amount)

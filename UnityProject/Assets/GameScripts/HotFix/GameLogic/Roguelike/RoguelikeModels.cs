@@ -389,6 +389,93 @@ namespace GameLogic
         }
     }
 
+    public readonly struct RoguelikeMemoryPoolSnapshot
+    {
+        public int UsingCount { get; }
+
+        public int UnusedCount { get; }
+
+        public int AcquireCount { get; }
+
+        public int ReleaseCount { get; }
+
+        public RoguelikeMemoryPoolSnapshot(int usingCount, int unusedCount, int acquireCount, int releaseCount)
+        {
+            UsingCount = Math.Max(0, usingCount);
+            UnusedCount = Math.Max(0, unusedCount);
+            AcquireCount = Math.Max(0, acquireCount);
+            ReleaseCount = Math.Max(0, releaseCount);
+        }
+
+        public int TotalCount => UsingCount + UnusedCount;
+    }
+
+    public readonly struct RoguelikePerformanceSnapshot
+    {
+        public float ElapsedTime { get; }
+
+        public int EnemyCount { get; }
+
+        public int ProjectileCount { get; }
+
+        public int PickupCount { get; }
+
+        public int EffectCueCount { get; }
+
+        public int ActiveEffectViewCount { get; }
+
+        public int PooledViewCount { get; }
+
+        public int ViewReuseCount { get; }
+
+        public int EnemyPoolUsingCount { get; }
+
+        public int EnemyPoolUnusedCount { get; }
+
+        public int ProjectilePoolUsingCount { get; }
+
+        public int ProjectilePoolUnusedCount { get; }
+
+        public long ManagedMemoryBytes { get; }
+
+        public float AverageFps { get; }
+
+        public RoguelikePerformanceSnapshot(
+            float elapsedTime,
+            int enemyCount,
+            int projectileCount,
+            int pickupCount,
+            int effectCueCount,
+            int activeEffectViewCount,
+            int pooledViewCount,
+            int viewReuseCount,
+            RoguelikeMemoryPoolSnapshot enemyPool,
+            RoguelikeMemoryPoolSnapshot projectilePool,
+            long managedMemoryBytes,
+            float averageFps)
+        {
+            ElapsedTime = Math.Max(0f, elapsedTime);
+            EnemyCount = Math.Max(0, enemyCount);
+            ProjectileCount = Math.Max(0, projectileCount);
+            PickupCount = Math.Max(0, pickupCount);
+            EffectCueCount = Math.Max(0, effectCueCount);
+            ActiveEffectViewCount = Math.Max(0, activeEffectViewCount);
+            PooledViewCount = Math.Max(0, pooledViewCount);
+            ViewReuseCount = Math.Max(0, viewReuseCount);
+            EnemyPoolUsingCount = enemyPool.UsingCount;
+            EnemyPoolUnusedCount = enemyPool.UnusedCount;
+            ProjectilePoolUsingCount = projectilePool.UsingCount;
+            ProjectilePoolUnusedCount = projectilePool.UnusedCount;
+            ManagedMemoryBytes = Math.Max(0L, managedMemoryBytes);
+            AverageFps = Math.Max(0f, averageFps);
+        }
+
+        public string ToBaselineLine()
+        {
+            return $"时间 {ElapsedTime:0.0}s，敌人 {EnemyCount}，投射物 {ProjectileCount}，掉落 {PickupCount}，特效 {EffectCueCount}，活动特效视图 {ActiveEffectViewCount}，池化视图 {PooledViewCount}，视图复用 {ViewReuseCount}，敌人池 {EnemyPoolUsingCount}/{EnemyPoolUnusedCount}，投射物池 {ProjectilePoolUsingCount}/{ProjectilePoolUnusedCount}，托管内存 {ManagedMemoryBytes / 1024f:0.0}KB，平均帧率 {AverageFps:0.0}";
+        }
+    }
+
     public sealed class RoguelikeSurvivalEnemy : IMemory
     {
         public int Id { get; private set; }
