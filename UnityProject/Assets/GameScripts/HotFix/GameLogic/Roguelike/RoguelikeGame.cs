@@ -396,6 +396,141 @@ namespace GameLogic
             return BuildPerformanceSnapshot(0f, 0f, null);
         }
 
+        public RoguelikePerformanceSnapshot DebugPopulateShowcaseRuntimeObjects(int seed = 46001)
+        {
+            StartNewRun(seed);
+            System.Random showcaseRandom = new System.Random(seed);
+            ReleaseSurvivalObjects();
+            _effectCues.Clear();
+
+            PlayerPosition = new Vector2(-0.65f, -0.20f);
+            _attackDirection = new Vector2(1f, 0.18f).normalized;
+            ElapsedTime = 185f;
+            Level = 5;
+            Experience = 18;
+            ExperienceToNextLevel = 40;
+            KillCount = 42;
+            AttackFlash = 0.12f;
+            PickupFlash = 0.14f;
+            CameraShake = 0.10f;
+            LastMessage = "展示构图：敌群、弹幕、掉落和暴击反馈已就位。";
+            CurrentRun?.AddGold(18);
+
+            _weapons.Clear();
+            _weapons.Add(CreateWeapon(RoguelikeWeaponType.MagicBolt));
+            _weapons.Add(CreateWeapon(RoguelikeWeaponType.SpinningBlade));
+            _weapons.Add(CreateWeapon(RoguelikeWeaponType.PiercingDart));
+            _weapons.Add(CreateWeapon(RoguelikeWeaponType.StarRingPulse));
+
+            Vector2[] enemyPositions =
+            {
+                new Vector2(5.95f, 1.45f),
+                new Vector2(2.75f, 2.35f),
+                new Vector2(3.90f, 1.60f),
+                new Vector2(4.85f, 0.45f),
+                new Vector2(2.05f, 0.95f),
+                new Vector2(1.45f, -1.25f),
+                new Vector2(3.25f, -1.85f),
+                new Vector2(4.70f, -2.55f),
+                new Vector2(6.15f, -0.95f),
+                new Vector2(0.45f, 1.75f),
+                new Vector2(-0.35f, 2.85f),
+                new Vector2(-2.35f, 2.25f),
+                new Vector2(-3.85f, 1.05f),
+                new Vector2(-4.85f, -0.45f),
+                new Vector2(-3.20f, -1.90f),
+                new Vector2(-1.65f, -2.70f),
+                new Vector2(0.35f, -3.10f),
+                new Vector2(2.10f, -3.45f),
+                new Vector2(-5.80f, 2.95f),
+                new Vector2(6.70f, 3.10f),
+                new Vector2(-6.35f, -2.60f),
+                new Vector2(5.25f, -3.55f),
+            };
+            string[] enemyIds =
+            {
+                "dungeon_heart",
+                "moon_knight",
+                "wisp",
+                "mushroom_guard",
+                "crystal_bug",
+            };
+            for (int i = 0; i < enemyPositions.Length; i++)
+            {
+                bool isBoss = i == 0;
+                Vector2 jitter = new Vector2(
+                    NextShowcaseRange(showcaseRandom, -0.16f, 0.16f),
+                    NextShowcaseRange(showcaseRandom, -0.14f, 0.14f));
+                Vector2 position = ResolveObstaclePosition(enemyPositions[i] + jitter, EnemyCollisionRadius);
+                string configId = isBoss ? "dungeon_heart" : enemyIds[1 + (i % (enemyIds.Length - 1))];
+                int health = isBoss ? 160 : 28 + i % 5 * 6;
+                int attack = isBoss ? 18 : 5 + i % 4;
+                float speed = isBoss ? 0.55f : 0.65f + i % 3 * 0.12f;
+                _enemies.Add(CreateEnemy(_nextEnemyId++, position, health, attack, speed, configId, isBoss));
+            }
+
+            Vector2[] pickupPositions =
+            {
+                new Vector2(-1.05f, 0.60f),
+                new Vector2(-0.15f, 1.20f),
+                new Vector2(0.95f, 0.45f),
+                new Vector2(1.85f, -0.45f),
+                new Vector2(2.80f, -0.95f),
+                new Vector2(3.65f, 0.80f),
+                new Vector2(-2.10f, -1.45f),
+                new Vector2(-3.35f, -2.25f),
+                new Vector2(4.55f, 2.10f),
+                new Vector2(5.70f, -1.85f),
+            };
+            for (int i = 0; i < pickupPositions.Length; i++)
+            {
+                Vector2 jitter = new Vector2(
+                    NextShowcaseRange(showcaseRandom, -0.10f, 0.10f),
+                    NextShowcaseRange(showcaseRandom, -0.10f, 0.10f));
+                Vector2 position = ResolveObstaclePosition(pickupPositions[i] + jitter, 0.18f);
+                RoguelikePickupType type = i % 3 == 0 ? RoguelikePickupType.Gold : RoguelikePickupType.Experience;
+                _pickups.Add(CreatePickup(_nextPickupId++, type, position, type == RoguelikePickupType.Gold ? 2 : 4));
+            }
+
+            RoguelikeWeaponType[] projectileTypes =
+            {
+                RoguelikeWeaponType.MagicBolt,
+                RoguelikeWeaponType.PiercingDart,
+                RoguelikeWeaponType.SpinningBlade,
+                RoguelikeWeaponType.StarRingPulse,
+            };
+            for (int i = 0; i < 20; i++)
+            {
+                float angle = (-38f + i * 19.5f + NextShowcaseRange(showcaseRandom, -5f, 5f)) * Mathf.Deg2Rad;
+                Vector2 direction = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)).normalized;
+                Vector2 origin = PlayerPosition + direction * NextShowcaseRange(showcaseRandom, 0.35f, 2.75f);
+                bool critical = i == 3 || i == 11 || i == 17;
+                RoguelikeWeaponType type = projectileTypes[i % projectileTypes.Length];
+                _projectiles.Add(CreateProjectile(
+                    _nextProjectileId++,
+                    type,
+                    ResolveObstaclePosition(origin, 0.10f),
+                    direction,
+                    4.5f,
+                    3.0f + i % 4 * 0.5f,
+                    new RoguelikeDamageRoll(critical ? 32 : 14 + i % 5 * 3, critical)));
+            }
+
+            AddEffectCue(RoguelikeEffectCueType.Hit, new Vector2(2.85f, 1.65f), 18);
+            AddEffectCue(RoguelikeEffectCueType.Hit, new Vector2(4.05f, 0.55f), 22, true);
+            AddEffectCue(RoguelikeEffectCueType.Critical, new Vector2(4.05f, 0.55f), 22, true);
+            AddEffectCue(RoguelikeEffectCueType.Hit, new Vector2(1.35f, -1.25f), 16);
+            AddEffectCue(RoguelikeEffectCueType.Kill, new Vector2(3.45f, -1.95f));
+            AddEffectCue(RoguelikeEffectCueType.Pickup, new Vector2(-0.20f, 1.15f));
+
+            return BuildPerformanceSnapshot(0f, 0f, null);
+        }
+
+        private static float NextShowcaseRange(System.Random random, float min, float max)
+        {
+            return Mathf.Lerp(min, max, (float)random.NextDouble());
+        }
+
         private void UpdateSpawning(float dt)
         {
             _spawnTimer -= dt;
