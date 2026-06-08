@@ -14,6 +14,7 @@ namespace GameLogic.Tests
         private const string HeroPortraitSprite = "Roguelike_UI_HeroPortrait";
         private const string WeaponIconSprite = "Roguelike_UI_WeaponIcon";
         private const string RelicIconSprite = "Roguelike_UI_RelicIcon";
+        private const string MagicBoltIconSprite = "Roguelike_UI_Icon_MagicBolt";
         private const string GoldIconSprite = "Roguelike_UI_GoldIcon";
         private const string SliderFrameSprite = "Roguelike_UI_SliderFrame";
         private const string SliderFillRedSprite = "Roguelike_UI_SliderFill_Red";
@@ -95,7 +96,7 @@ namespace GameLogic.Tests
                 AssertSprite(FindSliderFill(fixture.Root, "生命条"), SliderFillRedSprite, Image.Type.Sliced);
                 AssertSprite(FindSliderBackground(fixture.Root, "经验条"), SliderFrameSprite, Image.Type.Sliced);
                 AssertSprite(FindSliderFill(fixture.Root, "经验条"), SliderFillBlueSprite, Image.Type.Sliced);
-                AssertSprite(FindImage(fixture.Root, "武器槽_1"), WeaponIconSprite, Image.Type.Simple);
+                AssertSprite(FindImage(fixture.Root, "武器槽_1"), MagicBoltIconSprite, Image.Type.Simple);
                 AssertSprite(FindImage(fixture.Root, "被动槽_1"), RelicIconSprite, Image.Type.Simple);
             }
         }

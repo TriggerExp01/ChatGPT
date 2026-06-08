@@ -17,6 +17,8 @@ namespace GameLogic
         private RectTransform _buildPanel;
         private RectTransform _hintPanel;
         private RoguelikeBattleStageView _stageView;
+        private readonly Image[] _weaponSlotImages = new Image[4];
+        private readonly Image[] _relicSlotImages = new Image[4];
 
         protected override void ScriptGenerator()
         {
@@ -69,6 +71,7 @@ namespace GameLogic
 
             _stageView.Refresh(run);
             ApplyShowcaseScreenshotMode(game);
+            RefreshBuildIcons(game);
             RoguelikeActorState player = run.Player;
             RoguelikeUIFactory.SetText(_heroText, $"星辉旅人  Lv.{game.Level}\n生命 {player.Health}/{player.Stats.MaxHealth}  攻击 {player.Stats.Attack}\n金币 {run.Gold}  永久 {game.MetaGold}");
             RoguelikeUIFactory.SetText(_timeText, $"{game.ElapsedTime:0.0}s\n敌人 {game.Enemies.Count}  击杀 {game.KillCount}");
@@ -97,12 +100,41 @@ namespace GameLogic
             canvasGroup.alpha = alpha;
         }
 
-        private static void BuildIconSlots(RectTransform parent, string prefix, float yCenter, Color color, string spriteAddress)
+        private void RefreshBuildIcons(RoguelikeGame game)
+        {
+            for (int i = 0; i < _weaponSlotImages.Length; i++)
+            {
+                string spriteAddress = i < game.Weapons.Count
+                    ? RoguelikeUIFactory.ResolveWeaponIconSprite(game.Weapons[i].Type)
+                    : RoguelikeUIFactory.WeaponIconSprite;
+                RoguelikeUIFactory.ApplySprite(_weaponSlotImages[i], spriteAddress, Image.Type.Simple, true);
+            }
+
+            RoguelikeRunState run = game.CurrentRun;
+            for (int i = 0; i < _relicSlotImages.Length; i++)
+            {
+                string spriteAddress = run != null && i < run.Relics.Count
+                    ? RoguelikeUIFactory.ResolveRelicIconSprite(run.Relics[i].Id)
+                    : RoguelikeUIFactory.RelicIconSprite;
+                RoguelikeUIFactory.ApplySprite(_relicSlotImages[i], spriteAddress, Image.Type.Simple, true);
+            }
+        }
+
+        private void BuildIconSlots(RectTransform parent, string prefix, float yCenter, Color color, string spriteAddress)
         {
             for (int i = 0; i < 4; i++)
             {
                 float xMin = 0.05f + i * 0.09f;
-                RoguelikeUIFactory.CreateImage($"{prefix}_{i + 1}", parent, new Vector2(xMin, yCenter - 0.10f), new Vector2(xMin + 0.065f, yCenter + 0.10f), color, spriteAddress, Image.Type.Simple, true);
+                RectTransform slot = RoguelikeUIFactory.CreateImage($"{prefix}_{i + 1}", parent, new Vector2(xMin, yCenter - 0.10f), new Vector2(xMin + 0.065f, yCenter + 0.10f), color, spriteAddress, Image.Type.Simple, true);
+                Image image = slot.GetComponent<Image>();
+                if (prefix == "武器槽")
+                {
+                    _weaponSlotImages[i] = image;
+                }
+                else
+                {
+                    _relicSlotImages[i] = image;
+                }
             }
         }
     }

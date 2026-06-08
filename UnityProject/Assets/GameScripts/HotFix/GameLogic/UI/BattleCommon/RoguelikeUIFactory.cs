@@ -240,6 +240,43 @@ namespace GameLogic
             return WeaponIconSprite;
         }
 
+        public static string ResolveWeaponIconSprite(RoguelikeWeaponType weaponType)
+        {
+            switch (weaponType)
+            {
+                case RoguelikeWeaponType.MagicBolt:
+                    return MagicBoltIconSprite;
+                case RoguelikeWeaponType.SpinningBlade:
+                    return SpinningBladeIconSprite;
+                case RoguelikeWeaponType.PiercingDart:
+                    return PiercingDartIconSprite;
+                case RoguelikeWeaponType.StarRingPulse:
+                    return StarRingPulseIconSprite;
+                default:
+                    return WeaponIconSprite;
+            }
+        }
+
+        public static string ResolveRelicIconSprite(string relicId)
+        {
+            if (string.IsNullOrEmpty(relicId))
+            {
+                return RelicIconSprite;
+            }
+
+            if (relicId.Contains("vital_sigil") || relicId.Contains("starlight_soles") || relicId.Contains("wind_boots"))
+            {
+                return RelicGrowthIconSprite;
+            }
+
+            if (relicId.Contains("eagle_eye") || relicId.Contains("focus") || relicId.Contains("power"))
+            {
+                return RelicPowerIconSprite;
+            }
+
+            return RelicUtilityIconSprite;
+        }
+
         private static Sprite LoadSprite(string address)
         {
             if (string.IsNullOrEmpty(address))
