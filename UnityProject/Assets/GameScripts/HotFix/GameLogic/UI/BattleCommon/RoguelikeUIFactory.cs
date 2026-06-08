@@ -277,7 +277,7 @@ namespace GameLogic
             return RelicUtilityIconSprite;
         }
 
-        private static Sprite LoadSprite(string address)
+        public static Sprite LoadSprite(string address)
         {
             if (string.IsNullOrEmpty(address))
             {

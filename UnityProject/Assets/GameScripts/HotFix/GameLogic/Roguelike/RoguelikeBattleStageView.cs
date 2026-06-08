@@ -16,6 +16,8 @@ namespace GameLogic
         public const string PiercingDartProjectilePrefabAddress = "Roguelike_Projectile_PiercingDart";
         private const float CommonEnemyVisualSize = 0.72f;
         private const float BossEnemyVisualSize = 1.18f;
+        private const float ExperiencePickupVisualSize = 0.30f;
+        private const float GoldPickupVisualSize = 0.32f;
         private const float MinFeedbackDeltaTime = 0.016f;
         private const float MaxFeedbackDeltaTime = 0.05f;
 
@@ -30,6 +32,7 @@ namespace GameLogic
         private readonly Dictionary<RoguelikeEffectCueType, string> _effectPrefabAddressOverrides = new Dictionary<RoguelikeEffectCueType, string>();
         private readonly Dictionary<bool, string> _enemyPrefabAddressOverrides = new Dictionary<bool, string>();
         private readonly Dictionary<RoguelikeWeaponType, string> _projectilePrefabAddressOverrides = new Dictionary<RoguelikeWeaponType, string>();
+        private readonly Dictionary<RoguelikePickupType, string> _pickupSpriteAddressOverrides = new Dictionary<RoguelikePickupType, string>();
         private readonly Dictionary<RoguelikeWeaponType, Stack<Transform>> _projectileViewPools = new Dictionary<RoguelikeWeaponType, Stack<Transform>>();
         private readonly Stack<Transform> _commonEnemyViewPool = new Stack<Transform>();
         private readonly Stack<Transform> _bossEnemyViewPool = new Stack<Transform>();
@@ -94,6 +97,11 @@ namespace GameLogic
         public void DebugSetProjectilePrefabAddressOverride(RoguelikeWeaponType weaponType, string address)
         {
             _projectilePrefabAddressOverrides[weaponType] = address;
+        }
+
+        public void DebugSetPickupSpriteAddressOverride(RoguelikePickupType pickupType, string address)
+        {
+            _pickupSpriteAddressOverrides[pickupType] = address;
         }
 
         public static RoguelikeBattleStageView Ensure()
@@ -604,15 +612,13 @@ namespace GameLogic
                 active.Add(pickup.Id);
                 if (!_pickupViews.TryGetValue(pickup.Id, out Transform view))
                 {
-                    Color color = pickup.Type == RoguelikePickupType.Experience
-                        ? new Color(0.25f, 0.72f, 1f, 1f)
-                        : new Color(1f, 0.78f, 0.16f, 1f);
-                    view = SpawnSpriteView(_pickupViewPool, $"掉落_{pickup.Id}", pickup.Position, new Vector3(0.22f, 0.22f, 1f), color, 7);
-                    view.localRotation = Quaternion.Euler(0f, 0f, 45f);
+                    GetPickupPresentation(pickup.Type, out Vector3 visualSize, out Color color);
+                    view = SpawnSpriteView(_pickupViewPool, $"掉落_{pickup.Id}", pickup.Position, visualSize, color, 7);
                     _pickupViews.Add(pickup.Id, view);
                 }
 
                 view.localPosition = new Vector3(pickup.Position.x, pickup.Position.y, 0f);
+                ApplyPickupPresentation(view, pickup.Type);
             }
 
             List<int> removed = new List<int>();
@@ -699,6 +705,19 @@ namespace GameLogic
                     color = new Color(1f, 0.82f, 0.24f, 1f);
                     break;
             }
+        }
+
+        private static void GetPickupPresentation(RoguelikePickupType pickupType, out Vector3 visualSize, out Color color)
+        {
+            if (pickupType == RoguelikePickupType.Gold)
+            {
+                visualSize = Vector3.one * GoldPickupVisualSize;
+                color = Color.white;
+                return;
+            }
+
+            visualSize = Vector3.one * ExperiencePickupVisualSize;
+            color = new Color(0.72f, 0.92f, 1f, 1f);
         }
 
         private Transform CreateActor(string name, Vector3 position, Color color, int order)
@@ -865,6 +884,43 @@ namespace GameLogic
             GetProjectilePresentation(weaponType, out visualSize, out color);
             PrepareSpriteRenderer(view, color, 11, true);
             ApplyProjectileVisualScale(view, weaponType);
+        }
+
+        private void ApplyPickupPresentation(Transform view, RoguelikePickupType pickupType)
+        {
+            if (view == null)
+            {
+                return;
+            }
+
+            GetPickupPresentation(pickupType, out Vector3 visualSize, out Color color);
+            PrepareSpriteRenderer(view, color, 7);
+            SpriteRenderer renderer = view.GetComponent<SpriteRenderer>();
+            Sprite sprite = RoguelikeUIFactory.LoadSprite(GetPickupSpriteAddress(pickupType));
+            if (sprite != null)
+            {
+                renderer.sprite = sprite;
+                renderer.color = color;
+                view.localRotation = Quaternion.identity;
+                ApplyVisualMaxSize(view, pickupType == RoguelikePickupType.Gold ? GoldPickupVisualSize : ExperiencePickupVisualSize);
+                return;
+            }
+
+            _presentationFallbackCount++;
+            view.localRotation = Quaternion.Euler(0f, 0f, 45f);
+            view.localScale = visualSize;
+        }
+
+        private string GetPickupSpriteAddress(RoguelikePickupType pickupType)
+        {
+            if (_pickupSpriteAddressOverrides.TryGetValue(pickupType, out string overrideAddress))
+            {
+                return overrideAddress;
+            }
+
+            return pickupType == RoguelikePickupType.Gold
+                ? RoguelikeUIFactory.GoldIconSprite
+                : RoguelikeUIFactory.RelicGrowthIconSprite;
         }
 
         private static Color GetEnemyColor(RoguelikeSurvivalEnemy enemy)
