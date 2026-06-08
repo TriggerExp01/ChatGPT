@@ -14,6 +14,7 @@ namespace GameLogic
         public const string BossEnemyPrefabAddress = "Roguelike_Enemy_Boss";
         public const string MagicBoltProjectilePrefabAddress = "Roguelike_Projectile_MagicBolt";
         public const string PiercingDartProjectilePrefabAddress = "Roguelike_Projectile_PiercingDart";
+        public const string PlayerSpriteAddress = "Roguelike_Kenney_PlayerAdventurer";
         private const float CommonEnemyVisualSize = 0.72f;
         private const float BossEnemyVisualSize = 1.18f;
         private const float ExperiencePickupVisualSize = 0.30f;
@@ -206,6 +207,7 @@ namespace GameLogic
             _pickupPulseView = CreateSprite("拾取反馈", Vector3.zero, Vector3.one, new Color(0.35f, 0.95f, 1f, 0f), 12);
             _pickupPulseView.gameObject.SetActive(false);
             _player = CreateActor("玩家", Vector3.zero, new Color(0.16f, 0.68f, 1f, 1f), 10);
+            ApplyPlayerPresentation(_player);
             Rigidbody2D body = _player.gameObject.AddComponent<Rigidbody2D>();
             body.gravityScale = 0f;
             body.freezeRotation = true;
@@ -727,6 +729,42 @@ namespace GameLogic
             CreateSprite("眼睛左", new Vector3(-0.10f, 0.08f, -0.2f), new Vector3(0.06f, 0.06f, 1f), Color.black, order + 2, body);
             CreateSprite("眼睛右", new Vector3(0.10f, 0.08f, -0.2f), new Vector3(0.06f, 0.06f, 1f), Color.black, order + 2, body);
             return body;
+        }
+
+        private static void ApplyPlayerPresentation(Transform view)
+        {
+            if (view == null)
+            {
+                return;
+            }
+
+            Sprite sprite = RoguelikeUIFactory.LoadSprite(PlayerSpriteAddress);
+            SpriteRenderer renderer = view.GetComponent<SpriteRenderer>();
+            if (sprite == null || renderer == null)
+            {
+                return;
+            }
+
+            renderer.sprite = sprite;
+            renderer.color = Color.white;
+
+            for (int i = view.childCount - 1; i >= 0; i--)
+            {
+                Transform child = view.GetChild(i);
+                if (child != null)
+                {
+                    SpriteRenderer childRenderer = child.GetComponent<SpriteRenderer>();
+                    if (childRenderer != null)
+                    {
+                        childRenderer.sprite = null;
+                    }
+
+                    child.gameObject.SetActive(false);
+                }
+            }
+
+            view.localRotation = Quaternion.identity;
+            ApplyVisualMaxSize(view, 0.78f);
         }
 
         private Transform SpawnEnemyView(RoguelikeSurvivalEnemy enemy, string name, Vector3 position)

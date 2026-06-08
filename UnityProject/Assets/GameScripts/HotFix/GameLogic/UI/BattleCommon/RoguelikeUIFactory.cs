@@ -12,7 +12,8 @@ namespace GameLogic
         public const string CardFrameSprite = "Roguelike_Kenney_UI_CardBorder";
         public const string ButtonFrameSprite = "Roguelike_Kenney_UI_ButtonFrame";
         public const string DividerFadeSprite = "Roguelike_Kenney_UI_DividerFade";
-        public const string HeroPortraitSprite = "Roguelike_UI_HeroPortrait";
+        public const string OriginalHeroPortraitSprite = "Roguelike_UI_HeroPortrait";
+        public const string HeroPortraitSprite = "Roguelike_Kenney_PlayerPortrait";
         public const string WeaponIconSprite = "Roguelike_UI_WeaponIcon";
         public const string RelicIconSprite = "Roguelike_UI_RelicIcon";
         public const string GoldIconSprite = "Roguelike_UI_GoldIcon";
@@ -316,6 +317,11 @@ namespace GameLogic
             if (sprite == null)
             {
                 sprite = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>($"Assets/AssetRaw/UIRaw/Atlas/Battle/{address}.png");
+            }
+
+            if (sprite == null)
+            {
+                sprite = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>($"Assets/AssetRaw/Actor/{address}.png");
             }
 #endif
 

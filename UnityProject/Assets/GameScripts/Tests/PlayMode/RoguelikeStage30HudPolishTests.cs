@@ -11,7 +11,7 @@ namespace GameLogic.Tests
     {
         private const string PanelFrameSprite = "Roguelike_Kenney_UI_PanelStone";
         private const string CardFrameSprite = "Roguelike_Kenney_UI_CardBorder";
-        private const string HeroPortraitSprite = "Roguelike_UI_HeroPortrait";
+        private const string HeroPortraitSprite = "Roguelike_Kenney_PlayerPortrait";
         private const string WeaponIconSprite = "Roguelike_UI_WeaponIcon";
         private const string RelicIconSprite = "Roguelike_UI_RelicIcon";
         private const string MagicBoltIconSprite = "Roguelike_UI_Icon_MagicBolt";

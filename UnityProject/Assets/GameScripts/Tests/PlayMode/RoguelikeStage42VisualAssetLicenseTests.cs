@@ -13,6 +13,7 @@ namespace GameLogic.Tests
             "Roguelike_UI_PanelFrame.png",
             "Roguelike_UI_CardFrame.png",
             "Roguelike_UI_HeroPortrait.png",
+            "Roguelike_Kenney_PlayerPortrait.png",
             "Roguelike_UI_WeaponIcon.png",
             "Roguelike_UI_RelicIcon.png",
             "Roguelike_UI_GoldIcon.png",
@@ -38,6 +39,7 @@ namespace GameLogic.Tests
             "Roguelike_Enemy_Boss.prefab",
             "Roguelike_Projectile_MagicBolt.prefab",
             "Roguelike_Projectile_PiercingDart.prefab",
+            "Roguelike_Kenney_PlayerAdventurer.png",
         };
 
         [Test]
