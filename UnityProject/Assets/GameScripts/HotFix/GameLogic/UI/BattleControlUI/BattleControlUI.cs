@@ -47,10 +47,11 @@ namespace GameLogic
 
         private void RefreshControlInfo()
         {
-            bool running = RoguelikeGame.Instance.Phase == RoguelikeGamePhase.Running;
-            _panel.gameObject.SetActive(running);
-            RoguelikeUIFactory.SetText(_helpText, RoguelikeGame.Instance.OperationHint);
-            _pauseButton.GetComponentInChildren<Text>(true).text = RoguelikeGame.Instance.IsPaused ? "继续" : "暂停";
+            RoguelikeGame game = RoguelikeGame.Instance;
+            bool running = game.Phase == RoguelikeGamePhase.Running;
+            _panel.gameObject.SetActive(running && game.ShouldShowOperationHintUi);
+            RoguelikeUIFactory.SetText(_helpText, game.OperationHint);
+            _pauseButton.GetComponentInChildren<Text>(true).text = game.IsPaused ? "继续" : "暂停";
         }
 
         private static void HandleInput()

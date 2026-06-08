@@ -25,6 +25,7 @@ namespace GameLogic
         public const float LevelUpSoundCooldown = 0.12f;
         public const float BossSoundCooldown = 0.45f;
         public const float UiConfirmSoundCooldown = 0.08f;
+        public const float ShowcaseScreenshotHudAlpha = 0.68f;
         private const int BossKillGoldReward = 25;
         public const int MetaGoldPerAttackBonus = 100;
         private const float PlayerCollisionRadius = 0.48f;
@@ -99,6 +100,9 @@ namespace GameLogic
         public float EnemyLanePosition => _enemies.Count > 0 ? _enemies[0].Position.x : 0f;
         public bool InRealtimeCombat => Phase == RoguelikeGamePhase.Running;
         public bool IsUsingLubanConfig => _configTables != null;
+        public bool IsShowcaseScreenshotMode { get; private set; }
+        public bool ShouldShowOperationHintUi => !IsShowcaseScreenshotMode;
+        public float CurrentHudPanelAlpha => IsShowcaseScreenshotMode ? ShowcaseScreenshotHudAlpha : 1f;
         public IReadOnlyList<string> ConfigValidationIssues => _configValidationIssues;
         public string WeaponSummary => BuildWeaponSummary();
         public string PassiveSummary => BuildPassiveSummary();
@@ -123,6 +127,7 @@ namespace GameLogic
             CurrentRun = new RoguelikeRunState(seed, new RoguelikeActorState("player", "玩家", stats), new List<RoguelikeRoom>());
             Phase = RoguelikeGamePhase.Running;
             IsPaused = false;
+            IsShowcaseScreenshotMode = false;
             LastMessage = "生存挑战开始。击败敌人并收集经验升级。";
             PlayerPosition = Vector2.zero;
             _moveInput = Vector2.zero;
@@ -314,6 +319,11 @@ namespace GameLogic
         {
             CurrentRun?.Player.TakeDamage(int.MaxValue);
             FinishRun();
+        }
+
+        public void DebugSetShowcaseScreenshotMode(bool enabled)
+        {
+            IsShowcaseScreenshotMode = enabled;
         }
 
         public void DebugSetConfigTables(GameConfig.Tables tables)
@@ -522,6 +532,7 @@ namespace GameLogic
             AddEffectCue(RoguelikeEffectCueType.Hit, new Vector2(1.35f, -1.25f), 16);
             AddEffectCue(RoguelikeEffectCueType.Kill, new Vector2(3.45f, -1.95f));
             AddEffectCue(RoguelikeEffectCueType.Pickup, new Vector2(-0.20f, 1.15f));
+            DebugSetShowcaseScreenshotMode(true);
 
             return BuildPerformanceSnapshot(0f, 0f, null);
         }

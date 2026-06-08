@@ -79,7 +79,8 @@ namespace GameLogic
                 RoguelikeUIFactory.SetText(_statsText, $"战斗数据\n生存 {game.ElapsedTime:0.0} 秒\n等级 Lv.{game.Level}\n击杀 {game.KillCount}");
                 RoguelikeUIFactory.SetText(_earningsText, $"本局收益\n本局金币 +{runGold}\n永久金币 {game.MetaGold}");
                 RoguelikeUIFactory.SetText(_growthText, $"局外成长\n下局初始攻击 +{game.PermanentAttackBonus}\n距离下一点攻击还需 {game.PermanentGoldToNextAttack} 金币");
-                RoguelikeUIFactory.SetText(_hintText, game.OperationHint);
+                _hintText.gameObject.SetActive(game.ShouldShowOperationHintUi);
+                RoguelikeUIFactory.SetText(_hintText, game.ShouldShowOperationHintUi ? game.OperationHint : string.Empty);
                 RefreshProgress(game.PermanentGoldProgress);
             }
         }

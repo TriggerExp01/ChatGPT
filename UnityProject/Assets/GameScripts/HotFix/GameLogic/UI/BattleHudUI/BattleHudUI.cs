@@ -68,13 +68,33 @@ namespace GameLogic
             }
 
             _stageView.Refresh(run);
+            ApplyShowcaseScreenshotMode(game);
             RoguelikeActorState player = run.Player;
             RoguelikeUIFactory.SetText(_heroText, $"星辉旅人  Lv.{game.Level}\n生命 {player.Health}/{player.Stats.MaxHealth}  攻击 {player.Stats.Attack}\n金币 {run.Gold}  永久 {game.MetaGold}");
             RoguelikeUIFactory.SetText(_timeText, $"{game.ElapsedTime:0.0}s\n敌人 {game.Enemies.Count}  击杀 {game.KillCount}");
             RoguelikeUIFactory.SetText(_buildText, $"武器  {game.WeaponSummary}\n被动  {game.PassiveSummary}\n范围 {game.AttackRange:0.0}  间隔 {game.AttackInterval:0.00}s");
-            RoguelikeUIFactory.SetText(_messageText, $"{game.LastMessage}\n{game.OperationHint}");
+            RoguelikeUIFactory.SetText(_messageText, game.ShouldShowOperationHintUi ? $"{game.LastMessage}\n{game.OperationHint}" : game.LastMessage);
             RoguelikeUIFactory.SetSlider(_hpSlider, player.Health, player.Stats.MaxHealth);
             RoguelikeUIFactory.SetSlider(_expSlider, game.Experience, game.ExperienceToNextLevel);
+        }
+
+        private void ApplyShowcaseScreenshotMode(RoguelikeGame game)
+        {
+            SetPanelAlpha(_heroPanel, game.CurrentHudPanelAlpha);
+            SetPanelAlpha(_pressurePanel, game.CurrentHudPanelAlpha);
+            SetPanelAlpha(_buildPanel, game.CurrentHudPanelAlpha);
+            _hintPanel.gameObject.SetActive(game.ShouldShowOperationHintUi);
+        }
+
+        private static void SetPanelAlpha(RectTransform panel, float alpha)
+        {
+            CanvasGroup canvasGroup = panel.GetComponent<CanvasGroup>();
+            if (canvasGroup == null)
+            {
+                canvasGroup = panel.gameObject.AddComponent<CanvasGroup>();
+            }
+
+            canvasGroup.alpha = alpha;
         }
 
         private static void BuildIconSlots(RectTransform parent, string prefix, float yCenter, Color color, string spriteAddress)
