@@ -10,10 +10,10 @@ namespace GameLogic.Tests
 {
     public sealed class RoguelikeStage52ExternalUiAssetTests
     {
-        private const string ExternalPanelSprite = "Roguelike_Kenney_UI_PanelStone";
-        private const string ExternalCardSprite = "Roguelike_Kenney_UI_CardBorder";
-        private const string ExternalButtonSprite = "Roguelike_Kenney_UI_ButtonFrame";
-        private const string ExternalDividerSprite = "Roguelike_Kenney_UI_DividerFade";
+        private const string ExternalPanelSprite = "Roguelike_SystemG6_UI_PanelFrame";
+        private const string ExternalCardSprite = "Roguelike_SystemG6_UI_CardFrame";
+        private const string ExternalButtonSprite = "Roguelike_SystemG6_UI_ButtonFrame";
+        private const string ExternalDividerSprite = "Roguelike_SystemG6_UI_DividerMetal";
 
         [Test]
         public void KenneyFantasyUiAssetsAreImportedAndRegistered()
@@ -36,10 +36,10 @@ namespace GameLogic.Tests
             Assert.That(manifest, Does.Contain("Kenney Fantasy UI Borders"));
             Assert.That(manifest, Does.Contain("https://kenney.nl/assets/fantasy-ui-borders"));
             Assert.That(manifest, Does.Contain("https://creativecommons.org/publicdomain/zero/1.0/"));
-            Assert.That(manifest, Does.Contain("Roguelike_Kenney_UI_PanelStone.png"));
-            Assert.That(manifest, Does.Contain("Roguelike_Kenney_UI_CardBorder.png"));
-            Assert.That(manifest, Does.Contain("Roguelike_Kenney_UI_ButtonFrame.png"));
-            Assert.That(manifest, Does.Contain("Roguelike_Kenney_UI_DividerFade.png"));
+            Assert.That(manifest, Does.Contain("Roguelike_SystemG6_UI_PanelFrame.png"));
+            Assert.That(manifest, Does.Contain("Roguelike_SystemG6_UI_CardFrame.png"));
+            Assert.That(manifest, Does.Contain("Roguelike_SystemG6_UI_ButtonFrame.png"));
+            Assert.That(manifest, Does.Contain("Roguelike_SystemG6_UI_DividerMetal.png"));
         }
 
         [Test]

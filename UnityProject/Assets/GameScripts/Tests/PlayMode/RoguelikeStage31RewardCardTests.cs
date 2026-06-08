@@ -9,7 +9,7 @@ namespace GameLogic.Tests
 {
     public sealed class RoguelikeStage31RewardCardTests
     {
-        private const string CardFrameSprite = "Roguelike_Kenney_UI_CardBorder";
+        private const string CardFrameSprite = "Roguelike_SystemG6_UI_CardFrame";
         private const string MagicBoltIconSprite = "Roguelike_UI_Icon_MagicBolt";
         private const string RelicUtilityIconSprite = "Roguelike_UI_Icon_RelicUtility";
         private const string PaidSupplyIconSprite = "Roguelike_UI_Icon_PaidSupply";

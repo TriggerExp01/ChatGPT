@@ -9,17 +9,17 @@ namespace GameLogic.Tests
 {
     public sealed class RoguelikeStage30HudPolishTests
     {
-        private const string PanelFrameSprite = "Roguelike_Kenney_UI_PanelStone";
-        private const string CardFrameSprite = "Roguelike_Kenney_UI_CardBorder";
+        private const string PanelFrameSprite = "Roguelike_SystemG6_UI_PanelFrame";
+        private const string CardFrameSprite = "Roguelike_SystemG6_UI_CardFrame";
         private const string HeroPortraitSprite = "Roguelike_Kenney_PlayerPortrait";
         private const string WeaponIconSprite = "Roguelike_UI_WeaponIcon";
         private const string RelicIconSprite = "Roguelike_UI_RelicIcon";
         private const string MagicBoltIconSprite = "Roguelike_UI_Icon_MagicBolt";
         private const string GoldIconSprite = "Roguelike_UI_GoldIcon";
-        private const string SliderFrameSprite = "Roguelike_UI_SliderFrame";
-        private const string SliderFillRedSprite = "Roguelike_UI_SliderFill_Red";
+        private const string SliderFrameSprite = "Roguelike_SystemG6_UI_SliderFrame";
+        private const string SliderFillRedSprite = "Roguelike_SystemG6_UI_SliderFillRed";
         private const string SliderFillBlueSprite = "Roguelike_UI_SliderFill_Blue";
-        private const string SliderFillYellowSprite = "Roguelike_UI_SliderFill_Yellow";
+        private const string SliderFillYellowSprite = "Roguelike_SystemG6_UI_SliderFillYellow";
         private const string LightBandSprite = "Roguelike_UI_LightBand";
 
         [Test]
