@@ -52,7 +52,8 @@ namespace GameLogic
                 RoguelikeUIFactory.CreateImage($"图标高光_{i + 1}", _iconRects[i], new Vector2(0.10f, 0.56f), new Vector2(0.90f, 0.90f), new Color(1f, 0.94f, 0.72f, 0.50f), RoguelikeUIFactory.BattleLightSprite, Image.Type.Simple, true);
                 _titleTexts[i] = RoguelikeUIFactory.CreateText($"卡牌标题_{i + 1}", card, 18, TextAnchor.MiddleCenter, new Vector2(0.07f, 0.55f), new Vector2(0.93f, 0.67f), Vector2.zero, Vector2.zero);
                 _descriptionTexts[i] = RoguelikeUIFactory.CreateText($"卡牌描述_{i + 1}", card, 15, TextAnchor.UpperCenter, new Vector2(0.08f, 0.28f), new Vector2(0.92f, 0.53f), Vector2.zero, Vector2.zero);
-                _costBadgeRects[i] = RoguelikeUIFactory.CreateImage($"卡牌金币徽章_{i + 1}", card, new Vector2(0.105f, 0.155f), new Vector2(0.215f, 0.255f), Color.white, RoguelikeUIFactory.GoldIconSprite, Image.Type.Simple, true);
+                Image costBadge = RoguelikeUIFactory.CreateFramedIconSlot($"卡牌金币徽章_{i + 1}", card, new Vector2(0.10f, 0.145f), new Vector2(0.225f, 0.27f), new Color(0.90f, 0.74f, 0.46f, 0.94f), Color.white, RoguelikeUIFactory.GoldIconSprite);
+                _costBadgeRects[i] = costBadge != null ? costBadge.rectTransform.parent as RectTransform : null;
                 _costTexts[i] = RoguelikeUIFactory.CreateText($"卡牌价格_{i + 1}", card, 14, TextAnchor.MiddleCenter, new Vector2(0.10f, 0.15f), new Vector2(0.90f, 0.25f), Vector2.zero, Vector2.zero);
                 _stateTexts[i] = RoguelikeUIFactory.CreateText($"卡牌状态_{i + 1}", card, 15, TextAnchor.MiddleCenter, new Vector2(0.10f, 0.045f), new Vector2(0.90f, 0.14f), Vector2.zero, Vector2.zero);
                 _choiceButtons[i].onClick.AddListener(() => ChooseReward(captured));

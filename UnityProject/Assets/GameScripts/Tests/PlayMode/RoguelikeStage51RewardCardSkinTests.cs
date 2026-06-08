@@ -28,13 +28,14 @@ namespace GameLogic.Tests
                 AssertSprite(FindImage(panel, "卡牌顶部徽带_1"), "Roguelike_UI_SliderFill_Blue", Image.Type.Sliced);
                 AssertSprite(FindImage(panel, "奖励图标底座_1"), "Roguelike_SystemG6_UI_SlotFrame", Image.Type.Sliced);
 
-                RectTransform freeCostBadge = FindRect(panel, "卡牌金币徽章_1");
-                RectTransform paidCostBadge = FindRect(panel, "卡牌金币徽章_2");
+                RectTransform freeCostBadge = FindRect(panel, "卡牌金币徽章_1框");
+                RectTransform paidCostBadge = FindRect(panel, "卡牌金币徽章_2框");
                 Assert.NotNull(freeCostBadge);
                 Assert.NotNull(paidCostBadge);
                 Assert.IsFalse(freeCostBadge.gameObject.activeSelf);
                 Assert.IsTrue(paidCostBadge.gameObject.activeSelf);
-                AssertSprite(paidCostBadge.GetComponent<Image>(), "Roguelike_UI_GoldIcon", Image.Type.Simple);
+                AssertSprite(paidCostBadge.GetComponent<Image>(), "Roguelike_SystemG6_UI_SlotFrame", Image.Type.Sliced);
+                AssertSprite(FindImage(panel, "卡牌金币徽章_2"), "Roguelike_UI_GoldIcon", Image.Type.Simple);
 
                 RectTransform freeOverlay = FindRect(panel, "卡牌不可选遮罩_1");
                 RectTransform paidOverlay = FindRect(panel, "卡牌不可选遮罩_2");

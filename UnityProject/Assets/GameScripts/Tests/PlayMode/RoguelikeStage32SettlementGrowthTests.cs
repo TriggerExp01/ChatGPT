@@ -74,6 +74,7 @@ namespace GameLogic.Tests
                 Assert.NotNull(FindRect(panel, "永久成长进度条"));
                 AssertSprite(FindImage(panel, "结算成长面板"), PanelFrameSprite, Image.Type.Sliced);
                 AssertSprite(FindImage(panel, "角色剪影头像"), HeroPortraitSprite, Image.Type.Simple);
+                AssertSprite(FindImage(panel, "金币成长徽章框"), "Roguelike_SystemG6_UI_SlotFrame", Image.Type.Sliced);
                 AssertSprite(FindImage(panel, "金币成长徽章"), GoldIconSprite, Image.Type.Simple);
 
                 Assert.That(FindText(panel, "结算标题").text, Does.Contain("星辉凯旋"));

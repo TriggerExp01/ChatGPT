@@ -35,7 +35,7 @@ namespace GameLogic
             _earningsText = RoguelikeUIFactory.CreateText("结算收益", _panel, 17, TextAnchor.MiddleLeft, new Vector2(0.64f, 0.52f), new Vector2(0.84f, 0.67f), Vector2.zero, Vector2.zero);
             _growthText = RoguelikeUIFactory.CreateText("永久成长", _panel, 17, TextAnchor.MiddleLeft, new Vector2(0.34f, 0.35f), new Vector2(0.84f, 0.48f), Vector2.zero, Vector2.zero);
 
-            RoguelikeUIFactory.CreateImage("金币成长徽章", _panel, new Vector2(0.85f, 0.29f), new Vector2(0.91f, 0.36f), Color.white, RoguelikeUIFactory.GoldIconSprite, Image.Type.Simple, true);
+            RoguelikeUIFactory.CreateFramedIconSlot("金币成长徽章", _panel, new Vector2(0.845f, 0.285f), new Vector2(0.915f, 0.365f), new Color(0.90f, 0.74f, 0.46f, 0.94f), Color.white, RoguelikeUIFactory.GoldIconSprite);
             RectTransform progressRoot = RoguelikeUIFactory.CreatePanel("永久成长进度条", _panel, new Vector2(0.34f, 0.29f), new Vector2(0.84f, 0.34f), new Color(0.88f, 0.92f, 1f, 0.80f));
             RectTransform progressFill = RoguelikeUIFactory.CreateImage("永久成长进度填充", progressRoot, Vector2.zero, new Vector2(0.01f, 1f), Color.white, RoguelikeUIFactory.SliderFillYellowSprite, Image.Type.Sliced);
             _progressFill = progressFill.GetComponent<Image>();
