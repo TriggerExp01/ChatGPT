@@ -9,7 +9,7 @@ namespace GameLogic.Tests
     public sealed class RoguelikeStage32SettlementGrowthTests
     {
         private const string MetaGoldKey = "Roguelike.MetaGold";
-        private const string PanelFrameSprite = "Roguelike_UI_PanelFrame";
+        private const string PanelFrameSprite = "Roguelike_Kenney_UI_PanelStone";
         private const string HeroPortraitSprite = "Roguelike_UI_HeroPortrait";
         private const string GoldIconSprite = "Roguelike_UI_GoldIcon";
         private const string SliderFillYellowSprite = "Roguelike_UI_SliderFill_Yellow";

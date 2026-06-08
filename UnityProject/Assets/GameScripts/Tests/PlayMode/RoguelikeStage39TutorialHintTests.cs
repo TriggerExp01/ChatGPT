@@ -9,7 +9,7 @@ namespace GameLogic.Tests
 {
     public sealed class RoguelikeStage39TutorialHintTests
     {
-        private const string PanelFrameSprite = "Roguelike_UI_PanelFrame";
+        private const string PanelFrameSprite = "Roguelike_Kenney_UI_PanelStone";
         private const string BattleLightSprite = "Roguelike_UI_LightBand";
 
         [Test]

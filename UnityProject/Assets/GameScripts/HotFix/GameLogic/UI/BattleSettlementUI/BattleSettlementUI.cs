@@ -21,6 +21,7 @@ namespace GameLogic
         {
             RectTransform root = RoguelikeUIFactory.ResolveContainer(this);
             _panel = RoguelikeUIFactory.CreatePanel("结算成长面板", root, new Vector2(0.12f, 0.14f), new Vector2(0.88f, 0.84f), new Color(0.024f, 0.028f, 0.052f, 0.97f));
+            RoguelikeUIFactory.CreateImage("结算外部标题线", _panel, new Vector2(0.34f, 0.755f), new Vector2(0.84f, 0.80f), new Color(0.88f, 0.94f, 1f, 0.35f), RoguelikeUIFactory.DividerFadeSprite, Image.Type.Simple, true);
             RoguelikeUIFactory.CreateImage("结算星辉装饰", _panel, new Vector2(0.04f, 0.84f), new Vector2(0.24f, 0.98f), new Color(1f, 0.72f, 0.92f, 0.52f), RoguelikeUIFactory.BattleLightSprite, Image.Type.Simple, true);
             RoguelikeUIFactory.CreateImage("结算月辉装饰", _panel, new Vector2(0.76f, 0.84f), new Vector2(0.96f, 0.98f), new Color(0.52f, 0.82f, 1f, 0.48f), RoguelikeUIFactory.BattleLightSprite, Image.Type.Simple, true);
 
@@ -40,7 +41,7 @@ namespace GameLogic
             _progressFill = progressFill.GetComponent<Image>();
 
             _hintText = RoguelikeUIFactory.CreateText("结算提示", _panel, 15, TextAnchor.MiddleCenter, new Vector2(0.34f, 0.19f), new Vector2(0.84f, 0.27f), Vector2.zero, Vector2.zero);
-            _restartButton = RoguelikeUIFactory.CreateButton("重新开始按钮", _panel, "使用永久成长重新开始", new Vector2(0.38f, 0.08f), new Vector2(0.78f, 0.17f), new Color(0.42f, 0.20f, 0.36f, 0.96f), 18);
+            _restartButton = RoguelikeUIFactory.CreateButton("重新开始按钮", _panel, "使用永久成长重新开始", new Vector2(0.38f, 0.08f), new Vector2(0.78f, 0.17f), new Color(0.42f, 0.20f, 0.36f, 0.96f), 18, RoguelikeUIFactory.ButtonFrameSprite);
         }
 
         protected override void OnCreate()

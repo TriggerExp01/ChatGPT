@@ -6,8 +6,12 @@ namespace GameLogic
 {
     internal static class RoguelikeUIFactory
     {
-        public const string PanelFrameSprite = "Roguelike_UI_PanelFrame";
-        public const string CardFrameSprite = "Roguelike_UI_CardFrame";
+        public const string OriginalPanelFrameSprite = "Roguelike_UI_PanelFrame";
+        public const string OriginalCardFrameSprite = "Roguelike_UI_CardFrame";
+        public const string PanelFrameSprite = "Roguelike_Kenney_UI_PanelStone";
+        public const string CardFrameSprite = "Roguelike_Kenney_UI_CardBorder";
+        public const string ButtonFrameSprite = "Roguelike_Kenney_UI_ButtonFrame";
+        public const string DividerFadeSprite = "Roguelike_Kenney_UI_DividerFade";
         public const string HeroPortraitSprite = "Roguelike_UI_HeroPortrait";
         public const string WeaponIconSprite = "Roguelike_UI_WeaponIcon";
         public const string RelicIconSprite = "Roguelike_UI_RelicIcon";
