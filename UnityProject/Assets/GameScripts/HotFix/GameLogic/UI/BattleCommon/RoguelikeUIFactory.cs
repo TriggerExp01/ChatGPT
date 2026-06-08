@@ -12,6 +12,14 @@ namespace GameLogic
         public const string WeaponIconSprite = "Roguelike_UI_WeaponIcon";
         public const string RelicIconSprite = "Roguelike_UI_RelicIcon";
         public const string GoldIconSprite = "Roguelike_UI_GoldIcon";
+        public const string MagicBoltIconSprite = "Roguelike_UI_Icon_MagicBolt";
+        public const string SpinningBladeIconSprite = "Roguelike_UI_Icon_SpinningBlade";
+        public const string PiercingDartIconSprite = "Roguelike_UI_Icon_PiercingDart";
+        public const string StarRingPulseIconSprite = "Roguelike_UI_Icon_StarRingPulse";
+        public const string RelicPowerIconSprite = "Roguelike_UI_Icon_RelicPower";
+        public const string RelicGrowthIconSprite = "Roguelike_UI_Icon_RelicGrowth";
+        public const string RelicUtilityIconSprite = "Roguelike_UI_Icon_RelicUtility";
+        public const string PaidSupplyIconSprite = "Roguelike_UI_Icon_PaidSupply";
         public const string BattleLightSprite = "Roguelike_UI_LightBand";
         public const string SliderFrameSprite = "Roguelike_UI_SliderFrame";
         public const string SliderFillRedSprite = "Roguelike_UI_SliderFill_Red";
@@ -180,6 +188,56 @@ namespace GameLogic
             image.sprite = sprite;
             image.type = imageType;
             image.preserveAspect = preserveAspect;
+        }
+
+        public static string ResolveRewardIconSprite(string rewardId)
+        {
+            if (string.IsNullOrEmpty(rewardId))
+            {
+                return WeaponIconSprite;
+            }
+
+            if (rewardId.Contains("spinning_blade"))
+            {
+                return SpinningBladeIconSprite;
+            }
+
+            if (rewardId.Contains("piercing_dart"))
+            {
+                return PiercingDartIconSprite;
+            }
+
+            if (rewardId.Contains("star_ring_pulse"))
+            {
+                return StarRingPulseIconSprite;
+            }
+
+            if (rewardId.Contains("magic_bolt") || rewardId.Contains("weapon"))
+            {
+                return MagicBoltIconSprite;
+            }
+
+            if (rewardId.Contains("paid"))
+            {
+                return PaidSupplyIconSprite;
+            }
+
+            if (rewardId.Contains("vital_sigil") || rewardId.Contains("starlight_soles"))
+            {
+                return RelicGrowthIconSprite;
+            }
+
+            if (rewardId.Contains("eagle_eye") || rewardId.Contains("focus") || rewardId.Contains("power"))
+            {
+                return RelicPowerIconSprite;
+            }
+
+            if (rewardId.Contains("passive"))
+            {
+                return RelicUtilityIconSprite;
+            }
+
+            return WeaponIconSprite;
         }
 
         private static Sprite LoadSprite(string address)

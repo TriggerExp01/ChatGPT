@@ -10,9 +10,9 @@ namespace GameLogic.Tests
     public sealed class RoguelikeStage31RewardCardTests
     {
         private const string CardFrameSprite = "Roguelike_UI_CardFrame";
-        private const string WeaponIconSprite = "Roguelike_UI_WeaponIcon";
-        private const string RelicIconSprite = "Roguelike_UI_RelicIcon";
-        private const string GoldIconSprite = "Roguelike_UI_GoldIcon";
+        private const string MagicBoltIconSprite = "Roguelike_UI_Icon_MagicBolt";
+        private const string RelicUtilityIconSprite = "Roguelike_UI_Icon_RelicUtility";
+        private const string PaidSupplyIconSprite = "Roguelike_UI_Icon_PaidSupply";
 
         [Test]
         public void ChoiceUiCreatesAnimeFantasyRewardCards()
@@ -42,9 +42,9 @@ namespace GameLogic.Tests
                 }
 
                 AssertSprite(FindImage(panel, "奖励卡_1"), CardFrameSprite, Image.Type.Sliced);
-                AssertSprite(FindImage(panel, "奖励图标_1"), WeaponIconSprite, Image.Type.Simple);
-                AssertSprite(FindImage(panel, "奖励图标_2"), RelicIconSprite, Image.Type.Simple);
-                AssertSprite(FindImage(panel, "奖励图标_3"), GoldIconSprite, Image.Type.Simple);
+                AssertSprite(FindImage(panel, "奖励图标_1"), MagicBoltIconSprite, Image.Type.Simple);
+                AssertSprite(FindImage(panel, "奖励图标_2"), RelicUtilityIconSprite, Image.Type.Simple);
+                AssertSprite(FindImage(panel, "奖励图标_3"), PaidSupplyIconSprite, Image.Type.Simple);
             }
         }
 

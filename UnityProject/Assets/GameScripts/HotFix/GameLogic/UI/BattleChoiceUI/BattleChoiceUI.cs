@@ -146,17 +146,7 @@ namespace GameLogic
 
         private static string GetIconSprite(string id)
         {
-            if (!string.IsNullOrEmpty(id) && id.Contains("passive"))
-            {
-                return RoguelikeUIFactory.RelicIconSprite;
-            }
-
-            if (!string.IsNullOrEmpty(id) && id.Contains("paid"))
-            {
-                return RoguelikeUIFactory.GoldIconSprite;
-            }
-
-            return RoguelikeUIFactory.WeaponIconSprite;
+            return RoguelikeUIFactory.ResolveRewardIconSprite(id);
         }
     }
 }
