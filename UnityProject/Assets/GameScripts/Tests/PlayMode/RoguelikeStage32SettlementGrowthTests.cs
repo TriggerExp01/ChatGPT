@@ -9,6 +9,10 @@ namespace GameLogic.Tests
     public sealed class RoguelikeStage32SettlementGrowthTests
     {
         private const string MetaGoldKey = "Roguelike.MetaGold";
+        private const string PanelFrameSprite = "Roguelike_UI_PanelFrame";
+        private const string HeroPortraitSprite = "Roguelike_UI_HeroPortrait";
+        private const string GoldIconSprite = "Roguelike_UI_GoldIcon";
+        private const string SliderFillYellowSprite = "Slider11_Fill_Yellow";
 
         [SetUp]
         public void ClearMetaGold()
@@ -68,6 +72,9 @@ namespace GameLogic.Tests
                 Assert.IsTrue(panel.gameObject.activeSelf);
                 Assert.NotNull(FindRect(panel, "角色剪影区"));
                 Assert.NotNull(FindRect(panel, "永久成长进度条"));
+                AssertSprite(FindImage(panel, "结算成长面板"), PanelFrameSprite, Image.Type.Sliced);
+                AssertSprite(FindImage(panel, "角色剪影头像"), HeroPortraitSprite, Image.Type.Simple);
+                AssertSprite(FindImage(panel, "金币成长徽章"), GoldIconSprite, Image.Type.Simple);
 
                 Assert.That(FindText(panel, "结算标题").text, Does.Contain("星辉凯旋"));
                 Assert.That(FindText(panel, "结算数据").text, Does.Contain("击杀"));
@@ -77,6 +84,7 @@ namespace GameLogic.Tests
 
                 RectTransform fill = FindRect(panel, "永久成长进度填充");
                 Assert.That(fill.anchorMax.x, Is.EqualTo(0.18f).Within(0.01f));
+                AssertSprite(fill.GetComponent<Image>(), SliderFillYellowSprite, Image.Type.Sliced);
 
                 FindButton(panel, "重新开始按钮").onClick.Invoke();
 
@@ -110,6 +118,20 @@ namespace GameLogic.Tests
         {
             RectTransform rect = FindRect(root, name);
             return rect != null ? rect.GetComponent<Button>() : null;
+        }
+
+        private static Image FindImage(Transform root, string name)
+        {
+            RectTransform rect = FindRect(root, name);
+            return rect != null ? rect.GetComponent<Image>() : null;
+        }
+
+        private static void AssertSprite(Image image, string spriteName, Image.Type imageType)
+        {
+            Assert.NotNull(image);
+            Assert.NotNull(image.sprite);
+            Assert.That(image.sprite.name, Is.EqualTo(spriteName));
+            Assert.That(image.type, Is.EqualTo(imageType));
         }
 
         private static void InvokeWindowMethod(object window, string methodName)

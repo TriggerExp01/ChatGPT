@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Reflection;
 using NUnit.Framework;
 using UnityEngine;
@@ -8,6 +9,15 @@ namespace GameLogic.Tests
 {
     public sealed class RoguelikeStage30HudPolishTests
     {
+        private const string PanelFrameSprite = "Roguelike_UI_PanelFrame";
+        private const string CardFrameSprite = "Roguelike_UI_CardFrame";
+        private const string HeroPortraitSprite = "Roguelike_UI_HeroPortrait";
+        private const string WeaponIconSprite = "Roguelike_UI_WeaponIcon";
+        private const string RelicIconSprite = "Roguelike_UI_RelicIcon";
+        private const string GoldIconSprite = "Roguelike_UI_GoldIcon";
+        private const string SliderFillRedSprite = "Slider11_Fill_Red";
+        private const string SliderFillBlueSprite = "Slider11_Fill_Blue";
+
         [Test]
         public void HudCreatesLowObstructionAnimeFantasyLayout()
         {
@@ -69,6 +79,33 @@ namespace GameLogic.Tests
             }
         }
 
+        [Test]
+        public void HudUsesRoguelikeUiSpriteAssets()
+        {
+            using (HudFixture fixture = HudFixture.Create())
+            {
+                AssertSprite(FindImage(fixture.Root, "角色状态面板"), PanelFrameSprite, Image.Type.Sliced);
+                AssertSprite(FindImage(fixture.Root, "角色头像"), HeroPortraitSprite, Image.Type.Simple);
+                AssertSprite(FindSliderFill(fixture.Root, "生命条"), SliderFillRedSprite, Image.Type.Sliced);
+                AssertSprite(FindSliderFill(fixture.Root, "经验条"), SliderFillBlueSprite, Image.Type.Sliced);
+                AssertSprite(FindImage(fixture.Root, "武器槽_1"), WeaponIconSprite, Image.Type.Simple);
+                AssertSprite(FindImage(fixture.Root, "被动槽_1"), RelicIconSprite, Image.Type.Simple);
+            }
+        }
+
+        [Test]
+        public void RoguelikeUiSpriteAssetsExistInAtlasFolder()
+        {
+            string atlasPath = Path.Combine(Application.dataPath, "AssetRaw", "UIRaw", "Atlas", "Roguelike");
+
+            Assert.IsTrue(File.Exists(Path.Combine(atlasPath, PanelFrameSprite + ".png")));
+            Assert.IsTrue(File.Exists(Path.Combine(atlasPath, CardFrameSprite + ".png")));
+            Assert.IsTrue(File.Exists(Path.Combine(atlasPath, HeroPortraitSprite + ".png")));
+            Assert.IsTrue(File.Exists(Path.Combine(atlasPath, WeaponIconSprite + ".png")));
+            Assert.IsTrue(File.Exists(Path.Combine(atlasPath, RelicIconSprite + ".png")));
+            Assert.IsTrue(File.Exists(Path.Combine(atlasPath, GoldIconSprite + ".png")));
+        }
+
         private static RectTransform FindRect(Transform root, string name)
         {
             Transform[] children = root.GetComponentsInChildren<Transform>(true);
@@ -87,6 +124,27 @@ namespace GameLogic.Tests
         {
             RectTransform rect = FindRect(root, name);
             return rect != null ? rect.GetComponent<Text>() : null;
+        }
+
+        private static Image FindImage(Transform root, string name)
+        {
+            RectTransform rect = FindRect(root, name);
+            return rect != null ? rect.GetComponent<Image>() : null;
+        }
+
+        private static Image FindSliderFill(Transform root, string name)
+        {
+            RectTransform sliderRoot = FindRect(root, name);
+            RectTransform fill = sliderRoot != null ? FindRect(sliderRoot, "Fill") : null;
+            return fill != null ? fill.GetComponent<Image>() : null;
+        }
+
+        private static void AssertSprite(Image image, string spriteName, Image.Type imageType)
+        {
+            Assert.NotNull(image);
+            Assert.NotNull(image.sprite);
+            Assert.That(image.sprite.name, Is.EqualTo(spriteName));
+            Assert.That(image.type, Is.EqualTo(imageType));
         }
 
         private static void InvokeWindowMethod(object window, string methodName)

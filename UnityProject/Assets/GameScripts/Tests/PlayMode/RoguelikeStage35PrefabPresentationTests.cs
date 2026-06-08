@@ -75,12 +75,31 @@ namespace GameLogic.Tests
             Dictionary<int, Transform> projectileViews = GetViewMap("_projectileViews", view);
             Transform commonView = enemyViews[common.Id];
             Transform bossView = enemyViews[boss.Id];
+            Transform boltView = projectileViews[bolt.Id];
             Transform dartView = projectileViews[dart.Id];
+            Vector2 commonSize = GetRendererSize(commonView);
+            Vector2 bossSize = GetRendererSize(bossView);
+            Vector2 boltSize = GetRendererSize(boltView);
+            Vector2 dartSize = GetRendererSize(dartView);
 
-            Assert.That(bossView.localScale.x, Is.GreaterThan(commonView.localScale.x + 0.4f));
+            Assert.That(commonSize.x, Is.EqualTo(0.72f).Within(0.03f));
+            Assert.That(commonSize.y, Is.EqualTo(0.72f).Within(0.03f));
+            Assert.That(bossSize.x, Is.EqualTo(1.18f).Within(0.04f));
+            Assert.That(bossSize.y, Is.EqualTo(1.18f).Within(0.04f));
+            Assert.That(bossSize.x, Is.GreaterThan(commonSize.x + 0.4f));
             Assert.That(bossView.GetComponent<SpriteRenderer>().color.b, Is.GreaterThan(commonView.GetComponent<SpriteRenderer>().color.b));
-            Assert.That(dartView.localScale.x, Is.EqualTo(0.44f).Within(0.001f));
+            Assert.That(boltSize.x, Is.EqualTo(0.28f).Within(0.03f));
+            Assert.That(boltSize.y, Is.EqualTo(0.14f).Within(0.03f));
+            Assert.That(Mathf.Max(dartSize.x, dartSize.y), Is.EqualTo(0.44f).Within(0.03f));
+            Assert.That(Mathf.Min(dartSize.x, dartSize.y), Is.EqualTo(0.09f).Within(0.03f));
             Assert.That(dartView.localRotation.eulerAngles.z, Is.EqualTo(90f).Within(0.001f));
+
+            common.Health = 1;
+            boss.Health = 1;
+            view.Refresh(game.CurrentRun);
+
+            Assert.That(GetRendererSize(commonView).x, Is.EqualTo(commonSize.x).Within(0.001f));
+            Assert.That(GetRendererSize(bossView).x, Is.EqualTo(bossSize.x).Within(0.001f));
 
             enemies.Clear();
             projectiles.Clear();
@@ -95,6 +114,14 @@ namespace GameLogic.Tests
             view.Refresh(game.CurrentRun);
 
             Assert.That(view.ViewReuseCount, Is.GreaterThanOrEqualTo(reuseBefore + 2));
+            Dictionary<int, Transform> reusedEnemyViews = GetViewMap("_enemyViews", view);
+            Dictionary<int, Transform> reusedProjectileViews = GetViewMap("_projectileViews", view);
+            Assert.That(reusedEnemyViews[35031], Is.SameAs(commonView));
+            Assert.That(reusedProjectileViews[35032], Is.SameAs(boltView));
+            Assert.That(reusedEnemyViews[35031], Is.Not.SameAs(bossView));
+            Assert.That(reusedProjectileViews[35032], Is.Not.SameAs(dartView));
+            Assert.That(GetRendererSize(reusedEnemyViews[35031]).x, Is.EqualTo(commonSize.x).Within(0.001f));
+            Assert.That(GetRendererSize(reusedProjectileViews[35032]).x, Is.EqualTo(0.28f).Within(0.03f));
         }
 
         private static RoguelikeBattleStageView CreateFreshStage()
@@ -134,6 +161,20 @@ namespace GameLogic.Tests
             FieldInfo field = typeof(RoguelikeBattleStageView).GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic);
             Assert.NotNull(field);
             return (Dictionary<int, Transform>)field.GetValue(view);
+        }
+
+        private static Vector2 GetRendererSize(Transform view)
+        {
+            SpriteRenderer[] renderers = view.GetComponentsInChildren<SpriteRenderer>(true);
+            Assert.That(renderers.Length, Is.GreaterThan(0));
+
+            Bounds bounds = renderers[0].bounds;
+            for (int i = 1; i < renderers.Length; i++)
+            {
+                bounds.Encapsulate(renderers[i].bounds);
+            }
+
+            return new Vector2(bounds.size.x, bounds.size.y);
         }
     }
 }

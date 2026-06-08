@@ -1,10 +1,25 @@
 using UnityEngine;
 using UnityEngine.UI;
+using System.Collections.Generic;
 
 namespace GameLogic
 {
     internal static class RoguelikeUIFactory
     {
+        public const string PanelFrameSprite = "Roguelike_UI_PanelFrame";
+        public const string CardFrameSprite = "Roguelike_UI_CardFrame";
+        public const string HeroPortraitSprite = "Roguelike_UI_HeroPortrait";
+        public const string WeaponIconSprite = "Roguelike_UI_WeaponIcon";
+        public const string RelicIconSprite = "Roguelike_UI_RelicIcon";
+        public const string GoldIconSprite = "Roguelike_UI_GoldIcon";
+        public const string BattleLightSprite = "zd_img_light";
+        public const string SliderFrameSprite = "Slider11_Frame";
+        public const string SliderFillRedSprite = "Slider11_Fill_Red";
+        public const string SliderFillBlueSprite = "Slider11_Fill_Blue";
+        public const string SliderFillYellowSprite = "Slider11_Fill_Yellow";
+
+        private static readonly Dictionary<string, Sprite> SpriteCache = new Dictionary<string, Sprite>();
+
         public static RectTransform ResolveContainer(UIWindow window)
         {
             RectTransform container = window.FindChildComponent<RectTransform>("m_rectContainer");
@@ -30,13 +45,27 @@ namespace GameLogic
             RectTransform rect = CreateRect(name, parent, anchorMin, anchorMax, Vector2.zero, Vector2.zero);
             Image image = rect.gameObject.AddComponent<Image>();
             image.color = color;
+            ApplySprite(image, PanelFrameSprite, Image.Type.Sliced);
             image.raycastTarget = false;
             return rect;
         }
 
         public static RectTransform CreateImage(string name, RectTransform parent, Vector2 anchorMin, Vector2 anchorMax, Color color)
         {
-            RectTransform rect = CreatePanel(name, parent, anchorMin, anchorMax, color);
+            return CreateImage(name, parent, anchorMin, anchorMax, color, null, Image.Type.Simple, false);
+        }
+
+        public static RectTransform CreateImage(string name, RectTransform parent, Vector2 anchorMin, Vector2 anchorMax, Color color, string spriteAddress, Image.Type imageType = Image.Type.Simple, bool preserveAspect = false)
+        {
+            RectTransform rect = CreateRect(name, parent, anchorMin, anchorMax, Vector2.zero, Vector2.zero);
+            Image image = rect.gameObject.AddComponent<Image>();
+            image.color = color;
+            image.raycastTarget = false;
+            if (!string.IsNullOrEmpty(spriteAddress))
+            {
+                ApplySprite(image, spriteAddress, imageType, preserveAspect);
+            }
+
             return rect;
         }
 
@@ -55,15 +84,21 @@ namespace GameLogic
 
         public static Button CreateButton(string name, RectTransform parent, string label, Vector2 anchorMin, Vector2 anchorMax, Color color, int fontSize = 22)
         {
+            return CreateButton(name, parent, label, anchorMin, anchorMax, color, fontSize, PanelFrameSprite);
+        }
+
+        public static Button CreateButton(string name, RectTransform parent, string label, Vector2 anchorMin, Vector2 anchorMax, Color color, int fontSize, string spriteAddress)
+        {
             RectTransform rect = CreateRect(name, parent, anchorMin, anchorMax, Vector2.zero, Vector2.zero);
             Image image = rect.gameObject.AddComponent<Image>();
             image.color = color;
+            ApplySprite(image, spriteAddress, Image.Type.Sliced);
             Button button = rect.gameObject.AddComponent<Button>();
             button.targetGraphic = image;
             ColorBlock colors = button.colors;
             colors.normalColor = Color.white;
-            colors.highlightedColor = new Color(1.12f, 1.12f, 1.12f, 1f);
-            colors.pressedColor = new Color(0.72f, 0.78f, 0.86f, 1f);
+            colors.highlightedColor = new Color(1.10f, 1.06f, 1.16f, 1f);
+            colors.pressedColor = new Color(0.78f, 0.80f, 0.94f, 1f);
             colors.disabledColor = new Color(0.42f, 0.42f, 0.42f, 0.65f);
             colors.fadeDuration = 0.08f;
             button.colors = colors;
@@ -75,14 +110,21 @@ namespace GameLogic
 
         public static Slider CreateSlider(string name, RectTransform parent, Vector2 anchorMin, Vector2 anchorMax, Color fillColor)
         {
+            return CreateSlider(name, parent, anchorMin, anchorMax, fillColor, null);
+        }
+
+        public static Slider CreateSlider(string name, RectTransform parent, Vector2 anchorMin, Vector2 anchorMax, Color fillColor, string fillSpriteAddress)
+        {
             RectTransform root = CreateRect(name, parent, anchorMin, anchorMax, Vector2.zero, Vector2.zero);
             Image bg = root.gameObject.AddComponent<Image>();
-            bg.color = new Color(0.08f, 0.08f, 0.10f, 1f);
+            bg.color = new Color(0.88f, 0.92f, 1f, 0.86f);
+            ApplySprite(bg, SliderFrameSprite, Image.Type.Sliced);
 
-            RectTransform fillArea = CreateRect("Fill Area", root, Vector2.zero, Vector2.one, new Vector2(5f, 4f), new Vector2(-5f, -4f));
+            RectTransform fillArea = CreateRect("Fill Area", root, Vector2.zero, Vector2.one, new Vector2(6f, 4f), new Vector2(-6f, -4f));
             RectTransform fill = CreateRect("Fill", fillArea, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
             Image fillImage = fill.gameObject.AddComponent<Image>();
             fillImage.color = fillColor;
+            ApplySprite(fillImage, fillSpriteAddress, Image.Type.Sliced);
 
             Slider slider = root.gameObject.AddComponent<Slider>();
             slider.transition = Selectable.Transition.None;
@@ -110,6 +152,80 @@ namespace GameLogic
             slider.minValue = 0;
             slider.maxValue = Mathf.Max(1, maxValue);
             slider.value = Mathf.Clamp(value, 0, maxValue);
+        }
+
+        public static void ApplySprite(RectTransform rect, string spriteAddress, Image.Type imageType = Image.Type.Simple, bool preserveAspect = false)
+        {
+            if (rect == null)
+            {
+                return;
+            }
+
+            ApplySprite(rect.GetComponent<Image>(), spriteAddress, imageType, preserveAspect);
+        }
+
+        public static void ApplySprite(Image image, string spriteAddress, Image.Type imageType = Image.Type.Simple, bool preserveAspect = false)
+        {
+            if (image == null || string.IsNullOrEmpty(spriteAddress))
+            {
+                return;
+            }
+
+            Sprite sprite = LoadSprite(spriteAddress);
+            if (sprite == null)
+            {
+                return;
+            }
+
+            image.sprite = sprite;
+            image.type = imageType;
+            image.preserveAspect = preserveAspect;
+        }
+
+        private static Sprite LoadSprite(string address)
+        {
+            if (string.IsNullOrEmpty(address))
+            {
+                return null;
+            }
+
+            if (SpriteCache.TryGetValue(address, out Sprite cached))
+            {
+                return cached;
+            }
+
+            Sprite sprite = null;
+            try
+            {
+                TEngine.IResourceModule resource = GameModule.Resource;
+                if (resource != null && resource.CheckLocationValid(address))
+                {
+                    sprite = resource.LoadAsset<Sprite>(address);
+                }
+            }
+            catch (System.Exception)
+            {
+                sprite = null;
+            }
+
+#if UNITY_EDITOR
+            if (sprite == null)
+            {
+                sprite = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>($"Assets/AssetRaw/UIRaw/Atlas/Roguelike/{address}.png");
+            }
+
+            if (sprite == null)
+            {
+                sprite = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>($"Assets/AssetRaw/UIRaw/Atlas/Battle/{address}.png");
+            }
+#endif
+
+            if (sprite != null)
+            {
+                SpriteCache[address] = sprite;
+            }
+
+            return sprite;
         }
     }
 }

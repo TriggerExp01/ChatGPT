@@ -9,6 +9,11 @@ namespace GameLogic.Tests
 {
     public sealed class RoguelikeStage31RewardCardTests
     {
+        private const string CardFrameSprite = "Roguelike_UI_CardFrame";
+        private const string WeaponIconSprite = "Roguelike_UI_WeaponIcon";
+        private const string RelicIconSprite = "Roguelike_UI_RelicIcon";
+        private const string GoldIconSprite = "Roguelike_UI_GoldIcon";
+
         [Test]
         public void ChoiceUiCreatesAnimeFantasyRewardCards()
         {
@@ -35,6 +40,11 @@ namespace GameLogic.Tests
                     Assert.NotNull(FindText(panel, $"卡牌价格_{i}"));
                     Assert.NotNull(FindText(panel, $"卡牌状态_{i}"));
                 }
+
+                AssertSprite(FindImage(panel, "奖励卡_1"), CardFrameSprite, Image.Type.Sliced);
+                AssertSprite(FindImage(panel, "奖励图标_1"), WeaponIconSprite, Image.Type.Simple);
+                AssertSprite(FindImage(panel, "奖励图标_2"), RelicIconSprite, Image.Type.Simple);
+                AssertSprite(FindImage(panel, "奖励图标_3"), GoldIconSprite, Image.Type.Simple);
             }
         }
 
@@ -140,6 +150,20 @@ namespace GameLogic.Tests
         {
             RectTransform rect = FindRect(root, name);
             return rect != null ? rect.GetComponent<Button>() : null;
+        }
+
+        private static Image FindImage(Transform root, string name)
+        {
+            RectTransform rect = FindRect(root, name);
+            return rect != null ? rect.GetComponent<Image>() : null;
+        }
+
+        private static void AssertSprite(Image image, string spriteName, Image.Type imageType)
+        {
+            Assert.NotNull(image);
+            Assert.NotNull(image.sprite);
+            Assert.That(image.sprite.name, Is.EqualTo(spriteName));
+            Assert.That(image.type, Is.EqualTo(imageType));
         }
 
         private static void InvokeWindowMethod(object window, string methodName)

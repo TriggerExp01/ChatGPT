@@ -21,6 +21,15 @@ namespace GameLogic.Tests
         }
 
         [Test]
+        public void Stage34EffectPixelSpriteUsesOneWorldUnitImportScale()
+        {
+            string metaPath = Path.Combine(Application.dataPath, "AssetRaw", "Effects", "Roguelike_EffectPixel.png.meta");
+
+            Assert.IsTrue(File.Exists(metaPath));
+            StringAssert.Contains("spritePixelsToUnits: 8", File.ReadAllText(metaPath));
+        }
+
+        [Test]
         public void CombatEventsEmitHitKillAndPickupEffectCues()
         {
             RoguelikeGame game = RoguelikeGame.Instance;

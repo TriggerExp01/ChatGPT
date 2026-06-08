@@ -19,15 +19,15 @@ namespace GameLogic
         {
             RectTransform root = RoguelikeUIFactory.ResolveContainer(this);
             _panel = RoguelikeUIFactory.CreatePanel("奖励选择面板", root, new Vector2(0.08f, 0.20f), new Vector2(0.92f, 0.78f), new Color(0.028f, 0.032f, 0.058f, 0.95f));
-            RoguelikeUIFactory.CreateImage("奖励面板星辉", _panel, new Vector2(0.02f, 0.84f), new Vector2(0.12f, 0.96f), new Color(1f, 0.72f, 0.92f, 0.76f));
-            RoguelikeUIFactory.CreateImage("奖励面板月辉", _panel, new Vector2(0.88f, 0.84f), new Vector2(0.98f, 0.96f), new Color(0.52f, 0.82f, 1f, 0.70f));
+            RoguelikeUIFactory.CreateImage("奖励面板星辉", _panel, new Vector2(0.02f, 0.82f), new Vector2(0.22f, 0.98f), new Color(1f, 0.72f, 0.92f, 0.58f), RoguelikeUIFactory.BattleLightSprite, Image.Type.Simple, true);
+            RoguelikeUIFactory.CreateImage("奖励面板月辉", _panel, new Vector2(0.78f, 0.82f), new Vector2(0.98f, 0.98f), new Color(0.52f, 0.82f, 1f, 0.52f), RoguelikeUIFactory.BattleLightSprite, Image.Type.Simple, true);
             _promptText = RoguelikeUIFactory.CreateText("奖励提示", _panel, 22, TextAnchor.MiddleCenter, new Vector2(0.10f, 0.80f), new Vector2(0.90f, 0.96f), Vector2.zero, Vector2.zero);
             for (int i = 0; i < _choiceButtons.Length; i++)
             {
                 int captured = i;
                 float xMin = 0.04f + i * 0.315f;
                 float xMax = xMin + 0.275f;
-                _choiceButtons[i] = RoguelikeUIFactory.CreateButton($"奖励卡_{i + 1}", _panel, string.Empty, new Vector2(xMin, 0.09f), new Vector2(xMax, 0.76f), new Color(0.13f, 0.16f, 0.25f, 0.98f), 16);
+                _choiceButtons[i] = RoguelikeUIFactory.CreateButton($"奖励卡_{i + 1}", _panel, string.Empty, new Vector2(xMin, 0.09f), new Vector2(xMax, 0.76f), new Color(0.88f, 0.92f, 1f, 0.98f), 16, RoguelikeUIFactory.CardFrameSprite);
                 Text label = _choiceButtons[i].GetComponentInChildren<Text>(true);
                 if (label != null)
                 {
@@ -35,9 +35,9 @@ namespace GameLogic
                 }
 
                 RectTransform card = _choiceButtons[i].GetComponent<RectTransform>();
-                RoguelikeUIFactory.CreateImage($"卡牌边框_{i + 1}", card, new Vector2(0.03f, 0.035f), new Vector2(0.97f, 0.965f), new Color(0.92f, 0.66f, 1f, 0.18f));
-                _iconRects[i] = RoguelikeUIFactory.CreateImage($"奖励图标_{i + 1}", card, new Vector2(0.34f, 0.68f), new Vector2(0.66f, 0.92f), new Color(1f, 0.72f, 0.38f, 0.94f));
-                RoguelikeUIFactory.CreateImage($"图标高光_{i + 1}", _iconRects[i], new Vector2(0.18f, 0.58f), new Vector2(0.82f, 0.84f), new Color(1f, 0.94f, 0.72f, 0.82f));
+                RoguelikeUIFactory.CreateImage($"卡牌边框_{i + 1}", card, new Vector2(0.05f, 0.05f), new Vector2(0.95f, 0.95f), new Color(1f, 0.76f, 0.94f, 0.20f), RoguelikeUIFactory.BattleLightSprite, Image.Type.Simple, true);
+                _iconRects[i] = RoguelikeUIFactory.CreateImage($"奖励图标_{i + 1}", card, new Vector2(0.34f, 0.67f), new Vector2(0.66f, 0.93f), Color.white, RoguelikeUIFactory.WeaponIconSprite, Image.Type.Simple, true);
+                RoguelikeUIFactory.CreateImage($"图标高光_{i + 1}", _iconRects[i], new Vector2(0.10f, 0.56f), new Vector2(0.90f, 0.90f), new Color(1f, 0.94f, 0.72f, 0.50f), RoguelikeUIFactory.BattleLightSprite, Image.Type.Simple, true);
                 _titleTexts[i] = RoguelikeUIFactory.CreateText($"卡牌标题_{i + 1}", card, 18, TextAnchor.MiddleCenter, new Vector2(0.07f, 0.55f), new Vector2(0.93f, 0.67f), Vector2.zero, Vector2.zero);
                 _descriptionTexts[i] = RoguelikeUIFactory.CreateText($"卡牌描述_{i + 1}", card, 15, TextAnchor.UpperCenter, new Vector2(0.08f, 0.28f), new Vector2(0.92f, 0.53f), Vector2.zero, Vector2.zero);
                 _costTexts[i] = RoguelikeUIFactory.CreateText($"卡牌价格_{i + 1}", card, 14, TextAnchor.MiddleCenter, new Vector2(0.10f, 0.15f), new Vector2(0.90f, 0.25f), Vector2.zero, Vector2.zero);
@@ -87,6 +87,7 @@ namespace GameLogic
                     if (iconImage != null)
                     {
                         iconImage.color = iconColor;
+                        RoguelikeUIFactory.ApplySprite(iconImage, GetIconSprite(option.Id), Image.Type.Simple, true);
                     }
 
                     RoguelikeUIFactory.SetText(_titleTexts[i], option.Title);
@@ -97,6 +98,12 @@ namespace GameLogic
                 else
                 {
                     _choiceButtons[i].interactable = false;
+                    Image iconImage = _iconRects[i] != null ? _iconRects[i].GetComponent<Image>() : null;
+                    if (iconImage != null)
+                    {
+                        iconImage.color = new Color(0.40f, 0.42f, 0.50f, 0.70f);
+                        RoguelikeUIFactory.ApplySprite(iconImage, RoguelikeUIFactory.CardFrameSprite, Image.Type.Simple, true);
+                    }
                     RoguelikeUIFactory.SetText(_titleTexts[i], "空卡位");
                     RoguelikeUIFactory.SetText(_descriptionTexts[i], "等待新的星辉奖励。");
                     RoguelikeUIFactory.SetText(_costTexts[i], "-");
@@ -135,6 +142,21 @@ namespace GameLogic
             }
 
             return new Color(0.92f, 0.56f, 1f, 0.96f);
+        }
+
+        private static string GetIconSprite(string id)
+        {
+            if (!string.IsNullOrEmpty(id) && id.Contains("passive"))
+            {
+                return RoguelikeUIFactory.RelicIconSprite;
+            }
+
+            if (!string.IsNullOrEmpty(id) && id.Contains("paid"))
+            {
+                return RoguelikeUIFactory.GoldIconSprite;
+            }
+
+            return RoguelikeUIFactory.WeaponIconSprite;
         }
     }
 }

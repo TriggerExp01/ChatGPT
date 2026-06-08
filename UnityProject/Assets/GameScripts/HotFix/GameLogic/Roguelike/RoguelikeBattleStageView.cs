@@ -13,18 +13,23 @@ namespace GameLogic
         public const string BossEnemyPrefabAddress = "Roguelike_Enemy_Boss";
         public const string MagicBoltProjectilePrefabAddress = "Roguelike_Projectile_MagicBolt";
         public const string PiercingDartProjectilePrefabAddress = "Roguelike_Projectile_PiercingDart";
+        private const float CommonEnemyVisualSize = 0.72f;
+        private const float BossEnemyVisualSize = 1.18f;
 
         private readonly Dictionary<int, Transform> _enemyViews = new Dictionary<int, Transform>();
+        private readonly Dictionary<int, bool> _enemyViewKinds = new Dictionary<int, bool>();
         private readonly Dictionary<int, Transform> _pickupViews = new Dictionary<int, Transform>();
         private readonly Dictionary<int, Transform> _projectileViews = new Dictionary<int, Transform>();
+        private readonly Dictionary<int, RoguelikeWeaponType> _projectileViewTypes = new Dictionary<int, RoguelikeWeaponType>();
         private readonly Dictionary<int, RoguelikeRuntimeEffectView> _activeEffectViews = new Dictionary<int, RoguelikeRuntimeEffectView>();
         private readonly Dictionary<RoguelikeEffectCueType, Stack<Transform>> _effectViewPools = new Dictionary<RoguelikeEffectCueType, Stack<Transform>>();
         private readonly Dictionary<RoguelikeEffectCueType, string> _effectPrefabAddressOverrides = new Dictionary<RoguelikeEffectCueType, string>();
         private readonly Dictionary<bool, string> _enemyPrefabAddressOverrides = new Dictionary<bool, string>();
         private readonly Dictionary<RoguelikeWeaponType, string> _projectilePrefabAddressOverrides = new Dictionary<RoguelikeWeaponType, string>();
-        private readonly Stack<Transform> _enemyViewPool = new Stack<Transform>();
+        private readonly Dictionary<RoguelikeWeaponType, Stack<Transform>> _projectileViewPools = new Dictionary<RoguelikeWeaponType, Stack<Transform>>();
+        private readonly Stack<Transform> _commonEnemyViewPool = new Stack<Transform>();
+        private readonly Stack<Transform> _bossEnemyViewPool = new Stack<Transform>();
         private readonly Stack<Transform> _pickupViewPool = new Stack<Transform>();
-        private readonly Stack<Transform> _projectileViewPool = new Stack<Transform>();
         private readonly List<Transform> _obstacleViews = new List<Transform>();
         private readonly List<int> _expiredEffectIds = new List<int>();
         private Transform _player;
@@ -41,9 +46,9 @@ namespace GameLogic
         private int _presentationFallbackCount;
         private static Sprite _whiteSprite;
 
-        public int EnemyViewPoolCount => _enemyViewPool.Count;
+        public int EnemyViewPoolCount => _commonEnemyViewPool.Count + _bossEnemyViewPool.Count;
         public int PickupViewPoolCount => _pickupViewPool.Count;
-        public int ProjectileViewPoolCount => _projectileViewPool.Count;
+        public int ProjectileViewPoolCount => CountProjectileViewPool();
         public int EffectViewPoolCount
         {
             get
@@ -134,13 +139,16 @@ namespace GameLogic
 
             ClearChildren();
             _enemyViews.Clear();
+            _enemyViewKinds.Clear();
             _pickupViews.Clear();
             _projectileViews.Clear();
+            _projectileViewTypes.Clear();
             _activeEffectViews.Clear();
             _obstacleViews.Clear();
-            _enemyViewPool.Clear();
+            _commonEnemyViewPool.Clear();
+            _bossEnemyViewPool.Clear();
             _pickupViewPool.Clear();
-            _projectileViewPool.Clear();
+            _projectileViewPools.Clear();
             _effectViewPools.Clear();
             _expiredEffectIds.Clear();
             _lastEffectCueSequence = 0;
@@ -455,15 +463,22 @@ namespace GameLogic
             {
                 RoguelikeSurvivalEnemy enemy = enemies[i];
                 active.Add(enemy.Id);
-                if (!_enemyViews.TryGetValue(enemy.Id, out Transform view))
+                bool isBoss = enemy.IsBoss;
+                bool hasView = _enemyViews.TryGetValue(enemy.Id, out Transform view);
+                bool hasKind = _enemyViewKinds.TryGetValue(enemy.Id, out bool viewIsBoss);
+                if (!hasView || !hasKind || viewIsBoss != isBoss)
                 {
+                    if (hasView)
+                    {
+                        RecycleView(view, GetEnemyViewPool(hasKind && viewIsBoss));
+                    }
+
                     view = SpawnEnemyView(enemy, $"敌人_{enemy.Id}", enemy.Position);
-                    _enemyViews.Add(enemy.Id, view);
+                    _enemyViews[enemy.Id] = view;
+                    _enemyViewKinds[enemy.Id] = isBoss;
                 }
 
                 view.GetComponent<RoguelikeEnemyMotor>().SetTarget(enemy.Position);
-                float healthRate = Mathf.Clamp01((float)enemy.Health / Mathf.Max(1, enemy.MaxHealth));
-                view.localScale = Vector3.one * GetEnemyScale(enemy, healthRate);
                 ApplyEnemyPresentation(view, enemy);
             }
 
@@ -472,7 +487,7 @@ namespace GameLogic
             {
                 if (!active.Contains(pair.Key))
                 {
-                    RecycleView(pair.Value, _enemyViewPool);
+                    RecycleView(pair.Value, GetEnemyViewPool(_enemyViewKinds.TryGetValue(pair.Key, out bool isBoss) && isBoss));
                     removed.Add(pair.Key);
                 }
             }
@@ -480,6 +495,7 @@ namespace GameLogic
             for (int i = 0; i < removed.Count; i++)
             {
                 _enemyViews.Remove(removed[i]);
+                _enemyViewKinds.Remove(removed[i]);
             }
         }
 
@@ -526,15 +542,25 @@ namespace GameLogic
             {
                 RoguelikeSurvivalProjectile projectile = projectiles[i];
                 active.Add(projectile.Id);
-                if (!_projectileViews.TryGetValue(projectile.Id, out Transform view))
+                RoguelikeWeaponType weaponType = projectile.WeaponType;
+                bool hasView = _projectileViews.TryGetValue(projectile.Id, out Transform view);
+                bool hasType = _projectileViewTypes.TryGetValue(projectile.Id, out RoguelikeWeaponType viewType);
+                if (!hasView || !hasType || viewType != weaponType)
                 {
+                    if (hasView)
+                    {
+                        RecycleView(view, GetProjectileViewPool(hasType ? viewType : weaponType));
+                    }
+
                     view = SpawnProjectileView(projectile, $"投射物_{projectile.Id}");
-                    _projectileViews.Add(projectile.Id, view);
+                    _projectileViews[projectile.Id] = view;
+                    _projectileViewTypes[projectile.Id] = weaponType;
                 }
 
                 view.localPosition = projectile.Position;
                 float angle = Mathf.Atan2(projectile.Direction.y, projectile.Direction.x) * Mathf.Rad2Deg;
                 view.localRotation = Quaternion.Euler(0f, 0f, angle);
+                ApplyProjectileVisualScale(view, weaponType);
             }
 
             List<int> removed = new List<int>();
@@ -542,7 +568,9 @@ namespace GameLogic
             {
                 if (!active.Contains(pair.Key))
                 {
-                    RecycleView(pair.Value, _projectileViewPool);
+                    RecycleView(pair.Value, GetProjectileViewPool(_projectileViewTypes.TryGetValue(pair.Key, out RoguelikeWeaponType weaponType)
+                        ? weaponType
+                        : RoguelikeWeaponType.MagicBolt));
                     removed.Add(pair.Key);
                 }
             }
@@ -550,27 +578,28 @@ namespace GameLogic
             for (int i = 0; i < removed.Count; i++)
             {
                 _projectileViews.Remove(removed[i]);
+                _projectileViewTypes.Remove(removed[i]);
             }
         }
 
-        private static void GetProjectilePresentation(RoguelikeWeaponType weaponType, out Vector3 scale, out Color color)
+        private static void GetProjectilePresentation(RoguelikeWeaponType weaponType, out Vector3 visualSize, out Color color)
         {
             switch (weaponType)
             {
                 case RoguelikeWeaponType.SpinningBlade:
-                    scale = new Vector3(0.34f, 0.10f, 1f);
+                    visualSize = new Vector3(0.34f, 0.10f, 1f);
                     color = new Color(0.72f, 0.95f, 1f, 1f);
                     break;
                 case RoguelikeWeaponType.PiercingDart:
-                    scale = new Vector3(0.44f, 0.09f, 1f);
+                    visualSize = new Vector3(0.44f, 0.09f, 1f);
                     color = new Color(0.95f, 0.62f, 1f, 1f);
                     break;
                 case RoguelikeWeaponType.StarRingPulse:
-                    scale = new Vector3(0.22f, 0.22f, 1f);
+                    visualSize = new Vector3(0.22f, 0.22f, 1f);
                     color = new Color(0.42f, 1f, 0.72f, 1f);
                     break;
                 default:
-                    scale = new Vector3(0.28f, 0.14f, 1f);
+                    visualSize = new Vector3(0.28f, 0.14f, 1f);
                     color = new Color(1f, 0.82f, 0.24f, 1f);
                     break;
             }
@@ -587,7 +616,7 @@ namespace GameLogic
 
         private Transform SpawnEnemyView(RoguelikeSurvivalEnemy enemy, string name, Vector3 position)
         {
-            Transform view = TakeFromPool(_enemyViewPool);
+            Transform view = TakeFromPool(GetEnemyViewPool(enemy));
             if (view == null)
             {
                 GameObject instance = LoadPresentationGameObject(GetEnemyPrefabAddress(enemy), ref _enemyPrefabLoadedCount);
@@ -636,11 +665,11 @@ namespace GameLogic
 
         private Transform SpawnProjectileView(RoguelikeSurvivalProjectile projectile, string name)
         {
-            Vector3 scale;
+            Vector3 visualSize;
             Color color;
-            GetProjectilePresentation(projectile.WeaponType, out scale, out color);
+            GetProjectilePresentation(projectile.WeaponType, out visualSize, out color);
 
-            Transform view = TakeFromPool(_projectileViewPool);
+            Transform view = TakeFromPool(GetProjectileViewPool(projectile.WeaponType));
             if (view == null)
             {
                 GameObject instance = LoadPresentationGameObject(GetProjectilePrefabAddress(projectile.WeaponType), ref _projectilePrefabLoadedCount);
@@ -649,11 +678,11 @@ namespace GameLogic
 
             if (view == null)
             {
-                view = CreateSprite(name, projectile.Position, scale, color, 11);
+                view = CreateSprite(name, projectile.Position, visualSize, color, 11);
                 _presentationFallbackCount++;
             }
 
-            PreparePooledView(view, name, projectile.Position, scale, Quaternion.identity);
+            PreparePooledView(view, name, projectile.Position, Vector3.one, Quaternion.identity);
             ApplyProjectilePresentation(view, projectile.WeaponType);
             return view;
         }
@@ -725,6 +754,7 @@ namespace GameLogic
 
             Color color = enemy != null && enemy.HitFlash > 0f ? Color.white : GetEnemyColor(enemy);
             PrepareSpriteRenderer(view, color, 9, true);
+            ApplyEnemyVisualScale(view, enemy);
         }
 
         private static void ApplyProjectilePresentation(Transform view, RoguelikeWeaponType weaponType)
@@ -734,10 +764,11 @@ namespace GameLogic
                 return;
             }
 
-            Vector3 scale;
+            Vector3 visualSize;
             Color color;
-            GetProjectilePresentation(weaponType, out scale, out color);
+            GetProjectilePresentation(weaponType, out visualSize, out color);
             PrepareSpriteRenderer(view, color, 11, true);
+            ApplyProjectileVisualScale(view, weaponType);
         }
 
         private static Color GetEnemyColor(RoguelikeSurvivalEnemy enemy)
@@ -747,11 +778,92 @@ namespace GameLogic
                 : new Color(0.95f, 0.26f, 0.20f, 1f);
         }
 
-        private static float GetEnemyScale(RoguelikeSurvivalEnemy enemy, float healthRate)
+        private static float GetEnemyVisualSize(RoguelikeSurvivalEnemy enemy)
         {
-            return enemy != null && enemy.IsBoss
-                ? Mathf.Lerp(1.2f, 1.55f, healthRate)
-                : Mathf.Lerp(0.55f, 0.8f, healthRate);
+            return enemy != null && enemy.IsBoss ? BossEnemyVisualSize : CommonEnemyVisualSize;
+        }
+
+        private static void ApplyEnemyVisualScale(Transform view, RoguelikeSurvivalEnemy enemy)
+        {
+            ApplyVisualMaxSize(view, GetEnemyVisualSize(enemy));
+        }
+
+        private static void ApplyProjectileVisualScale(Transform view, RoguelikeWeaponType weaponType)
+        {
+            GetProjectilePresentation(weaponType, out Vector3 visualSize, out Color color);
+            ApplyVisualSize(view, visualSize);
+        }
+
+        private static void ApplyVisualMaxSize(Transform view, float targetMaxSize)
+        {
+            if (view == null)
+            {
+                return;
+            }
+
+            Quaternion rotation = view.localRotation;
+            view.localScale = Vector3.one;
+            view.localRotation = Quaternion.identity;
+            if (!TryGetRendererBounds(view, out Bounds bounds))
+            {
+                view.localScale = Vector3.one * targetMaxSize;
+                view.localRotation = rotation;
+                return;
+            }
+
+            float maxSize = Mathf.Max(bounds.size.x, bounds.size.y);
+            float scale = maxSize > 0.001f ? targetMaxSize / maxSize : targetMaxSize;
+            view.localScale = Vector3.one * scale;
+            view.localRotation = rotation;
+        }
+
+        private static void ApplyVisualSize(Transform view, Vector3 targetSize)
+        {
+            if (view == null)
+            {
+                return;
+            }
+
+            Quaternion rotation = view.localRotation;
+            view.localScale = Vector3.one;
+            view.localRotation = Quaternion.identity;
+            if (!TryGetRendererBounds(view, out Bounds bounds))
+            {
+                view.localScale = targetSize;
+                view.localRotation = rotation;
+                return;
+            }
+
+            float scaleX = bounds.size.x > 0.001f ? targetSize.x / bounds.size.x : targetSize.x;
+            float scaleY = bounds.size.y > 0.001f ? targetSize.y / bounds.size.y : targetSize.y;
+            view.localScale = new Vector3(scaleX, scaleY, 1f);
+            view.localRotation = rotation;
+        }
+
+        private static bool TryGetRendererBounds(Transform view, out Bounds bounds)
+        {
+            SpriteRenderer[] renderers = view.GetComponentsInChildren<SpriteRenderer>(true);
+            bounds = new Bounds(view.position, Vector3.zero);
+            bool hasBounds = false;
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                SpriteRenderer renderer = renderers[i];
+                if (renderer == null || renderer.sprite == null)
+                {
+                    continue;
+                }
+
+                if (!hasBounds)
+                {
+                    bounds = renderer.bounds;
+                    hasBounds = true;
+                    continue;
+                }
+
+                bounds.Encapsulate(renderer.bounds);
+            }
+
+            return hasBounds;
         }
 
         private Transform SpawnSpriteView(Stack<Transform> pool, string name, Vector3 position, Vector3 scale, Color color, int order)
@@ -782,6 +894,38 @@ namespace GameLogic
             }
 
             return null;
+        }
+
+        private Stack<Transform> GetEnemyViewPool(RoguelikeSurvivalEnemy enemy)
+        {
+            return GetEnemyViewPool(enemy != null && enemy.IsBoss);
+        }
+
+        private Stack<Transform> GetEnemyViewPool(bool isBoss)
+        {
+            return isBoss ? _bossEnemyViewPool : _commonEnemyViewPool;
+        }
+
+        private Stack<Transform> GetProjectileViewPool(RoguelikeWeaponType weaponType)
+        {
+            if (!_projectileViewPools.TryGetValue(weaponType, out Stack<Transform> pool))
+            {
+                pool = new Stack<Transform>();
+                _projectileViewPools.Add(weaponType, pool);
+            }
+
+            return pool;
+        }
+
+        private int CountProjectileViewPool()
+        {
+            int count = 0;
+            foreach (Stack<Transform> pool in _projectileViewPools.Values)
+            {
+                count += pool.Count;
+            }
+
+            return count;
         }
 
         private void RecycleView(Transform view, Stack<Transform> pool)
