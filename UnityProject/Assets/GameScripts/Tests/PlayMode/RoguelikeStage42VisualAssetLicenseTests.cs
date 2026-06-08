@@ -26,7 +26,12 @@ namespace GameLogic.Tests
         private static readonly string[] RequiredRuntimeVisualAssets =
         {
             "Roguelike_EffectPixel.png",
+            "Roguelike_Kenney_HitSpark.png",
+            "Roguelike_Kenney_CriticalBolt.png",
+            "Roguelike_Kenney_KillStar.png",
+            "Roguelike_Kenney_PickupGlow.png",
             "Roguelike_HitEffect.prefab",
+            "Roguelike_CriticalEffect.prefab",
             "Roguelike_KillEffect.prefab",
             "Roguelike_PickupEffect.prefab",
             "Roguelike_Enemy_Common.prefab",

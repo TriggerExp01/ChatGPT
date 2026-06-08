@@ -16,6 +16,7 @@ namespace GameLogic.Tests
 
             Assert.IsTrue(File.Exists(Path.Combine(effectPath, "Roguelike_EffectPixel.png")));
             Assert.IsTrue(File.Exists(Path.Combine(effectPath, RoguelikeBattleStageView.HitEffectPrefabAddress + ".prefab")));
+            Assert.IsTrue(File.Exists(Path.Combine(effectPath, RoguelikeBattleStageView.CriticalEffectPrefabAddress + ".prefab")));
             Assert.IsTrue(File.Exists(Path.Combine(effectPath, RoguelikeBattleStageView.KillEffectPrefabAddress + ".prefab")));
             Assert.IsTrue(File.Exists(Path.Combine(effectPath, RoguelikeBattleStageView.PickupEffectPrefabAddress + ".prefab")));
         }

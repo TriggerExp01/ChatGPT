@@ -7,6 +7,7 @@ namespace GameLogic
     {
         private const string StageName = "Roguelike2DSurvivalStage";
         public const string HitEffectPrefabAddress = "Roguelike_HitEffect";
+        public const string CriticalEffectPrefabAddress = "Roguelike_CriticalEffect";
         public const string KillEffectPrefabAddress = "Roguelike_KillEffect";
         public const string PickupEffectPrefabAddress = "Roguelike_PickupEffect";
         public const string CommonEnemyPrefabAddress = "Roguelike_Enemy_Common";
@@ -417,6 +418,8 @@ namespace GameLogic
 
             switch (type)
             {
+                case RoguelikeEffectCueType.Critical:
+                    return CriticalEffectPrefabAddress;
                 case RoguelikeEffectCueType.Kill:
                     return KillEffectPrefabAddress;
                 case RoguelikeEffectCueType.Pickup:
