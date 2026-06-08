@@ -25,7 +25,7 @@ namespace GameLogic.Tests
                 Assert.NotNull(panel);
 
                 AssertSprite(FindImage(panel, "卡牌正式底纹_1"), "Roguelike_UI_LightBand", Image.Type.Simple);
-                AssertSprite(FindImage(panel, "卡牌顶部徽带_1"), "Roguelike_UI_SliderFill_Blue", Image.Type.Sliced);
+                AssertSprite(FindImage(panel, "卡牌顶部徽带_1"), "Roguelike_SystemG6_UI_DividerMetal", Image.Type.Simple);
                 AssertSprite(FindImage(panel, "奖励图标底座_1"), "Roguelike_SystemG6_UI_SlotFrame", Image.Type.Sliced);
 
                 RectTransform freeCostBadge = FindRect(panel, "卡牌金币徽章_1框");
