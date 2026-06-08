@@ -443,6 +443,13 @@ namespace GameLogic
             root.SetParent(transform, false);
             switch (type)
             {
+                case RoguelikeEffectCueType.Critical:
+                    CreateSprite("暴击光核", Vector3.zero, new Vector3(0.62f, 0.62f, 1f), new Color(1f, 0.92f, 0.30f, 0.82f), 16, root);
+                    CreateSprite("暴击横芒", Vector3.zero, new Vector3(1.08f, 0.12f, 1f), new Color(1f, 0.56f, 0.78f, 0.88f), 17, root);
+                    CreateSprite("暴击竖芒", Vector3.zero, new Vector3(0.12f, 1.08f, 1f), new Color(1f, 0.98f, 0.58f, 0.92f), 18, root);
+                    root.GetChild(1).localRotation = Quaternion.Euler(0f, 0f, 25f);
+                    root.GetChild(2).localRotation = Quaternion.Euler(0f, 0f, 25f);
+                    break;
                 case RoguelikeEffectCueType.Kill:
                     CreateSprite("击杀光环", Vector3.zero, new Vector3(0.72f, 0.72f, 1f), new Color(1f, 0.36f, 0.62f, 0.76f), 14, root);
                     CreateSprite("击杀星芒", Vector3.zero, new Vector3(0.92f, 0.12f, 1f), new Color(1f, 0.86f, 0.30f, 0.90f), 15, root);
@@ -467,6 +474,8 @@ namespace GameLogic
         {
             switch (type)
             {
+                case RoguelikeEffectCueType.Critical:
+                    return "暴击特效";
                 case RoguelikeEffectCueType.Kill:
                     return "击杀特效";
                 case RoguelikeEffectCueType.Pickup:
@@ -480,6 +489,8 @@ namespace GameLogic
         {
             switch (type)
             {
+                case RoguelikeEffectCueType.Critical:
+                    return 0.32f;
                 case RoguelikeEffectCueType.Kill:
                     return 0.42f;
                 case RoguelikeEffectCueType.Pickup:
@@ -493,6 +504,8 @@ namespace GameLogic
         {
             switch (type)
             {
+                case RoguelikeEffectCueType.Critical:
+                    return Vector3.one * 0.94f;
                 case RoguelikeEffectCueType.Kill:
                     return Vector3.one * 1.08f;
                 case RoguelikeEffectCueType.Pickup:
@@ -1140,6 +1153,8 @@ namespace GameLogic
         {
             switch (Type)
             {
+                case RoguelikeEffectCueType.Critical:
+                    return 2.15f;
                 case RoguelikeEffectCueType.Kill:
                     return 1.85f;
                 case RoguelikeEffectCueType.Pickup:
@@ -1189,10 +1204,10 @@ namespace GameLogic
 
             _remaining = Duration;
             _startPosition = transform.localPosition;
-            _startScale = isCritical ? 1.12f : 1f;
-            _baseColor = isCritical ? new Color(1f, 0.88f, 0.24f, 1f) : new Color(1f, 0.96f, 0.72f, 1f);
-            _text.text = isCritical ? $"{damage}!" : damage.ToString();
-            _text.characterSize = isCritical ? 0.23f : 0.18f;
+            _startScale = isCritical ? 1.22f : 1f;
+            _baseColor = isCritical ? new Color(1f, 0.78f, 0.22f, 1f) : new Color(1f, 0.96f, 0.72f, 1f);
+            _text.text = isCritical ? $"暴击 {damage}!" : damage.ToString();
+            _text.characterSize = isCritical ? 0.24f : 0.18f;
             _text.color = _baseColor;
             transform.localScale = Vector3.one * _startScale;
         }

@@ -35,6 +35,7 @@ namespace GameLogic
     public enum RoguelikeEffectCueType
     {
         Hit,
+        Critical,
         Kill,
         Pickup,
     }

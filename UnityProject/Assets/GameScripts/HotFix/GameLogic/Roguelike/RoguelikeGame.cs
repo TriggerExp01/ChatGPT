@@ -675,7 +675,12 @@ namespace GameLogic
                     projectile.RecordHitEnemy(enemy.Id);
                     enemy.HitFlash = 0.12f;
                     AddEffectCue(RoguelikeEffectCueType.Hit, enemy.Position, projectile.Damage, projectile.IsCritical);
-                    TriggerCameraShake(0.08f);
+                    if (projectile.IsCritical)
+                    {
+                        AddEffectCue(RoguelikeEffectCueType.Critical, enemy.Position, projectile.Damage, true);
+                    }
+
+                    TriggerCameraShake(projectile.IsCritical ? 0.12f : 0.08f);
                     CurrentRun.RecordDamageDealt(projectile.Damage);
                     PlayHitSound();
                     string weaponName = GetWeaponDisplayName(projectile.WeaponType);

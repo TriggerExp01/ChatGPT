@@ -70,6 +70,52 @@ namespace GameLogic.Tests
         }
 
         [Test]
+        public void Stage44CriticalHitsEmitLayeredEffectCueWithoutDuplicateDamageNumber()
+        {
+            GameObject oldStage = GameObject.Find("Roguelike2DSurvivalStage");
+            if (oldStage != null)
+            {
+                Object.DestroyImmediate(oldStage);
+            }
+
+            RoguelikeGame game = RoguelikeGame.Instance;
+            game.StartNewRun(44001);
+
+            List<RoguelikeSurvivalEnemy> enemies = GetList<RoguelikeSurvivalEnemy>(game, "_enemies");
+            List<RoguelikeSurvivalWeapon> weapons = GetList<RoguelikeSurvivalWeapon>(game, "_weapons");
+            List<RoguelikeSurvivalProjectile> projectiles = GetList<RoguelikeSurvivalProjectile>(game, "_projectiles");
+            enemies.Clear();
+            weapons.Clear();
+            projectiles.Clear();
+
+            RoguelikeSurvivalEnemy enemy = MemoryPool.Acquire<RoguelikeSurvivalEnemy>();
+            enemy.Init(44011, new Vector2(1f, 0f), 30, 1, 0f);
+            enemies.Add(enemy);
+
+            RoguelikeSurvivalProjectile projectile = MemoryPool.Acquire<RoguelikeSurvivalProjectile>();
+            projectile.Init(44012, RoguelikeWeaponType.MagicBolt, new Vector2(0.9f, 0f), Vector2.right, 0f, 1f, 9, true, true);
+            projectiles.Add(projectile);
+
+            game.Tick(0.1f);
+
+            RoguelikeEffectCue hitCue = AssertCueExists(game, RoguelikeEffectCueType.Hit);
+            RoguelikeEffectCue criticalCue = AssertCueExists(game, RoguelikeEffectCueType.Critical);
+            Assert.IsTrue(hitCue.IsCritical);
+            Assert.IsTrue(criticalCue.IsCritical);
+            Assert.That(criticalCue.Damage, Is.EqualTo(hitCue.Damage));
+
+            RoguelikeBattleStageView view = RoguelikeBattleStageView.Ensure();
+            view.DebugSetEffectPrefabAddressOverride(RoguelikeEffectCueType.Hit, "Missing_Roguelike_HitEffect");
+            view.DebugSetEffectPrefabAddressOverride(RoguelikeEffectCueType.Critical, "Missing_Roguelike_CriticalEffect");
+            view.Refresh(game.CurrentRun);
+
+            Assert.That(view.ActiveEffectViewCount, Is.GreaterThanOrEqualTo(2));
+            Assert.That(view.ActiveDamageNumberCount, Is.EqualTo(1));
+            Assert.That(view.EffectFallbackCount, Is.GreaterThanOrEqualTo(2));
+            Assert.NotNull(GameObject.Find($"暴击特效_{criticalCue.Sequence}"));
+        }
+
+        [Test]
         public void StageViewSpawnsAndRecyclesDamageNumbersForHitCues()
         {
             GameObject oldStage = GameObject.Find("Roguelike2DSurvivalStage");
