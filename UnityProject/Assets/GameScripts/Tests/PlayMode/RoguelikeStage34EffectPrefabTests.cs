@@ -50,7 +50,9 @@ namespace GameLogic.Tests
 
             game.Tick(0.1f);
 
-            AssertCueExists(game, RoguelikeEffectCueType.Hit);
+            RoguelikeEffectCue hitCue = AssertCueExists(game, RoguelikeEffectCueType.Hit);
+            Assert.That(hitCue.Damage, Is.GreaterThan(0));
+            Assert.IsFalse(hitCue.IsCritical);
 
             game.Tick(0.1f);
 
@@ -65,6 +67,49 @@ namespace GameLogic.Tests
             game.Tick(0.1f);
 
             AssertCueExists(game, RoguelikeEffectCueType.Pickup);
+        }
+
+        [Test]
+        public void StageViewSpawnsAndRecyclesDamageNumbersForHitCues()
+        {
+            GameObject oldStage = GameObject.Find("Roguelike2DSurvivalStage");
+            if (oldStage != null)
+            {
+                Object.DestroyImmediate(oldStage);
+            }
+
+            RoguelikeGame game = RoguelikeGame.Instance;
+            game.StartNewRun(34003);
+
+            List<RoguelikeSurvivalEnemy> enemies = GetList<RoguelikeSurvivalEnemy>(game, "_enemies");
+            List<RoguelikeSurvivalProjectile> projectiles = GetList<RoguelikeSurvivalProjectile>(game, "_projectiles");
+            enemies.Clear();
+            projectiles.Clear();
+
+            RoguelikeSurvivalEnemy enemy = MemoryPool.Acquire<RoguelikeSurvivalEnemy>();
+            enemy.Init(34031, new Vector2(1f, 0f), 30, 1, 0f);
+            enemies.Add(enemy);
+
+            RoguelikeSurvivalProjectile projectile = MemoryPool.Acquire<RoguelikeSurvivalProjectile>();
+            projectile.Init(34032, RoguelikeWeaponType.MagicBolt, new Vector2(0.9f, 0f), Vector2.right, 0f, 1f, 7);
+            projectiles.Add(projectile);
+
+            game.Tick(0.1f);
+
+            RoguelikeBattleStageView view = RoguelikeBattleStageView.Ensure();
+            view.DebugSetEffectPrefabAddressOverride(RoguelikeEffectCueType.Hit, "Missing_Roguelike_HitEffect");
+            view.Refresh(game.CurrentRun);
+
+            Assert.That(view.ActiveDamageNumberCount, Is.GreaterThanOrEqualTo(1));
+
+            int guard = 0;
+            while (view.ActiveDamageNumberCount > 0 && guard++ < 64)
+            {
+                view.Refresh(game.CurrentRun);
+            }
+
+            Assert.That(view.ActiveDamageNumberCount, Is.EqualTo(0));
+            Assert.That(view.DamageNumberPoolCount, Is.GreaterThanOrEqualTo(1));
         }
 
         [Test]
@@ -103,17 +148,18 @@ namespace GameLogic.Tests
             Assert.That(view.EffectViewPoolCount, Is.GreaterThanOrEqualTo(1));
         }
 
-        private static void AssertCueExists(RoguelikeGame game, RoguelikeEffectCueType type)
+        private static RoguelikeEffectCue AssertCueExists(RoguelikeGame game, RoguelikeEffectCueType type)
         {
             for (int i = 0; i < game.EffectCues.Count; i++)
             {
                 if (game.EffectCues[i].Type == type)
                 {
-                    return;
+                    return game.EffectCues[i];
                 }
             }
 
             Assert.Fail($"Missing effect cue: {type}");
+            return default;
         }
 
         private static List<T> GetList<T>(RoguelikeGame game, string fieldName)

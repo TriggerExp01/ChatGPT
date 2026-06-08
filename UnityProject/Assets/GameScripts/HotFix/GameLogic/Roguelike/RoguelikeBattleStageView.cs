@@ -22,6 +22,7 @@ namespace GameLogic
         private readonly Dictionary<int, Transform> _projectileViews = new Dictionary<int, Transform>();
         private readonly Dictionary<int, RoguelikeWeaponType> _projectileViewTypes = new Dictionary<int, RoguelikeWeaponType>();
         private readonly Dictionary<int, RoguelikeRuntimeEffectView> _activeEffectViews = new Dictionary<int, RoguelikeRuntimeEffectView>();
+        private readonly Dictionary<int, RoguelikeDamageNumberView> _activeDamageNumbers = new Dictionary<int, RoguelikeDamageNumberView>();
         private readonly Dictionary<RoguelikeEffectCueType, Stack<Transform>> _effectViewPools = new Dictionary<RoguelikeEffectCueType, Stack<Transform>>();
         private readonly Dictionary<RoguelikeEffectCueType, string> _effectPrefabAddressOverrides = new Dictionary<RoguelikeEffectCueType, string>();
         private readonly Dictionary<bool, string> _enemyPrefabAddressOverrides = new Dictionary<bool, string>();
@@ -30,8 +31,10 @@ namespace GameLogic
         private readonly Stack<Transform> _commonEnemyViewPool = new Stack<Transform>();
         private readonly Stack<Transform> _bossEnemyViewPool = new Stack<Transform>();
         private readonly Stack<Transform> _pickupViewPool = new Stack<Transform>();
+        private readonly Stack<Transform> _damageNumberPool = new Stack<Transform>();
         private readonly List<Transform> _obstacleViews = new List<Transform>();
         private readonly List<int> _expiredEffectIds = new List<int>();
+        private readonly List<int> _expiredDamageNumberIds = new List<int>();
         private Transform _player;
         private Transform _attackView;
         private Transform _pickupPulseView;
@@ -65,6 +68,8 @@ namespace GameLogic
 
         public int ViewReuseCount { get; private set; }
         public int ActiveEffectViewCount => _activeEffectViews.Count;
+        public int ActiveDamageNumberCount => _activeDamageNumbers.Count;
+        public int DamageNumberPoolCount => _damageNumberPool.Count;
         public int EffectPrefabLoadedCount => _effectPrefabLoadedCount;
         public int EffectFallbackCount => _effectFallbackCount;
         public int EnemyPrefabLoadedCount => _enemyPrefabLoadedCount;
@@ -144,13 +149,16 @@ namespace GameLogic
             _projectileViews.Clear();
             _projectileViewTypes.Clear();
             _activeEffectViews.Clear();
+            _activeDamageNumbers.Clear();
             _obstacleViews.Clear();
             _commonEnemyViewPool.Clear();
             _bossEnemyViewPool.Clear();
             _pickupViewPool.Clear();
+            _damageNumberPool.Clear();
             _projectileViewPools.Clear();
             _effectViewPools.Clear();
             _expiredEffectIds.Clear();
+            _expiredDamageNumberIds.Clear();
             _lastEffectCueSequence = 0;
             if (_camera == null)
             {
@@ -238,11 +246,13 @@ namespace GameLogic
                     }
 
                     SpawnEffectView(cue);
+                    SpawnDamageNumber(cue);
                     _lastEffectCueSequence = Mathf.Max(_lastEffectCueSequence, cue.Sequence);
                 }
             }
 
             UpdateEffectViews();
+            UpdateDamageNumbers();
         }
 
         private void SpawnEffectView(RoguelikeEffectCue cue)
@@ -276,6 +286,64 @@ namespace GameLogic
 
             effectView.Play(cue.Type, GetEffectDuration(cue.Type), baseScale);
             _activeEffectViews[cue.Sequence] = effectView;
+        }
+
+        private void SpawnDamageNumber(RoguelikeEffectCue cue)
+        {
+            if (cue.Type != RoguelikeEffectCueType.Hit || cue.Damage <= 0)
+            {
+                return;
+            }
+
+            Transform view = TakeFromPool(_damageNumberPool);
+            if (view == null)
+            {
+                view = CreateDamageNumberView();
+            }
+
+            Vector3 position = new Vector3(cue.Position.x, cue.Position.y + 0.42f, 0f);
+            PreparePooledView(view, $"伤害数字_{cue.Sequence}", position, Vector3.one, Quaternion.identity);
+
+            RoguelikeDamageNumberView damageNumber = view.GetComponent<RoguelikeDamageNumberView>();
+            if (damageNumber == null)
+            {
+                damageNumber = view.gameObject.AddComponent<RoguelikeDamageNumberView>();
+            }
+
+            damageNumber.Play(cue.Damage, cue.IsCritical);
+            _activeDamageNumbers[cue.Sequence] = damageNumber;
+        }
+
+        private void UpdateDamageNumbers()
+        {
+            if (_activeDamageNumbers.Count <= 0)
+            {
+                return;
+            }
+
+            float dt = Application.isPlaying ? Mathf.Max(Time.unscaledDeltaTime, 0.016f) : 0.016f;
+            _expiredDamageNumberIds.Clear();
+            foreach (KeyValuePair<int, RoguelikeDamageNumberView> pair in _activeDamageNumbers)
+            {
+                RoguelikeDamageNumberView damageNumber = pair.Value;
+                if (damageNumber == null || !damageNumber.Tick(dt))
+                {
+                    _expiredDamageNumberIds.Add(pair.Key);
+                }
+            }
+
+            for (int i = 0; i < _expiredDamageNumberIds.Count; i++)
+            {
+                int id = _expiredDamageNumberIds[i];
+                if (!_activeDamageNumbers.TryGetValue(id, out RoguelikeDamageNumberView damageNumber) || damageNumber == null)
+                {
+                    _activeDamageNumbers.Remove(id);
+                    continue;
+                }
+
+                RecycleView(damageNumber.transform, _damageNumberPool);
+                _activeDamageNumbers.Remove(id);
+            }
         }
 
         private void UpdateEffectViews()
@@ -413,11 +481,11 @@ namespace GameLogic
             switch (type)
             {
                 case RoguelikeEffectCueType.Kill:
-                    return 0.34f;
+                    return 0.42f;
                 case RoguelikeEffectCueType.Pickup:
                     return 0.24f;
                 default:
-                    return 0.18f;
+                    return 0.22f;
             }
         }
 
@@ -426,11 +494,11 @@ namespace GameLogic
             switch (type)
             {
                 case RoguelikeEffectCueType.Kill:
-                    return Vector3.one * 0.95f;
+                    return Vector3.one * 1.08f;
                 case RoguelikeEffectCueType.Pickup:
                     return Vector3.one * 0.72f;
                 default:
-                    return Vector3.one * 0.64f;
+                    return Vector3.one * 0.74f;
             }
         }
 
@@ -980,6 +1048,21 @@ namespace GameLogic
             return go.transform;
         }
 
+        private Transform CreateDamageNumberView()
+        {
+            GameObject go = new GameObject("伤害数字");
+            go.transform.SetParent(transform, false);
+            TextMesh text = go.AddComponent<TextMesh>();
+            text.anchor = TextAnchor.MiddleCenter;
+            text.alignment = TextAlignment.Center;
+            text.characterSize = 0.18f;
+            text.fontSize = 42;
+            text.richText = false;
+            MeshRenderer renderer = go.GetComponent<MeshRenderer>();
+            renderer.sortingOrder = 26;
+            return go.transform;
+        }
+
         private static Sprite GetWhiteSprite()
         {
             if (_whiteSprite != null)
@@ -1084,6 +1167,51 @@ namespace GameLogic
                 _baseColors[i] = _sourceColors[i];
                 _renderers[i].color = _sourceColors[i];
             }
+        }
+    }
+
+    public sealed class RoguelikeDamageNumberView : MonoBehaviour
+    {
+        private const float Duration = 0.52f;
+
+        private TextMesh _text;
+        private Vector3 _startPosition;
+        private float _startScale;
+        private float _remaining;
+        private Color _baseColor;
+
+        public void Play(int damage, bool isCritical)
+        {
+            if (_text == null)
+            {
+                _text = GetComponent<TextMesh>();
+            }
+
+            _remaining = Duration;
+            _startPosition = transform.localPosition;
+            _startScale = isCritical ? 1.12f : 1f;
+            _baseColor = isCritical ? new Color(1f, 0.88f, 0.24f, 1f) : new Color(1f, 0.96f, 0.72f, 1f);
+            _text.text = isCritical ? $"{damage}!" : damage.ToString();
+            _text.characterSize = isCritical ? 0.23f : 0.18f;
+            _text.color = _baseColor;
+            transform.localScale = Vector3.one * _startScale;
+        }
+
+        public bool Tick(float dt)
+        {
+            _remaining = Mathf.Max(0f, _remaining - Mathf.Max(0f, dt));
+            float progress = 1f - Mathf.Clamp01(_remaining / Duration);
+            transform.localPosition = _startPosition + new Vector3(0f, Mathf.Lerp(0f, 0.62f, progress), 0f);
+            transform.localScale = Vector3.one * Mathf.Lerp(_startScale, 0.86f, progress);
+
+            if (_text != null)
+            {
+                Color color = _baseColor;
+                color.a = Mathf.Lerp(1f, 0f, progress);
+                _text.color = color;
+            }
+
+            return _remaining > 0f;
         }
     }
 

@@ -546,7 +546,7 @@ namespace GameLogic
                 _attackDirection,
                 GetWeaponSpeed(weapon, 9f + weapon.Level * 0.4f),
                 GetWeaponRange(weapon, AttackRange + (weapon.Level - 1) * 0.35f),
-                ScaleProjectileDamage(GetWeaponDamage(weapon, CurrentRun.Player.Stats.Attack + (weapon.Level - 1) * 2))));
+                RollProjectileDamage(GetWeaponDamage(weapon, CurrentRun.Player.Stats.Attack + (weapon.Level - 1) * 2))));
             return true;
         }
 
@@ -558,7 +558,7 @@ namespace GameLogic
             }
 
             int bladeCount = 4 + weapon.Level;
-            int damage = ScaleProjectileDamage(GetWeaponDamage(weapon, Mathf.Max(1, Mathf.RoundToInt(CurrentRun.Player.Stats.Attack * 0.55f) + weapon.Level)));
+            int baseDamage = GetWeaponDamage(weapon, Mathf.Max(1, Mathf.RoundToInt(CurrentRun.Player.Stats.Attack * 0.55f) + weapon.Level));
             float range = GetWeaponRange(weapon, 2.2f + weapon.Level * 0.12f);
             float angleOffset = (float)_random.NextDouble() * 360f;
             for (int i = 0; i < bladeCount; i++)
@@ -572,7 +572,7 @@ namespace GameLogic
                     direction,
                     GetWeaponSpeed(weapon, 6.5f),
                     range,
-                    damage));
+                    RollProjectileDamage(baseDamage)));
             }
 
             AttackFlash = 0.10f;
@@ -611,7 +611,7 @@ namespace GameLogic
                 _attackDirection,
                 GetWeaponSpeed(weapon, 10f),
                 GetWeaponRange(weapon, AttackRange * 1.25f),
-                ScaleProjectileDamage(GetWeaponDamage(weapon, Mathf.Max(1, CurrentRun.Player.Stats.Attack - 1 + weapon.Level)))));
+                RollProjectileDamage(GetWeaponDamage(weapon, Mathf.Max(1, CurrentRun.Player.Stats.Attack - 1 + weapon.Level)))));
             AttackFlash = 0.10f;
             LastMessage = "穿透飞镖出手。";
             return true;
@@ -625,7 +625,7 @@ namespace GameLogic
             }
 
             int pulseCount = 6 + weapon.Level * 2;
-            int damage = ScaleProjectileDamage(GetWeaponDamage(weapon, Mathf.Max(1, Mathf.RoundToInt(CurrentRun.Player.Stats.Attack * 0.45f) + weapon.Level)));
+            int baseDamage = GetWeaponDamage(weapon, Mathf.Max(1, Mathf.RoundToInt(CurrentRun.Player.Stats.Attack * 0.45f) + weapon.Level));
             float range = GetWeaponRange(weapon, 1.8f + weapon.Level * 0.10f);
             float angleOffset = (float)_random.NextDouble() * 360f;
             for (int i = 0; i < pulseCount; i++)
@@ -639,7 +639,7 @@ namespace GameLogic
                     direction,
                     GetWeaponSpeed(weapon, 5.6f),
                     range,
-                    damage));
+                    RollProjectileDamage(baseDamage)));
             }
 
             AttackFlash = 0.14f;
@@ -674,12 +674,14 @@ namespace GameLogic
                     enemy.Health -= projectile.Damage;
                     projectile.RecordHitEnemy(enemy.Id);
                     enemy.HitFlash = 0.12f;
-                    AddEffectCue(RoguelikeEffectCueType.Hit, enemy.Position);
+                    AddEffectCue(RoguelikeEffectCueType.Hit, enemy.Position, projectile.Damage, projectile.IsCritical);
                     TriggerCameraShake(0.08f);
                     CurrentRun.RecordDamageDealt(projectile.Damage);
                     PlayHitSound();
                     string weaponName = GetWeaponDisplayName(projectile.WeaponType);
-                    LastMessage = $"{weaponName}命中，造成 {projectile.Damage} 点伤害。";
+                    LastMessage = projectile.IsCritical
+                        ? $"{weaponName}暴击，造成 {projectile.Damage} 点伤害。"
+                        : $"{weaponName}命中，造成 {projectile.Damage} 点伤害。";
                     hit = true;
                     if (projectile.WeaponType != RoguelikeWeaponType.PiercingDart)
                     {
@@ -754,9 +756,9 @@ namespace GameLogic
             CameraShake = Mathf.Max(CameraShake, duration);
         }
 
-        private void AddEffectCue(RoguelikeEffectCueType type, Vector2 position)
+        private void AddEffectCue(RoguelikeEffectCueType type, Vector2 position, int damage = 0, bool isCritical = false)
         {
-            _effectCues.Add(new RoguelikeEffectCue(_nextEffectCueSequence++, type, position));
+            _effectCues.Add(new RoguelikeEffectCue(_nextEffectCueSequence++, type, position, damage, isCritical));
             if (_effectCues.Count > 96)
             {
                 _effectCues.RemoveRange(0, _effectCues.Count - 96);
@@ -879,11 +881,16 @@ namespace GameLogic
             return pickup;
         }
 
-        private static RoguelikeSurvivalProjectile CreateProjectile(int id, RoguelikeWeaponType weaponType, Vector2 position, Vector2 direction, float speed, float distance, int damage)
+        private static RoguelikeSurvivalProjectile CreateProjectile(int id, RoguelikeWeaponType weaponType, Vector2 position, Vector2 direction, float speed, float distance, RoguelikeDamageRoll damage)
         {
             RoguelikeSurvivalProjectile projectile = MemoryPool.Acquire<RoguelikeSurvivalProjectile>();
-            projectile.Init(id, weaponType, position, direction, speed, distance, damage);
+            projectile.Init(id, weaponType, position, direction, speed, distance, damage.Amount, true, damage.IsCritical);
             return projectile;
+        }
+
+        private static RoguelikeSurvivalProjectile CreateProjectile(int id, RoguelikeWeaponType weaponType, Vector2 position, Vector2 direction, float speed, float distance, int damage)
+        {
+            return CreateProjectile(id, weaponType, position, direction, speed, distance, new RoguelikeDamageRoll(damage, false));
         }
 
         private void ReleaseSurvivalObjects()
@@ -1346,6 +1353,19 @@ namespace GameLogic
         private int ScaleProjectileDamage(int baseDamage)
         {
             return Mathf.Max(1, Mathf.RoundToInt(baseDamage * _projectileDamageMultiplier));
+        }
+
+        private RoguelikeDamageRoll RollProjectileDamage(int baseDamage)
+        {
+            int scaledDamage = ScaleProjectileDamage(baseDamage);
+            RoguelikeStats stats = CurrentRun?.Player?.Stats;
+            if (stats == null || stats.CritChance <= 0f || _random.NextDouble() >= stats.CritChance)
+            {
+                return new RoguelikeDamageRoll(scaledDamage, false);
+            }
+
+            int criticalDamage = Mathf.Max(scaledDamage + 1, Mathf.RoundToInt(scaledDamage * Mathf.Max(1f, stats.CritMultiplier)));
+            return new RoguelikeDamageRoll(criticalDamage, true);
         }
 
         private RoguelikeSpawnStage GetActiveSpawnStage()

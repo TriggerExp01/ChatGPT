@@ -47,11 +47,30 @@ namespace GameLogic
 
         public Vector2 Position { get; }
 
-        public RoguelikeEffectCue(int sequence, RoguelikeEffectCueType type, Vector2 position)
+        public int Damage { get; }
+
+        public bool IsCritical { get; }
+
+        public RoguelikeEffectCue(int sequence, RoguelikeEffectCueType type, Vector2 position, int damage = 0, bool isCritical = false)
         {
             Sequence = sequence;
             Type = type;
             Position = position;
+            Damage = Math.Max(0, damage);
+            IsCritical = isCritical;
+        }
+    }
+
+    public readonly struct RoguelikeDamageRoll
+    {
+        public int Amount { get; }
+
+        public bool IsCritical { get; }
+
+        public RoguelikeDamageRoll(int amount, bool isCritical)
+        {
+            Amount = Math.Max(1, amount);
+            IsCritical = isCritical;
         }
     }
 
@@ -680,18 +699,19 @@ namespace GameLogic
         public float Speed;
         public float RemainingDistance;
         public int Damage;
+        public bool IsCritical;
         public bool IsPoolManaged { get; private set; }
 
         public RoguelikeSurvivalProjectile()
         {
         }
 
-        public RoguelikeSurvivalProjectile(int id, RoguelikeWeaponType weaponType, Vector2 position, Vector2 direction, float speed, float distance, int damage)
+        public RoguelikeSurvivalProjectile(int id, RoguelikeWeaponType weaponType, Vector2 position, Vector2 direction, float speed, float distance, int damage, bool isCritical = false)
         {
-            Init(id, weaponType, position, direction, speed, distance, damage, false);
+            Init(id, weaponType, position, direction, speed, distance, damage, false, isCritical);
         }
 
-        public void Init(int id, RoguelikeWeaponType weaponType, Vector2 position, Vector2 direction, float speed, float distance, int damage, bool poolManaged = true)
+        public void Init(int id, RoguelikeWeaponType weaponType, Vector2 position, Vector2 direction, float speed, float distance, int damage, bool poolManaged = true, bool isCritical = false)
         {
             Id = id;
             WeaponType = weaponType;
@@ -700,6 +720,7 @@ namespace GameLogic
             Speed = speed;
             RemainingDistance = distance;
             Damage = damage;
+            IsCritical = isCritical;
             IsPoolManaged = poolManaged;
             _hitEnemyIds.Clear();
         }
@@ -723,6 +744,7 @@ namespace GameLogic
             Speed = 0f;
             RemainingDistance = 0f;
             Damage = 0;
+            IsCritical = false;
             IsPoolManaged = false;
             _hitEnemyIds.Clear();
         }
