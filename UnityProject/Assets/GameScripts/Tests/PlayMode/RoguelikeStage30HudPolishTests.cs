@@ -15,8 +15,11 @@ namespace GameLogic.Tests
         private const string WeaponIconSprite = "Roguelike_UI_WeaponIcon";
         private const string RelicIconSprite = "Roguelike_UI_RelicIcon";
         private const string GoldIconSprite = "Roguelike_UI_GoldIcon";
-        private const string SliderFillRedSprite = "Slider11_Fill_Red";
-        private const string SliderFillBlueSprite = "Slider11_Fill_Blue";
+        private const string SliderFrameSprite = "Roguelike_UI_SliderFrame";
+        private const string SliderFillRedSprite = "Roguelike_UI_SliderFill_Red";
+        private const string SliderFillBlueSprite = "Roguelike_UI_SliderFill_Blue";
+        private const string SliderFillYellowSprite = "Roguelike_UI_SliderFill_Yellow";
+        private const string LightBandSprite = "Roguelike_UI_LightBand";
 
         [Test]
         public void HudCreatesLowObstructionAnimeFantasyLayout()
@@ -86,7 +89,11 @@ namespace GameLogic.Tests
             {
                 AssertSprite(FindImage(fixture.Root, "角色状态面板"), PanelFrameSprite, Image.Type.Sliced);
                 AssertSprite(FindImage(fixture.Root, "角色头像"), HeroPortraitSprite, Image.Type.Simple);
+                AssertSprite(FindImage(fixture.Root, "头像星辉"), LightBandSprite, Image.Type.Simple);
+                AssertSprite(FindImage(fixture.Root, "时间压力高光"), LightBandSprite, Image.Type.Simple);
+                AssertSprite(FindSliderBackground(fixture.Root, "生命条"), SliderFrameSprite, Image.Type.Sliced);
                 AssertSprite(FindSliderFill(fixture.Root, "生命条"), SliderFillRedSprite, Image.Type.Sliced);
+                AssertSprite(FindSliderBackground(fixture.Root, "经验条"), SliderFrameSprite, Image.Type.Sliced);
                 AssertSprite(FindSliderFill(fixture.Root, "经验条"), SliderFillBlueSprite, Image.Type.Sliced);
                 AssertSprite(FindImage(fixture.Root, "武器槽_1"), WeaponIconSprite, Image.Type.Simple);
                 AssertSprite(FindImage(fixture.Root, "被动槽_1"), RelicIconSprite, Image.Type.Simple);
@@ -104,6 +111,11 @@ namespace GameLogic.Tests
             Assert.IsTrue(File.Exists(Path.Combine(atlasPath, WeaponIconSprite + ".png")));
             Assert.IsTrue(File.Exists(Path.Combine(atlasPath, RelicIconSprite + ".png")));
             Assert.IsTrue(File.Exists(Path.Combine(atlasPath, GoldIconSprite + ".png")));
+            Assert.IsTrue(File.Exists(Path.Combine(atlasPath, SliderFrameSprite + ".png")));
+            Assert.IsTrue(File.Exists(Path.Combine(atlasPath, SliderFillRedSprite + ".png")));
+            Assert.IsTrue(File.Exists(Path.Combine(atlasPath, SliderFillBlueSprite + ".png")));
+            Assert.IsTrue(File.Exists(Path.Combine(atlasPath, SliderFillYellowSprite + ".png")));
+            Assert.IsTrue(File.Exists(Path.Combine(atlasPath, LightBandSprite + ".png")));
         }
 
         private static RectTransform FindRect(Transform root, string name)
@@ -137,6 +149,12 @@ namespace GameLogic.Tests
             RectTransform sliderRoot = FindRect(root, name);
             RectTransform fill = sliderRoot != null ? FindRect(sliderRoot, "Fill") : null;
             return fill != null ? fill.GetComponent<Image>() : null;
+        }
+
+        private static Image FindSliderBackground(Transform root, string name)
+        {
+            RectTransform sliderRoot = FindRect(root, name);
+            return sliderRoot != null ? sliderRoot.GetComponent<Image>() : null;
         }
 
         private static void AssertSprite(Image image, string spriteName, Image.Type imageType)

@@ -12,11 +12,11 @@ namespace GameLogic
         public const string WeaponIconSprite = "Roguelike_UI_WeaponIcon";
         public const string RelicIconSprite = "Roguelike_UI_RelicIcon";
         public const string GoldIconSprite = "Roguelike_UI_GoldIcon";
-        public const string BattleLightSprite = "zd_img_light";
-        public const string SliderFrameSprite = "Slider11_Frame";
-        public const string SliderFillRedSprite = "Slider11_Fill_Red";
-        public const string SliderFillBlueSprite = "Slider11_Fill_Blue";
-        public const string SliderFillYellowSprite = "Slider11_Fill_Yellow";
+        public const string BattleLightSprite = "Roguelike_UI_LightBand";
+        public const string SliderFrameSprite = "Roguelike_UI_SliderFrame";
+        public const string SliderFillRedSprite = "Roguelike_UI_SliderFill_Red";
+        public const string SliderFillBlueSprite = "Roguelike_UI_SliderFill_Blue";
+        public const string SliderFillYellowSprite = "Roguelike_UI_SliderFill_Yellow";
 
         private static readonly Dictionary<string, Sprite> SpriteCache = new Dictionary<string, Sprite>();
 
