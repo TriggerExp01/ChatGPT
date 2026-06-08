@@ -16,6 +16,8 @@ namespace GameLogic
         public const string PiercingDartProjectilePrefabAddress = "Roguelike_Projectile_PiercingDart";
         private const float CommonEnemyVisualSize = 0.72f;
         private const float BossEnemyVisualSize = 1.18f;
+        private const float MinFeedbackDeltaTime = 0.016f;
+        private const float MaxFeedbackDeltaTime = 0.05f;
 
         private readonly Dictionary<int, Transform> _enemyViews = new Dictionary<int, Transform>();
         private readonly Dictionary<int, bool> _enemyViewKinds = new Dictionary<int, bool>();
@@ -322,7 +324,7 @@ namespace GameLogic
                 return;
             }
 
-            float dt = Application.isPlaying ? Mathf.Max(Time.unscaledDeltaTime, 0.016f) : 0.016f;
+            float dt = GetFeedbackDeltaTime();
             _expiredDamageNumberIds.Clear();
             foreach (KeyValuePair<int, RoguelikeDamageNumberView> pair in _activeDamageNumbers)
             {
@@ -354,7 +356,7 @@ namespace GameLogic
                 return;
             }
 
-            float dt = Application.isPlaying ? Mathf.Max(Time.unscaledDeltaTime, 0.016f) : 0.016f;
+            float dt = GetFeedbackDeltaTime();
             _expiredEffectIds.Clear();
             foreach (KeyValuePair<int, RoguelikeRuntimeEffectView> pair in _activeEffectViews)
             {
@@ -501,6 +503,16 @@ namespace GameLogic
                 default:
                     return 0.22f;
             }
+        }
+
+        private static float GetFeedbackDeltaTime()
+        {
+            if (!Application.isPlaying)
+            {
+                return MinFeedbackDeltaTime;
+            }
+
+            return Mathf.Clamp(Time.unscaledDeltaTime, MinFeedbackDeltaTime, MaxFeedbackDeltaTime);
         }
 
         private static Vector3 GetEffectBaseScale(RoguelikeEffectCueType type)
@@ -1190,13 +1202,21 @@ namespace GameLogic
 
     public sealed class RoguelikeDamageNumberView : MonoBehaviour
     {
-        private const float Duration = 0.52f;
+        private const float NormalDuration = 0.52f;
+        private const float CriticalDuration = 0.66f;
+        private const int HeavyDamageThreshold = 20;
 
         private TextMesh _text;
+        private TextMesh _shadowText;
         private Vector3 _startPosition;
         private float _startScale;
+        private float _endScale;
+        private float _duration;
         private float _remaining;
+        private float _rise;
+        private float _horizontalDrift;
         private Color _baseColor;
+        private Color _shadowColor;
 
         public void Play(int damage, bool isCritical)
         {
@@ -1205,12 +1225,32 @@ namespace GameLogic
                 _text = GetComponent<TextMesh>();
             }
 
-            _remaining = Duration;
+            if (_text == null)
+            {
+                _text = gameObject.AddComponent<TextMesh>();
+            }
+
+            EnsureShadowText();
+            bool isHeavyHit = !isCritical && damage >= HeavyDamageThreshold;
+            _duration = isCritical ? CriticalDuration : NormalDuration;
+            _remaining = _duration;
             _startPosition = transform.localPosition;
-            _startScale = isCritical ? 1.22f : 1f;
-            _baseColor = isCritical ? new Color(1f, 0.78f, 0.22f, 1f) : new Color(1f, 0.96f, 0.72f, 1f);
-            _text.text = isCritical ? $"暴击 {damage}!" : damage.ToString();
-            _text.characterSize = isCritical ? 0.24f : 0.18f;
+            _startScale = isCritical ? 1.34f : isHeavyHit ? 1.15f : 1f;
+            _endScale = isCritical ? 0.92f : isHeavyHit ? 0.80f : 0.86f;
+            _rise = isCritical ? 0.84f : isHeavyHit ? 0.72f : 0.62f;
+            _horizontalDrift = isCritical ? 0.14f : isHeavyHit ? -0.08f : 0.04f;
+            _baseColor = isCritical
+                ? new Color(1f, 0.82f, 0.26f, 1f)
+                : isHeavyHit
+                    ? new Color(1f, 0.58f, 0.28f, 1f)
+                    : new Color(1f, 0.96f, 0.72f, 1f);
+            _shadowColor = new Color(0.12f, 0.04f, 0.02f, isCritical ? 0.82f : 0.68f);
+
+            string displayText = isCritical ? $"暴击 {damage}!" : damage.ToString();
+            float characterSize = isCritical ? 0.27f : isHeavyHit ? 0.22f : 0.18f;
+            ApplyText(_text, displayText, characterSize, _baseColor, 26);
+            ApplyText(_shadowText, displayText, characterSize, _shadowColor, 25);
+            _shadowText.transform.localPosition = new Vector3(0.035f, -0.035f, 0.01f);
             _text.color = _baseColor;
             transform.localScale = Vector3.one * _startScale;
         }
@@ -1218,9 +1258,12 @@ namespace GameLogic
         public bool Tick(float dt)
         {
             _remaining = Mathf.Max(0f, _remaining - Mathf.Max(0f, dt));
-            float progress = 1f - Mathf.Clamp01(_remaining / Duration);
-            transform.localPosition = _startPosition + new Vector3(0f, Mathf.Lerp(0f, 0.62f, progress), 0f);
-            transform.localScale = Vector3.one * Mathf.Lerp(_startScale, 0.86f, progress);
+            float progress = 1f - Mathf.Clamp01(_remaining / _duration);
+            transform.localPosition = _startPosition + new Vector3(
+                Mathf.Lerp(0f, _horizontalDrift, progress),
+                Mathf.Lerp(0f, _rise, progress),
+                0f);
+            transform.localScale = Vector3.one * EvaluateScale(progress);
 
             if (_text != null)
             {
@@ -1229,7 +1272,68 @@ namespace GameLogic
                 _text.color = color;
             }
 
+            if (_shadowText != null)
+            {
+                Color color = _shadowColor;
+                color.a = Mathf.Lerp(_shadowColor.a, 0f, progress);
+                _shadowText.color = color;
+            }
+
             return _remaining > 0f;
+        }
+
+        private float EvaluateScale(float progress)
+        {
+            if (progress < 0.18f)
+            {
+                return Mathf.Lerp(_startScale * 1.08f, _startScale, progress / 0.18f);
+            }
+
+            return Mathf.Lerp(_startScale, _endScale, (progress - 0.18f) / 0.82f);
+        }
+
+        private void EnsureShadowText()
+        {
+            if (_shadowText != null)
+            {
+                return;
+            }
+
+            Transform oldShadow = transform.Find("伤害数字阴影");
+            if (oldShadow != null)
+            {
+                _shadowText = oldShadow.GetComponent<TextMesh>();
+                if (_shadowText != null)
+                {
+                    return;
+                }
+            }
+
+            GameObject shadow = new GameObject("伤害数字阴影");
+            shadow.transform.SetParent(transform, false);
+            _shadowText = shadow.AddComponent<TextMesh>();
+        }
+
+        private static void ApplyText(TextMesh text, string value, float characterSize, Color color, int sortingOrder)
+        {
+            if (text == null)
+            {
+                return;
+            }
+
+            text.anchor = TextAnchor.MiddleCenter;
+            text.alignment = TextAlignment.Center;
+            text.richText = false;
+            text.fontSize = 42;
+            text.text = value;
+            text.characterSize = characterSize;
+            text.color = color;
+
+            MeshRenderer renderer = text.GetComponent<MeshRenderer>();
+            if (renderer != null)
+            {
+                renderer.sortingOrder = sortingOrder;
+            }
         }
     }
 
