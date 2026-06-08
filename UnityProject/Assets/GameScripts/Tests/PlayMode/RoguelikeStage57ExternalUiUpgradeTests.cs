@@ -51,7 +51,9 @@ namespace GameLogic.Tests
             Assert.That(manifest, Does.Contain("tiopalada"));
             Assert.That(manifest, Does.Contain("https://tiopalada.itch.io/tiny-rpg-mana-soul-gui"));
             Assert.That(manifest, Does.Contain("tinyRPG_manaSoulGUI_v_1_0.zip"));
-            Assert.That(manifest, Does.Contain("待官方 zip 获取后再导入"));
+            Assert.That(manifest, Does.Contain("上传 ID `13498579`"));
+            Assert.That(manifest, Does.Contain("`/file/13498579` 端点仍返回 `invalid key`"));
+            Assert.That(manifest, Does.Contain("待官方 zip 真正获取后再导入"));
         }
 
         [Test]
@@ -64,6 +66,7 @@ namespace GameLogic.Tests
             Assert.That(GetUiFactoryConstant("SliderFrameSprite"), Is.EqualTo("Roguelike_SystemG6_UI_SliderFrame"));
             Assert.That(GetUiFactoryConstant("SliderFillRedSprite"), Is.EqualTo("Roguelike_SystemG6_UI_SliderFillRed"));
             Assert.That(GetUiFactoryConstant("SliderFillYellowSprite"), Is.EqualTo("Roguelike_SystemG6_UI_SliderFillYellow"));
+            Assert.That(GetUiFactoryConstant("SlotFrameSprite"), Is.EqualTo("Roguelike_SystemG6_UI_SlotFrame"));
         }
 
         [Test]
@@ -81,6 +84,10 @@ namespace GameLogic.Tests
 
                 Image fill = slider.fillRect.GetComponent<Image>();
                 AssertSprite(fill, "Roguelike_SystemG6_UI_SliderFillRed", Image.Type.Sliced);
+
+                Image icon = InvokeCreateFramedIconSlot("正式图标槽", root, Vector2.zero, Vector2.one, Color.white, Color.white, "Roguelike_UI_WeaponIcon");
+                AssertSprite(FindImage(root, "正式图标槽框"), "Roguelike_SystemG6_UI_SlotFrame", Image.Type.Sliced);
+                AssertSprite(icon, "Roguelike_UI_WeaponIcon", Image.Type.Simple);
             }
             finally
             {
@@ -135,6 +142,29 @@ namespace GameLogic.Tests
                 null);
             Assert.NotNull(method);
             return (Slider)method.Invoke(null, new object[] { name, parent, anchorMin, anchorMax, fillColor, fillSpriteAddress });
+        }
+
+        private static Image InvokeCreateFramedIconSlot(string name, RectTransform parent, Vector2 anchorMin, Vector2 anchorMax, Color frameColor, Color iconColor, string iconSpriteAddress)
+        {
+            Type factoryType = typeof(RoguelikeGame).Assembly.GetType("GameLogic.RoguelikeUIFactory");
+            Assert.NotNull(factoryType);
+            MethodInfo method = factoryType.GetMethod("CreateFramedIconSlot", BindingFlags.Public | BindingFlags.Static);
+            Assert.NotNull(method);
+            return (Image)method.Invoke(null, new object[] { name, parent, anchorMin, anchorMax, frameColor, iconColor, iconSpriteAddress });
+        }
+
+        private static Image FindImage(Transform root, string name)
+        {
+            Transform[] children = root.GetComponentsInChildren<Transform>(true);
+            for (int i = 0; i < children.Length; i++)
+            {
+                if (children[i].name == name)
+                {
+                    return children[i].GetComponent<Image>();
+                }
+            }
+
+            return null;
         }
     }
 }

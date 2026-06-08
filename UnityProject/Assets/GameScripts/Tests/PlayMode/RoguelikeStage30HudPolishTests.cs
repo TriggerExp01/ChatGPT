@@ -20,6 +20,7 @@ namespace GameLogic.Tests
         private const string SliderFillRedSprite = "Roguelike_SystemG6_UI_SliderFillRed";
         private const string SliderFillBlueSprite = "Roguelike_UI_SliderFill_Blue";
         private const string SliderFillYellowSprite = "Roguelike_SystemG6_UI_SliderFillYellow";
+        private const string SlotFrameSprite = "Roguelike_SystemG6_UI_SlotFrame";
         private const string LightBandSprite = "Roguelike_UI_LightBand";
 
         [Test]
@@ -78,7 +79,9 @@ namespace GameLogic.Tests
                 for (int i = 1; i <= 4; i++)
                 {
                     Assert.NotNull(FindRect(build, $"武器槽_{i}"));
+                    Assert.NotNull(FindRect(build, $"武器槽_{i}框"));
                     Assert.NotNull(FindRect(build, $"被动槽_{i}"));
+                    Assert.NotNull(FindRect(build, $"被动槽_{i}框"));
                 }
             }
         }
@@ -96,7 +99,9 @@ namespace GameLogic.Tests
                 AssertSprite(FindSliderFill(fixture.Root, "生命条"), SliderFillRedSprite, Image.Type.Sliced);
                 AssertSprite(FindSliderBackground(fixture.Root, "经验条"), SliderFrameSprite, Image.Type.Sliced);
                 AssertSprite(FindSliderFill(fixture.Root, "经验条"), SliderFillBlueSprite, Image.Type.Sliced);
+                AssertSprite(FindImage(fixture.Root, "武器槽_1框"), SlotFrameSprite, Image.Type.Sliced);
                 AssertSprite(FindImage(fixture.Root, "武器槽_1"), MagicBoltIconSprite, Image.Type.Simple);
+                AssertSprite(FindImage(fixture.Root, "被动槽_1框"), SlotFrameSprite, Image.Type.Sliced);
                 AssertSprite(FindImage(fixture.Root, "被动槽_1"), RelicIconSprite, Image.Type.Simple);
             }
         }
@@ -116,6 +121,7 @@ namespace GameLogic.Tests
             Assert.IsTrue(File.Exists(Path.Combine(atlasPath, SliderFillRedSprite + ".png")));
             Assert.IsTrue(File.Exists(Path.Combine(atlasPath, SliderFillBlueSprite + ".png")));
             Assert.IsTrue(File.Exists(Path.Combine(atlasPath, SliderFillYellowSprite + ".png")));
+            Assert.IsTrue(File.Exists(Path.Combine(atlasPath, SlotFrameSprite + ".png")));
             Assert.IsTrue(File.Exists(Path.Combine(atlasPath, LightBandSprite + ".png")));
         }
 

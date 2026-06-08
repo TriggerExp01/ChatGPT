@@ -38,8 +38,8 @@ namespace GameLogic
 
             _buildPanel = RoguelikeUIFactory.CreatePanel("构筑槽面板", root, new Vector2(0.66f, 0.79f), new Vector2(0.982f, 0.975f), new Color(0.045f, 0.052f, 0.085f, 0.88f));
             RoguelikeUIFactory.CreateImage("构筑槽外部装饰线", _buildPanel, new Vector2(0.44f, 0.88f), new Vector2(0.94f, 0.98f), new Color(0.72f, 0.90f, 1f, 0.28f), RoguelikeUIFactory.DividerFadeSprite, Image.Type.Simple, true);
-            BuildIconSlots(_buildPanel, "武器槽", 0.70f, new Color(1f, 0.78f, 0.34f, 0.94f), RoguelikeUIFactory.WeaponIconSprite);
-            BuildIconSlots(_buildPanel, "被动槽", 0.36f, new Color(0.55f, 0.88f, 1f, 0.94f), RoguelikeUIFactory.RelicIconSprite);
+            BuildIconSlots(_buildPanel, "武器槽", 0.70f, new Color(0.92f, 0.82f, 0.66f, 0.92f), new Color(1f, 0.78f, 0.34f, 0.94f), RoguelikeUIFactory.WeaponIconSprite);
+            BuildIconSlots(_buildPanel, "被动槽", 0.36f, new Color(0.78f, 0.88f, 0.96f, 0.86f), new Color(0.55f, 0.88f, 1f, 0.94f), RoguelikeUIFactory.RelicIconSprite);
             _buildText = RoguelikeUIFactory.CreateText("构筑摘要", _buildPanel, 14, TextAnchor.UpperLeft, new Vector2(0.44f, 0.08f), new Vector2(0.96f, 0.92f), Vector2.zero, Vector2.zero);
 
             _hintPanel = RoguelikeUIFactory.CreatePanel("战斗提示面板", root, new Vector2(0.25f, 0.025f), new Vector2(0.75f, 0.10f), new Color(0.03f, 0.035f, 0.06f, 0.72f));
@@ -123,13 +123,12 @@ namespace GameLogic
             }
         }
 
-        private void BuildIconSlots(RectTransform parent, string prefix, float yCenter, Color color, string spriteAddress)
+        private void BuildIconSlots(RectTransform parent, string prefix, float yCenter, Color frameColor, Color iconColor, string spriteAddress)
         {
             for (int i = 0; i < 4; i++)
             {
                 float xMin = 0.05f + i * 0.09f;
-                RectTransform slot = RoguelikeUIFactory.CreateImage($"{prefix}_{i + 1}", parent, new Vector2(xMin, yCenter - 0.10f), new Vector2(xMin + 0.065f, yCenter + 0.10f), color, spriteAddress, Image.Type.Simple, true);
-                Image image = slot.GetComponent<Image>();
+                Image image = RoguelikeUIFactory.CreateFramedIconSlot($"{prefix}_{i + 1}", parent, new Vector2(xMin, yCenter - 0.10f), new Vector2(xMin + 0.065f, yCenter + 0.10f), frameColor, iconColor, spriteAddress);
                 if (prefix == "武器槽")
                 {
                     _weaponSlotImages[i] = image;

@@ -16,6 +16,7 @@ namespace GameLogic
         public const string CardFrameSprite = "Roguelike_SystemG6_UI_CardFrame";
         public const string ButtonFrameSprite = "Roguelike_SystemG6_UI_ButtonFrame";
         public const string DividerFadeSprite = "Roguelike_SystemG6_UI_DividerMetal";
+        public const string SlotFrameSprite = "Roguelike_SystemG6_UI_SlotFrame";
         public const string OriginalHeroPortraitSprite = "Roguelike_UI_HeroPortrait";
         public const string HeroPortraitSprite = "Roguelike_Kenney_PlayerPortrait";
         public const string WeaponIconSprite = "Roguelike_UI_WeaponIcon";
@@ -86,6 +87,13 @@ namespace GameLogic
             }
 
             return rect;
+        }
+
+        public static Image CreateFramedIconSlot(string name, RectTransform parent, Vector2 anchorMin, Vector2 anchorMax, Color frameColor, Color iconColor, string iconSpriteAddress)
+        {
+            RectTransform frame = CreateImage(name + "框", parent, anchorMin, anchorMax, frameColor, SlotFrameSprite, Image.Type.Sliced, false);
+            RectTransform icon = CreateImage(name, frame, new Vector2(0.18f, 0.18f), new Vector2(0.82f, 0.82f), iconColor, iconSpriteAddress, Image.Type.Simple, true);
+            return icon.GetComponent<Image>();
         }
 
         public static Text CreateText(string name, RectTransform parent, int size, TextAnchor alignment, Vector2 anchorMin, Vector2 anchorMax, Vector2 offsetMin, Vector2 offsetMax)
