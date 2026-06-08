@@ -44,6 +44,7 @@ namespace GameLogic
 
             _hintPanel = RoguelikeUIFactory.CreatePanel("战斗提示面板", root, new Vector2(0.25f, 0.025f), new Vector2(0.75f, 0.10f), new Color(0.03f, 0.035f, 0.06f, 0.72f));
             RoguelikeUIFactory.CreateImage("战斗提示光带", _hintPanel, new Vector2(0.02f, 0.46f), new Vector2(0.18f, 0.92f), new Color(1f, 0.78f, 0.38f, 0.34f), RoguelikeUIFactory.BattleLightSprite, Image.Type.Simple, true);
+            RoguelikeUIFactory.CreateImage("战斗提示外部装饰线", _hintPanel, new Vector2(0.18f, 0.10f), new Vector2(0.86f, 0.24f), new Color(1f, 0.85f, 0.42f, 0.30f), RoguelikeUIFactory.DividerFadeSprite, Image.Type.Simple, true);
             _messageText = RoguelikeUIFactory.CreateText("战斗提示", _hintPanel, 16, TextAnchor.MiddleCenter, new Vector2(0.04f, 0.08f), new Vector2(0.96f, 0.92f), Vector2.zero, Vector2.zero);
         }
 
