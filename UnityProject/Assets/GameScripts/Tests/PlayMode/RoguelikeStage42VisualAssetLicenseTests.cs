@@ -19,7 +19,7 @@ namespace GameLogic.Tests
             "Roguelike_UI_GoldIcon.png",
             "Roguelike_SystemG6_UI_SliderFrame.png",
             "Roguelike_SystemG6_UI_SliderFillRed.png",
-            "Roguelike_UI_SliderFill_Blue.png",
+            "Roguelike_SystemG6_UI_SliderFillBlue.png",
             "Roguelike_SystemG6_UI_SliderFillYellow.png",
             "Roguelike_UI_LightBand.png",
         };
@@ -48,7 +48,7 @@ namespace GameLogic.Tests
             Assert.That(GetUiFactoryConstant("BattleLightSprite"), Is.EqualTo("Roguelike_UI_LightBand"));
             Assert.That(GetUiFactoryConstant("SliderFrameSprite"), Is.EqualTo("Roguelike_SystemG6_UI_SliderFrame"));
             Assert.That(GetUiFactoryConstant("SliderFillRedSprite"), Is.EqualTo("Roguelike_SystemG6_UI_SliderFillRed"));
-            Assert.That(GetUiFactoryConstant("SliderFillBlueSprite"), Is.EqualTo("Roguelike_UI_SliderFill_Blue"));
+            Assert.That(GetUiFactoryConstant("SliderFillBlueSprite"), Is.EqualTo("Roguelike_SystemG6_UI_SliderFillBlue"));
             Assert.That(GetUiFactoryConstant("SliderFillYellowSprite"), Is.EqualTo("Roguelike_SystemG6_UI_SliderFillYellow"));
         }
 

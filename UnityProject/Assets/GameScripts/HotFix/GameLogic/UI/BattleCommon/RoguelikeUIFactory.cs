@@ -35,7 +35,7 @@ namespace GameLogic
         public const string OriginalSliderFillRedSprite = "Roguelike_UI_SliderFill_Red";
         public const string SliderFrameSprite = "Roguelike_SystemG6_UI_SliderFrame";
         public const string SliderFillRedSprite = "Roguelike_SystemG6_UI_SliderFillRed";
-        public const string SliderFillBlueSprite = "Roguelike_UI_SliderFill_Blue";
+        public const string SliderFillBlueSprite = "Roguelike_SystemG6_UI_SliderFillBlue";
         public const string SliderFillYellowSprite = "Roguelike_SystemG6_UI_SliderFillYellow";
 
         private static readonly Dictionary<string, Sprite> SpriteCache = new Dictionary<string, Sprite>();

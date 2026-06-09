@@ -18,7 +18,7 @@ namespace GameLogic.Tests
         private const string GoldIconSprite = "Roguelike_UI_GoldIcon";
         private const string SliderFrameSprite = "Roguelike_SystemG6_UI_SliderFrame";
         private const string SliderFillRedSprite = "Roguelike_SystemG6_UI_SliderFillRed";
-        private const string SliderFillBlueSprite = "Roguelike_UI_SliderFill_Blue";
+        private const string SliderFillBlueSprite = "Roguelike_SystemG6_UI_SliderFillBlue";
         private const string SliderFillYellowSprite = "Roguelike_SystemG6_UI_SliderFillYellow";
         private const string SlotFrameSprite = "Roguelike_SystemG6_UI_SlotFrame";
         private const string LightBandSprite = "Roguelike_UI_LightBand";
