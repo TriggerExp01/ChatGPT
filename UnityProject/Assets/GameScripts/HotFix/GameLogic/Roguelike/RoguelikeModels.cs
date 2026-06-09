@@ -503,6 +503,15 @@ namespace GameLogic
         }
     }
 
+    public enum RoguelikeEnemyRole
+    {
+        Common = 0,
+        Fast = 1,
+        Tank = 2,
+        Elite = 3,
+        Boss = 4,
+    }
+
     public sealed class RoguelikeSurvivalEnemy : IMemory
     {
         public int Id { get; private set; }
@@ -515,6 +524,7 @@ namespace GameLogic
         public float HitFlash;
         public string ConfigId { get; private set; }
         public bool IsBoss { get; private set; }
+        public RoguelikeEnemyRole Role { get; private set; }
         public bool IsPoolManaged { get; private set; }
 
         public bool IsAlive => Health > 0;
@@ -530,6 +540,11 @@ namespace GameLogic
 
         public void Init(int id, Vector2 position, int health, int attack, float moveSpeed, bool poolManaged = true, string configId = null, bool isBoss = false)
         {
+            Init(id, position, health, attack, moveSpeed, poolManaged, configId, isBoss, isBoss ? RoguelikeEnemyRole.Boss : RoguelikeEnemyRole.Common);
+        }
+
+        public void Init(int id, Vector2 position, int health, int attack, float moveSpeed, bool poolManaged, string configId, bool isBoss, RoguelikeEnemyRole role)
+        {
             Id = id;
             Position = position;
             Health = health;
@@ -540,6 +555,7 @@ namespace GameLogic
             HitFlash = 0f;
             ConfigId = configId ?? string.Empty;
             IsBoss = isBoss;
+            Role = isBoss ? RoguelikeEnemyRole.Boss : role;
             IsPoolManaged = poolManaged;
         }
 
@@ -555,6 +571,7 @@ namespace GameLogic
             HitFlash = 0f;
             ConfigId = string.Empty;
             IsBoss = false;
+            Role = RoguelikeEnemyRole.Common;
             IsPoolManaged = false;
         }
     }

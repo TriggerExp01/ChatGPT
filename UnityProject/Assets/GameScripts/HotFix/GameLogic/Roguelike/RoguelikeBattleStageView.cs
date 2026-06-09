@@ -16,6 +16,9 @@ namespace GameLogic
         public const string PiercingDartProjectilePrefabAddress = "Roguelike_Projectile_PiercingDart";
         public const string PlayerSpriteAddress = "Roguelike_Kenney_PlayerAdventurer";
         private const float CommonEnemyVisualSize = 0.72f;
+        private const float FastEnemyVisualSize = 0.58f;
+        private const float TankEnemyVisualSize = 0.86f;
+        private const float EliteEnemyVisualSize = 0.96f;
         private const float BossEnemyVisualSize = 1.18f;
         private const float ExperiencePickupVisualSize = 0.30f;
         private const float GoldPickupVisualSize = 0.32f;
@@ -963,14 +966,46 @@ namespace GameLogic
 
         private static Color GetEnemyColor(RoguelikeSurvivalEnemy enemy)
         {
-            return enemy != null && enemy.IsBoss
-                ? new Color(0.72f, 0.22f, 1f, 1f)
-                : new Color(0.95f, 0.26f, 0.20f, 1f);
+            if (enemy == null)
+            {
+                return new Color(0.95f, 0.26f, 0.20f, 1f);
+            }
+
+            switch (enemy.Role)
+            {
+                case RoguelikeEnemyRole.Fast:
+                    return new Color(0.22f, 0.86f, 1f, 1f);
+                case RoguelikeEnemyRole.Tank:
+                    return new Color(1f, 0.68f, 0.18f, 1f);
+                case RoguelikeEnemyRole.Elite:
+                    return new Color(0.58f, 0.34f, 1f, 1f);
+                case RoguelikeEnemyRole.Boss:
+                    return new Color(0.72f, 0.22f, 1f, 1f);
+                default:
+                    return new Color(0.95f, 0.26f, 0.20f, 1f);
+            }
         }
 
         private static float GetEnemyVisualSize(RoguelikeSurvivalEnemy enemy)
         {
-            return enemy != null && enemy.IsBoss ? BossEnemyVisualSize : CommonEnemyVisualSize;
+            if (enemy == null)
+            {
+                return CommonEnemyVisualSize;
+            }
+
+            switch (enemy.Role)
+            {
+                case RoguelikeEnemyRole.Fast:
+                    return FastEnemyVisualSize;
+                case RoguelikeEnemyRole.Tank:
+                    return TankEnemyVisualSize;
+                case RoguelikeEnemyRole.Elite:
+                    return EliteEnemyVisualSize;
+                case RoguelikeEnemyRole.Boss:
+                    return BossEnemyVisualSize;
+                default:
+                    return CommonEnemyVisualSize;
+            }
         }
 
         private static void ApplyEnemyVisualScale(Transform view, RoguelikeSurvivalEnemy enemy)

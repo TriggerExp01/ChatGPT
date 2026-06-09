@@ -478,7 +478,7 @@ namespace GameLogic
                 int health = isBoss ? 160 : 28 + i % 5 * 6;
                 int attack = isBoss ? 18 : 5 + i % 4;
                 float speed = isBoss ? 0.55f : 0.65f + i % 3 * 0.12f;
-                _enemies.Add(CreateEnemy(_nextEnemyId++, position, health, attack, speed, configId, isBoss));
+                _enemies.Add(CreateEnemy(_nextEnemyId++, position, health, attack, speed, configId, isBoss, ResolveEnemyRole(configId, null, health, speed, isBoss)));
             }
 
             Vector2[] pickupPositions =
@@ -579,7 +579,8 @@ namespace GameLogic
                     attack,
                     speed,
                     config?.Id,
-                    isBoss));
+                    isBoss,
+                    ResolveEnemyRole(config, health, speed)));
                 if (isBoss)
                 {
                     LastMessage = "地牢之心出现，击败它完成本局目标。";
@@ -875,11 +876,42 @@ namespace GameLogic
             _soundCooldowns[path] = Mathf.Max(0.01f, cooldown);
         }
 
-        private static RoguelikeSurvivalEnemy CreateEnemy(int id, Vector2 position, int health, int attack, float moveSpeed, string configId = null, bool isBoss = false)
+        private static RoguelikeSurvivalEnemy CreateEnemy(int id, Vector2 position, int health, int attack, float moveSpeed, string configId = null, bool isBoss = false, RoguelikeEnemyRole role = RoguelikeEnemyRole.Common)
         {
             RoguelikeSurvivalEnemy enemy = MemoryPool.Acquire<RoguelikeSurvivalEnemy>();
-            enemy.Init(id, position, health, attack, moveSpeed, true, configId, isBoss);
+            enemy.Init(id, position, health, attack, moveSpeed, true, configId, isBoss, role);
             return enemy;
+        }
+
+        private static RoguelikeEnemyRole ResolveEnemyRole(GameConfig.roguelike.RoguelikeEnemy config, int health, float moveSpeed)
+        {
+            bool isBoss = config != null && config.Tier == GameConfig.roguelike.EEnemyTier.Boss;
+            return ResolveEnemyRole(config?.Id, config?.Tier, health, moveSpeed, isBoss);
+        }
+
+        private static RoguelikeEnemyRole ResolveEnemyRole(string configId, GameConfig.roguelike.EEnemyTier? tier, int health, float moveSpeed, bool isBoss)
+        {
+            if (isBoss || tier == GameConfig.roguelike.EEnemyTier.Boss)
+            {
+                return RoguelikeEnemyRole.Boss;
+            }
+
+            if (tier == GameConfig.roguelike.EEnemyTier.Elite || configId == "moon_knight")
+            {
+                return RoguelikeEnemyRole.Elite;
+            }
+
+            if (configId == "mushroom_guard" || health >= 34)
+            {
+                return RoguelikeEnemyRole.Tank;
+            }
+
+            if (configId == "wisp" || moveSpeed >= 1.55f)
+            {
+                return RoguelikeEnemyRole.Fast;
+            }
+
+            return RoguelikeEnemyRole.Common;
         }
 
         private static RoguelikeSurvivalPickup CreatePickup(int id, RoguelikePickupType type, Vector2 position, int amount)
