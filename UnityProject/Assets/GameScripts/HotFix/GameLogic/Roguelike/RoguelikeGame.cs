@@ -27,6 +27,9 @@ namespace GameLogic
         public const float UiConfirmSoundCooldown = 0.08f;
         public const float ShowcaseScreenshotHudAlpha = 0.68f;
         private const int BossKillGoldReward = 25;
+        private const float BossVictoryAttackFlash = 0.24f;
+        private const float BossVictoryPickupFlash = 0.22f;
+        private const float BossVictoryCameraShake = 0.28f;
         public const int MetaGoldPerAttackBonus = 100;
         private const float PlayerCollisionRadius = 0.48f;
         private const float EnemyCollisionRadius = 0.42f;
@@ -49,6 +52,7 @@ namespace GameLogic
         private readonly RoguelikeRewardDirector _rewardDirector = new RoguelikeRewardDirector();
         private readonly RoguelikeWeaponDirector _weaponDirector = new RoguelikeWeaponDirector();
         private readonly RoguelikePickupDirector _pickupDirector = new RoguelikePickupDirector();
+        private readonly RoguelikeFeedbackDirector _feedbackDirector = new RoguelikeFeedbackDirector();
         private readonly System.Random _random = new System.Random();
         private Vector2 _moveInput;
         private Vector2 _attackDirection = Vector2.right;
@@ -62,7 +66,6 @@ namespace GameLogic
         private float _pickupAttractRadius = BasePickupAttractRadius;
         private float _projectileDamageMultiplier = 1f;
         private float _goldPickupMultiplier = 1f;
-        private readonly Dictionary<string, float> _soundCooldowns = new Dictionary<string, float>();
         private readonly List<string> _configValidationIssues = new List<string>();
         private bool _metaSaved;
         private bool _configValidationDone;
@@ -96,9 +99,9 @@ namespace GameLogic
         public float AttackInterval { get; private set; }
         public float PickupAttractRadius => _pickupAttractRadius;
         public float GoldPickupMultiplier => _goldPickupMultiplier;
-        public float AttackFlash { get; private set; }
-        public float PickupFlash { get; private set; }
-        public float CameraShake { get; private set; }
+        public float AttackFlash => _feedbackDirector.AttackFlash;
+        public float PickupFlash => _feedbackDirector.PickupFlash;
+        public float CameraShake => _feedbackDirector.CameraShake;
         public float SkillCooldownRemaining => _attackTimer;
         public float DashCooldownRemaining => 0f;
         public float PlayerLanePosition => PlayerPosition.x;
@@ -152,7 +155,7 @@ namespace GameLogic
             _pickupAttractRadius = BasePickupAttractRadius;
             _projectileDamageMultiplier = 1f;
             _goldPickupMultiplier = 1f;
-            _soundCooldowns.Clear();
+            _feedbackDirector.Reset();
             _metaSaved = false;
             _spawnDirector.Reset();
             ElapsedTime = 0f;
@@ -163,9 +166,6 @@ namespace GameLogic
             MoveSpeed = 4.5f;
             AttackRange = 5.5f;
             AttackInterval = 0.55f;
-            AttackFlash = 0f;
-            PickupFlash = 0f;
-            CameraShake = 0f;
         }
 
         public RoguelikeCombatResult Tick(float deltaTime)
@@ -184,10 +184,7 @@ namespace GameLogic
             ElapsedTime += dt;
             _attackTimer = Mathf.Max(0f, _attackTimer - dt);
             _hurtTimer = Mathf.Max(0f, _hurtTimer - dt);
-            UpdateSoundCooldowns(dt);
-            AttackFlash = Mathf.Max(0f, AttackFlash - dt);
-            PickupFlash = Mathf.Max(0f, PickupFlash - dt);
-            CameraShake = Mathf.Max(0f, CameraShake - dt);
+            _feedbackDirector.Tick(dt);
 
             UpdateSpawning(dt);
             UpdateEnemies(dt);
@@ -426,9 +423,9 @@ namespace GameLogic
             Experience = 18;
             ExperienceToNextLevel = 40;
             KillCount = 42;
-            AttackFlash = 0.12f;
-            PickupFlash = 0.14f;
-            CameraShake = 0.10f;
+            _feedbackDirector.SetAttackFlash(0.12f);
+            _feedbackDirector.SetPickupFlash(0.14f);
+            _feedbackDirector.TriggerCameraShake(0.10f);
             LastMessage = "展示构图：敌群、弹幕、掉落和暴击反馈已就位。";
             CurrentRun?.AddGold(18);
 
@@ -736,16 +733,12 @@ namespace GameLogic
 
         private void TriggerCameraShake(float duration)
         {
-            CameraShake = Mathf.Max(CameraShake, duration);
+            _feedbackDirector.TriggerCameraShake(duration);
         }
 
         private void AddEffectCue(RoguelikeEffectCueType type, Vector2 position, int damage = 0, bool isCritical = false)
         {
-            _effectCues.Add(new RoguelikeEffectCue(_nextEffectCueSequence++, type, position, damage, isCritical));
-            if (_effectCues.Count > 96)
-            {
-                _effectCues.RemoveRange(0, _effectCues.Count - 96);
-            }
+            _feedbackDirector.AddEffectCue(_effectCues, ref _nextEffectCueSequence, type, position, damage, isCritical);
         }
 
         public Vector2 ResolveObstaclePosition(Vector2 position, float radius)
@@ -801,53 +794,22 @@ namespace GameLogic
 
         private void PlaySound(string path, float volume, float cooldown)
         {
-            if (string.IsNullOrEmpty(path) || GetSoundCooldown(path) > 0f)
-            {
-                return;
-            }
-
-            try
-            {
-                GameModule.Audio.Play(TEngine.AudioType.Sound, path, false, Mathf.Clamp01(volume), true);
-                SetSoundCooldown(path, cooldown);
-            }
-            catch (Exception)
-            {
-                SetSoundCooldown(path, 0.2f);
-            }
+            _feedbackDirector.PlaySound(path, volume, cooldown);
         }
 
         private void UpdateSoundCooldowns(float dt)
         {
-            if (_soundCooldowns.Count <= 0)
-            {
-                return;
-            }
-
-            List<string> keys = new List<string>(_soundCooldowns.Keys);
-            for (int i = 0; i < keys.Count; i++)
-            {
-                string key = keys[i];
-                float remaining = Mathf.Max(0f, _soundCooldowns[key] - dt);
-                if (remaining <= 0f)
-                {
-                    _soundCooldowns.Remove(key);
-                }
-                else
-                {
-                    _soundCooldowns[key] = remaining;
-                }
-            }
+            _feedbackDirector.TickSoundCooldowns(dt);
         }
 
         private float GetSoundCooldown(string path)
         {
-            return _soundCooldowns.TryGetValue(path, out float value) ? value : 0f;
+            return _feedbackDirector.GetSoundCooldown(path);
         }
 
         private void SetSoundCooldown(string path, float cooldown)
         {
-            _soundCooldowns[path] = Mathf.Max(0.01f, cooldown);
+            _feedbackDirector.SetSoundCooldown(path, cooldown);
         }
 
         private static RoguelikeSurvivalEnemy CreateEnemy(int id, Vector2 position, int health, int attack, float moveSpeed, string configId = null, bool isBoss = false, RoguelikeEnemyRole role = RoguelikeEnemyRole.Common)
@@ -1168,7 +1130,7 @@ namespace GameLogic
                 AddProjectile = projectile => _projectiles.Add(projectile),
                 RollProjectileDamage = RollProjectileDamage,
                 SetAttackDirection = direction => _attackDirection = direction,
-                SetAttackFlash = value => AttackFlash = value,
+                SetAttackFlash = value => _feedbackDirector.SetAttackFlash(value),
                 SetLastMessage = message => LastMessage = message,
             };
         }
@@ -1290,7 +1252,7 @@ namespace GameLogic
         private void OnPickupCollected(Vector2 position)
         {
             PlayPickupSound();
-            PickupFlash = 0.14f;
+            _feedbackDirector.SetPickupFlash(0.14f);
             AddEffectCue(RoguelikeEffectCueType.Pickup, position);
             TriggerCameraShake(0.04f);
         }
@@ -1449,6 +1411,10 @@ namespace GameLogic
             CurrentRun?.AddGold(BossKillGoldReward);
             Phase = RoguelikeGamePhase.Victory;
             IsPaused = false;
+            _feedbackDirector.SetAttackFlash(BossVictoryAttackFlash);
+            _feedbackDirector.SetPickupFlash(BossVictoryPickupFlash);
+            _feedbackDirector.TriggerCameraShake(BossVictoryCameraShake);
+            PlayBossSound();
             LastMessage = $"击败地牢之心，生存目标达成。额外获得 {BossKillGoldReward} 金币。";
             SaveMetaGold();
         }

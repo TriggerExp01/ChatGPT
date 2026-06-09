@@ -88,9 +88,12 @@ namespace GameLogic.Tests
 
         private static Dictionary<string, float> GetSoundCooldowns(RoguelikeGame game)
         {
-            FieldInfo field = typeof(RoguelikeGame).GetField("_soundCooldowns", BindingFlags.Instance | BindingFlags.NonPublic);
+            FieldInfo directorField = typeof(RoguelikeGame).GetField("_feedbackDirector", BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.NotNull(directorField);
+            object director = directorField.GetValue(game);
+            FieldInfo field = typeof(RoguelikeFeedbackDirector).GetField("_soundCooldowns", BindingFlags.Instance | BindingFlags.NonPublic);
             Assert.NotNull(field);
-            return (Dictionary<string, float>)field.GetValue(game);
+            return (Dictionary<string, float>)field.GetValue(director);
         }
 
         private static void SetConfigTables(RoguelikeGame game, Tables tables)
