@@ -46,6 +46,7 @@ namespace GameLogic
             new RoguelikeArenaObstacle(new Vector2(0.4f, 2.7f), new Vector2(1.6f, 0.55f)),
         };
         private readonly RoguelikeSpawnDirector _spawnDirector = new RoguelikeSpawnDirector();
+        private readonly RoguelikeRewardDirector _rewardDirector = new RoguelikeRewardDirector();
         private readonly System.Random _random = new System.Random();
         private Vector2 _moveInput;
         private Vector2 _attackDirection = Vector2.right;
@@ -1149,61 +1150,30 @@ namespace GameLogic
 
         private void BuildLevelUpOptions()
         {
-            List<RoguelikeChoiceOption> pool = new List<RoguelikeChoiceOption>();
-            if (!AddConfiguredRewardChoices(pool))
+            _rewardDirector.BuildLevelUpOptions(_rewardOptions, CreateRewardContext(), _random);
+        }
+
+        private RoguelikeRewardDirector.Context CreateRewardContext()
+        {
+            return new RoguelikeRewardDirector.Context
             {
-                pool.Add(new RoguelikeChoiceOption("attack", "锋利武器", "攻击力 +3", run => run.Player.Stats.AddAttack(3)));
-                pool.Add(new RoguelikeChoiceOption("health", "强健体魄", "最大生命 +20，并恢复 20", run => { run.Player.Stats.AddMaxHealth(20); run.Player.Heal(20); }));
-            }
-
-            pool.Add(new RoguelikeChoiceOption("speed", "轻盈步伐", "移动速度 +10%", run => MoveSpeed *= 1.1f));
-            pool.Add(new RoguelikeChoiceOption("range", "延伸攻击", "攻击范围 +15%", run => AttackRange *= 1.15f));
-            pool.Add(new RoguelikeChoiceOption("frequency", "快速攻击", "攻击频率 +12%", run => AttackInterval = Mathf.Max(0.15f, AttackInterval * 0.88f)));
-            pool.Add(new RoguelikeChoiceOption("paid_field_ration", "战地补给", "花费金币，立即恢复 35 生命", run => run.Player.Heal(35), 8));
-
-            AddWeaponChoice(pool, RoguelikeWeaponType.MagicBolt);
-            AddWeaponChoice(pool, RoguelikeWeaponType.SpinningBlade);
-            AddWeaponChoice(pool, RoguelikeWeaponType.PiercingDart);
-            AddWeaponChoice(pool, RoguelikeWeaponType.StarRingPulse);
-            AddPassiveChoices(pool);
-
-            _rewardOptions.Clear();
-            while (_rewardOptions.Count < 3)
-            {
-                int index = _random.Next(pool.Count);
-                _rewardOptions.Add(pool[index]);
-                pool.RemoveAt(index);
-            }
+                Tables = TryGetConfigTables(),
+                Weapons = _weapons,
+                AddMoveSpeedReward = () => MoveSpeed *= 1.1f,
+                AddAttackRangeReward = () => AttackRange *= 1.15f,
+                AddAttackFrequencyReward = () => AttackInterval = Mathf.Max(0.15f, AttackInterval * 0.88f),
+                AddFallbackPickupRadiusPassive = () => _pickupAttractRadius += 0.8f,
+                AddFallbackProjectileDamagePassive = () => _projectileDamageMultiplier += 0.12f,
+                AddFallbackMoveSpeedPassive = () => MoveSpeed *= 1.08f,
+                ApplyConfigEffects = ApplyConfigEffects,
+                AddPassive = AddPassive,
+                AddOrUpgradeWeapon = AddOrUpgradeWeapon,
+            };
         }
 
         private bool AddConfiguredRewardChoices(List<RoguelikeChoiceOption> pool)
         {
-            GameConfig.Tables tables = TryGetConfigTables();
-            List<GameConfig.roguelike.RoguelikeChoice> choices = tables?.TbRoguelikeChoice?.DataList;
-            if (choices == null || choices.Count <= 0)
-            {
-                return false;
-            }
-
-            int added = 0;
-            for (int i = 0; i < choices.Count; i++)
-            {
-                GameConfig.roguelike.RoguelikeChoice config = choices[i];
-                if (config.PoolType != GameConfig.roguelike.EChoicePool.Reward)
-                {
-                    continue;
-                }
-
-                pool.Add(new RoguelikeChoiceOption(
-                    config.Id,
-                    config.Title,
-                    config.Desc,
-                    run => ApplyConfigEffects(run, config.Effects),
-                    config.Cost));
-                added++;
-            }
-
-            return added > 0;
+            return _rewardDirector.AddConfiguredRewardChoices(pool, CreateRewardContext());
         }
 
         private void ApplyConfigEffects(RoguelikeRunState run, IReadOnlyList<GameConfig.roguelike.Effect> effects)
@@ -1251,78 +1221,17 @@ namespace GameLogic
 
         private void AddWeaponChoice(List<RoguelikeChoiceOption> pool, RoguelikeWeaponType type)
         {
-            RoguelikeSurvivalWeapon weapon = FindWeapon(type);
-            if (weapon == null)
-            {
-                if (type != RoguelikeWeaponType.MagicBolt)
-                {
-                    string displayName = GetWeaponDisplayName(type);
-                    pool.Add(new RoguelikeChoiceOption(
-                        $"weapon_{GetWeaponConfigId(type)}_unlock",
-                        $"解锁{displayName}",
-                        $"新增武器：{displayName}",
-                        run => AddOrUpgradeWeapon(type)));
-                }
-
-                return;
-            }
-
-            if (weapon.IsMaxLevel)
-            {
-                return;
-            }
-
-            pool.Add(new RoguelikeChoiceOption(
-                $"weapon_{GetWeaponConfigId(type)}_upgrade",
-                $"{weapon.DisplayName}升级",
-                $"{weapon.DisplayName}升至 {weapon.Level + 1} 级",
-                run => AddOrUpgradeWeapon(type)));
+            _rewardDirector.AddWeaponChoice(pool, CreateRewardContext(), type);
         }
 
         private void AddPassiveChoices(List<RoguelikeChoiceOption> pool)
         {
-            if (AddConfiguredPassiveChoices(pool))
-            {
-                return;
-            }
-
-            pool.Add(new RoguelikeChoiceOption(
-                "passive_magnet_core",
-                "磁力核心",
-                "拾取吸附范围 +0.8",
-                run => AddPassive(run, "passive_magnet_core", "磁力核心", "拾取吸附范围提升。", _ => _pickupAttractRadius += 0.8f)));
-            pool.Add(new RoguelikeChoiceOption(
-                "passive_focus_charm",
-                "聚能护符",
-                "所有投射物伤害 +12%",
-                run => AddPassive(run, "passive_focus_charm", "聚能护符", "投射物伤害提升。", _ => _projectileDamageMultiplier += 0.12f)));
-            pool.Add(new RoguelikeChoiceOption(
-                "passive_wind_boots",
-                "疾风靴",
-                "移动速度 +8%",
-                run => AddPassive(run, "passive_wind_boots", "疾风靴", "移动速度提升。", _ => MoveSpeed *= 1.08f)));
+            _rewardDirector.AddPassiveChoices(pool, CreateRewardContext());
         }
 
         private bool AddConfiguredPassiveChoices(List<RoguelikeChoiceOption> pool)
         {
-            GameConfig.Tables tables = TryGetConfigTables();
-            List<RoguelikeRelic> relics = tables?.TbRoguelikeRelic?.DataList;
-            if (relics == null || relics.Count <= 0)
-            {
-                return false;
-            }
-
-            for (int i = 0; i < relics.Count; i++)
-            {
-                RoguelikeRelic relic = relics[i];
-                pool.Add(new RoguelikeChoiceOption(
-                    $"passive_{relic.Id}",
-                    relic.DisplayName,
-                    relic.Desc,
-                    run => AddPassiveFromConfig(run, relic)));
-            }
-
-            return true;
+            return _rewardDirector.AddConfiguredPassiveChoices(pool, CreateRewardContext());
         }
 
         private void AddPassive(RoguelikeRunState run, string id, string displayName, string description, Action<RoguelikeRunState> apply)
@@ -1332,16 +1241,7 @@ namespace GameLogic
 
         private void AddPassiveFromConfig(RoguelikeRunState run, RoguelikeRelic relic)
         {
-            if (relic == null)
-            {
-                return;
-            }
-
-            run?.AddRelic(new RoguelikeRelicTemplate(
-                relic.Id,
-                relic.DisplayName,
-                relic.Desc,
-                state => ApplyConfigEffects(state, relic.Effects)));
+            _rewardDirector.AddPassiveFromConfig(run, relic, CreateRewardContext());
         }
 
         private void AddOrUpgradeWeapon(RoguelikeWeaponType type)
