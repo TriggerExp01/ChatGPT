@@ -48,6 +48,7 @@ namespace GameLogic
         private readonly RoguelikeSpawnDirector _spawnDirector = new RoguelikeSpawnDirector();
         private readonly RoguelikeRewardDirector _rewardDirector = new RoguelikeRewardDirector();
         private readonly RoguelikeWeaponDirector _weaponDirector = new RoguelikeWeaponDirector();
+        private readonly RoguelikePickupDirector _pickupDirector = new RoguelikePickupDirector();
         private readonly System.Random _random = new System.Random();
         private Vector2 _moveInput;
         private Vector2 _attackDirection = Vector2.right;
@@ -730,37 +731,7 @@ namespace GameLogic
 
         private void UpdatePickups(float dt)
         {
-            for (int i = _pickups.Count - 1; i >= 0; i--)
-            {
-                RoguelikeSurvivalPickup pickup = _pickups[i];
-                Vector2 offset = PlayerPosition - pickup.Position;
-                float distance = offset.magnitude;
-                if (distance < _pickupAttractRadius && distance > 0.05f)
-                {
-                    pickup.Position += offset.normalized * 7f * dt;
-                }
-
-                if (distance > 0.65f)
-                {
-                    continue;
-                }
-
-                if (pickup.Type == RoguelikePickupType.Experience)
-                {
-                    GainExperience(pickup.Amount);
-                }
-                else
-                {
-                    CurrentRun.AddGold(ScaleGoldPickupAmount(pickup.Amount));
-                }
-
-                PlayPickupSound();
-                PickupFlash = 0.14f;
-                AddEffectCue(RoguelikeEffectCueType.Pickup, pickup.Position);
-                TriggerCameraShake(0.04f);
-                _pickups.RemoveAt(i);
-                ReleasePickup(pickup);
-            }
+            _pickupDirector.UpdatePickups(CreatePickupContext(), dt);
         }
 
         private void TriggerCameraShake(float duration)
@@ -1202,6 +1173,21 @@ namespace GameLogic
             };
         }
 
+        private RoguelikePickupDirector.Context CreatePickupContext()
+        {
+            return new RoguelikePickupDirector.Context
+            {
+                Pickups = _pickups,
+                PlayerPosition = PlayerPosition,
+                AttractRadius = _pickupAttractRadius,
+                GainExperience = GainExperience,
+                AddGold = amount => CurrentRun.AddGold(amount),
+                ScaleGoldPickupAmount = ScaleGoldPickupAmount,
+                ReleasePickup = ReleasePickup,
+                OnPickupCollected = OnPickupCollected,
+            };
+        }
+
         private float GetWeaponInterval(RoguelikeSurvivalWeapon weapon)
         {
             return _weaponDirector.GetWeaponInterval(CreateWeaponContext(), weapon);
@@ -1299,6 +1285,14 @@ namespace GameLogic
             }
 
             return Mathf.Max(1, Mathf.RoundToInt(Mathf.Max(0, baseAmount) * _goldPickupMultiplier));
+        }
+
+        private void OnPickupCollected(Vector2 position)
+        {
+            PlayPickupSound();
+            PickupFlash = 0.14f;
+            AddEffectCue(RoguelikeEffectCueType.Pickup, position);
+            TriggerCameraShake(0.04f);
         }
 
         private RoguelikeDamageRoll RollProjectileDamage(int baseDamage)
