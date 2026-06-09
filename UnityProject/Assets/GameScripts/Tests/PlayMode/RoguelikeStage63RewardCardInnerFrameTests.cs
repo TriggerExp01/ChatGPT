@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
 using NUnit.Framework;
@@ -27,9 +27,9 @@ namespace GameLogic.Tests
                 Image passiveFrame = FindImage(fixture.Root, "卡牌边框_2");
                 Image unaffordableFrame = FindImage(fixture.Root, "卡牌边框_3");
 
-                AssertSprite(weaponFrame, "Roguelike_SystemG6_UI_CardFrame", Image.Type.Sliced);
-                AssertSprite(passiveFrame, "Roguelike_SystemG6_UI_CardFrame", Image.Type.Sliced);
-                AssertSprite(unaffordableFrame, "Roguelike_SystemG6_UI_CardFrame", Image.Type.Sliced);
+                AssertSprite(weaponFrame, "Roguelike_StarUI_CardFrame", Image.Type.Sliced);
+                AssertSprite(passiveFrame, "Roguelike_StarUI_CardFrame", Image.Type.Sliced);
+                AssertSprite(unaffordableFrame, "Roguelike_StarUI_CardFrame", Image.Type.Sliced);
                 Assert.IsFalse(weaponFrame.preserveAspect);
                 Assert.AreEqual(weaponFrame.color.a, passiveFrame.color.a);
                 Assert.AreEqual(weaponFrame.color.a, unaffordableFrame.color.a);

@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using NUnit.Framework;
@@ -17,10 +17,10 @@ namespace GameLogic.Tests
             "Roguelike_UI_WeaponIcon.png",
             "Roguelike_UI_RelicIcon.png",
             "Roguelike_UI_GoldIcon.png",
-            "Roguelike_SystemG6_UI_SliderFrame.png",
-            "Roguelike_SystemG6_UI_SliderFillRed.png",
-            "Roguelike_SystemG6_UI_SliderFillBlue.png",
-            "Roguelike_SystemG6_UI_SliderFillYellow.png",
+            "Roguelike_StarUI_SliderFrame.png",
+            "Roguelike_StarUI_SliderFillRed.png",
+            "Roguelike_StarUI_SliderFillBlue.png",
+            "Roguelike_StarUI_SliderFillYellow.png",
             "Roguelike_UI_LightBand.png",
         };
 
@@ -46,10 +46,10 @@ namespace GameLogic.Tests
         public void Stage42RoguelikeUiNoLongerDependsOnBattleAtlasSprites()
         {
             Assert.That(GetUiFactoryConstant("BattleLightSprite"), Is.EqualTo("Roguelike_UI_LightBand"));
-            Assert.That(GetUiFactoryConstant("SliderFrameSprite"), Is.EqualTo("Roguelike_SystemG6_UI_SliderFrame"));
-            Assert.That(GetUiFactoryConstant("SliderFillRedSprite"), Is.EqualTo("Roguelike_SystemG6_UI_SliderFillRed"));
-            Assert.That(GetUiFactoryConstant("SliderFillBlueSprite"), Is.EqualTo("Roguelike_SystemG6_UI_SliderFillBlue"));
-            Assert.That(GetUiFactoryConstant("SliderFillYellowSprite"), Is.EqualTo("Roguelike_SystemG6_UI_SliderFillYellow"));
+            Assert.That(GetUiFactoryConstant("SliderFrameSprite"), Is.EqualTo("Roguelike_StarUI_SliderFrame"));
+            Assert.That(GetUiFactoryConstant("SliderFillRedSprite"), Is.EqualTo("Roguelike_StarUI_SliderFillRed"));
+            Assert.That(GetUiFactoryConstant("SliderFillBlueSprite"), Is.EqualTo("Roguelike_StarUI_SliderFillBlue"));
+            Assert.That(GetUiFactoryConstant("SliderFillYellowSprite"), Is.EqualTo("Roguelike_StarUI_SliderFillYellow"));
         }
 
         [Test]

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
 using NUnit.Framework;
@@ -29,7 +29,7 @@ namespace GameLogic.Tests
                 Assert.NotNull(paidOverlay);
                 Assert.IsFalse(freeOverlay.gameObject.activeSelf);
                 Assert.IsTrue(paidOverlay.gameObject.activeSelf);
-                AssertSprite(paidOverlay, "Roguelike_SystemG6_UI_CardFrame", Image.Type.Sliced);
+                AssertSprite(paidOverlay, "Roguelike_StarUI_CardFrame", Image.Type.Sliced);
             }
         }
 

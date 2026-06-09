@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Reflection;
 using NUnit.Framework;
 using UnityEngine;
@@ -18,11 +18,11 @@ namespace GameLogic.Tests
             {
                 InvokeWindowMethod(fixture.Window, "InternalRefresh");
 
-                AssertSprite(FindImage(fixture.Root, "武器槽_1框"), "Roguelike_SystemG6_UI_SlotFrame", Image.Type.Sliced);
+                AssertSprite(FindImage(fixture.Root, "武器槽_1框"), "Roguelike_StarUI_SlotFrame", Image.Type.Sliced);
                 AssertSprite(FindImage(fixture.Root, "武器槽_1"), "Roguelike_UI_Icon_MagicBolt", Image.Type.Simple);
-                AssertSprite(FindImage(fixture.Root, "武器槽_2框"), "Roguelike_SystemG6_UI_SlotFrame", Image.Type.Sliced);
+                AssertSprite(FindImage(fixture.Root, "武器槽_2框"), "Roguelike_StarUI_SlotFrame", Image.Type.Sliced);
                 AssertSprite(FindImage(fixture.Root, "武器槽_2"), "Roguelike_UI_Icon_SpinningBlade", Image.Type.Simple);
-                AssertSprite(FindImage(fixture.Root, "被动槽_1框"), "Roguelike_SystemG6_UI_SlotFrame", Image.Type.Sliced);
+                AssertSprite(FindImage(fixture.Root, "被动槽_1框"), "Roguelike_StarUI_SlotFrame", Image.Type.Sliced);
             }
         }
 
@@ -40,9 +40,9 @@ namespace GameLogic.Tests
             {
                 InvokeWindowMethod(fixture.Window, "InternalRefresh");
 
-                AssertSprite(FindImage(fixture.Root, "奖励图标底座_1"), "Roguelike_SystemG6_UI_SlotFrame", Image.Type.Sliced);
-                AssertSprite(FindImage(fixture.Root, "奖励图标底座_2"), "Roguelike_SystemG6_UI_SlotFrame", Image.Type.Sliced);
-                AssertSprite(FindImage(fixture.Root, "奖励图标底座_3"), "Roguelike_SystemG6_UI_SlotFrame", Image.Type.Sliced);
+                AssertSprite(FindImage(fixture.Root, "奖励图标底座_1"), "Roguelike_StarUI_SlotFrame", Image.Type.Sliced);
+                AssertSprite(FindImage(fixture.Root, "奖励图标底座_2"), "Roguelike_StarUI_SlotFrame", Image.Type.Sliced);
+                AssertSprite(FindImage(fixture.Root, "奖励图标底座_3"), "Roguelike_StarUI_SlotFrame", Image.Type.Sliced);
             }
         }
 

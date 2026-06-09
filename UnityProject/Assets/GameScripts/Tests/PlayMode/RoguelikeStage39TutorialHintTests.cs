@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
 using NUnit.Framework;
@@ -9,7 +9,7 @@ namespace GameLogic.Tests
 {
     public sealed class RoguelikeStage39TutorialHintTests
     {
-        private const string PanelFrameSprite = "Roguelike_SystemG6_UI_PanelFrame";
+        private const string PanelFrameSprite = "Roguelike_StarUI_PanelFrame";
         private const string BattleLightSprite = "Roguelike_UI_LightBand";
 
         [Test]

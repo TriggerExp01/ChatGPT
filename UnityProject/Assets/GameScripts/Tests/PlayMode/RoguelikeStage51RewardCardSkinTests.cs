@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
 using NUnit.Framework;
@@ -25,8 +25,8 @@ namespace GameLogic.Tests
                 Assert.NotNull(panel);
 
                 AssertSprite(FindImage(panel, "卡牌正式底纹_1"), "Roguelike_UI_LightBand", Image.Type.Simple);
-                AssertSprite(FindImage(panel, "卡牌顶部徽带_1"), "Roguelike_SystemG6_UI_DividerMetal", Image.Type.Simple);
-                AssertSprite(FindImage(panel, "奖励图标底座_1"), "Roguelike_SystemG6_UI_SlotFrame", Image.Type.Sliced);
+                AssertSprite(FindImage(panel, "卡牌顶部徽带_1"), "Roguelike_StarUI_DividerLine", Image.Type.Simple);
+                AssertSprite(FindImage(panel, "奖励图标底座_1"), "Roguelike_StarUI_SlotFrame", Image.Type.Sliced);
 
                 RectTransform freeCostBadge = FindRect(panel, "卡牌金币徽章_1框");
                 RectTransform paidCostBadge = FindRect(panel, "卡牌金币徽章_2框");
@@ -34,7 +34,7 @@ namespace GameLogic.Tests
                 Assert.NotNull(paidCostBadge);
                 Assert.IsFalse(freeCostBadge.gameObject.activeSelf);
                 Assert.IsTrue(paidCostBadge.gameObject.activeSelf);
-                AssertSprite(paidCostBadge.GetComponent<Image>(), "Roguelike_SystemG6_UI_SlotFrame", Image.Type.Sliced);
+                AssertSprite(paidCostBadge.GetComponent<Image>(), "Roguelike_StarUI_SlotFrame", Image.Type.Sliced);
                 AssertSprite(FindImage(panel, "卡牌金币徽章_2"), "Roguelike_UI_GoldIcon", Image.Type.Simple);
 
                 RectTransform freeOverlay = FindRect(panel, "卡牌不可选遮罩_1");

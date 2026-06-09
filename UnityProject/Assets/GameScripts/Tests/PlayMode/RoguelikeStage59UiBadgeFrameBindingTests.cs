@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
 using NUnit.Framework;
@@ -29,7 +29,7 @@ namespace GameLogic.Tests
                 Assert.NotNull(paidFrame);
                 Assert.IsFalse(freeFrame.gameObject.activeSelf);
                 Assert.IsTrue(paidFrame.gameObject.activeSelf);
-                AssertSprite(paidFrame, "Roguelike_SystemG6_UI_SlotFrame", Image.Type.Sliced);
+                AssertSprite(paidFrame, "Roguelike_StarUI_SlotFrame", Image.Type.Sliced);
                 AssertSprite(FindImage(fixture.Root, "卡牌金币徽章_2"), "Roguelike_UI_GoldIcon", Image.Type.Simple);
             }
         }
@@ -46,7 +46,7 @@ namespace GameLogic.Tests
             {
                 InvokeWindowMethod(fixture.Window, "InternalRefresh");
 
-                AssertSprite(FindImage(fixture.Root, "金币成长徽章框"), "Roguelike_SystemG6_UI_SlotFrame", Image.Type.Sliced);
+                AssertSprite(FindImage(fixture.Root, "金币成长徽章框"), "Roguelike_StarUI_SlotFrame", Image.Type.Sliced);
                 AssertSprite(FindImage(fixture.Root, "金币成长徽章"), "Roguelike_UI_GoldIcon", Image.Type.Simple);
             }
         }

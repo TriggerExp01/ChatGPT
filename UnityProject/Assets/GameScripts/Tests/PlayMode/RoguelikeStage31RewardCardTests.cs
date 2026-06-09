@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
 using NUnit.Framework;
@@ -9,7 +9,7 @@ namespace GameLogic.Tests
 {
     public sealed class RoguelikeStage31RewardCardTests
     {
-        private const string CardFrameSprite = "Roguelike_SystemG6_UI_CardFrame";
+        private const string CardFrameSprite = "Roguelike_StarUI_CardFrame";
         private const string MagicBoltIconSprite = "Roguelike_UI_Icon_MagicBolt";
         private const string RelicUtilityIconSprite = "Roguelike_UI_Icon_RelicUtility";
         private const string PaidSupplyIconSprite = "Roguelike_UI_Icon_PaidSupply";

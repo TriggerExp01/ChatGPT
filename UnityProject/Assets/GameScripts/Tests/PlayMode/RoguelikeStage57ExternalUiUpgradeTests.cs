@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Reflection;
 using NUnit.Framework;
@@ -11,14 +11,14 @@ namespace GameLogic.Tests
     {
         private static readonly string[] SystemG6Assets =
         {
-            "Roguelike_SystemG6_UI_PanelFrame.png",
-            "Roguelike_SystemG6_UI_CardFrame.png",
-            "Roguelike_SystemG6_UI_ButtonFrame.png",
-            "Roguelike_SystemG6_UI_DividerMetal.png",
-            "Roguelike_SystemG6_UI_SliderFrame.png",
-            "Roguelike_SystemG6_UI_SliderFillRed.png",
-            "Roguelike_SystemG6_UI_SliderFillYellow.png",
-            "Roguelike_SystemG6_UI_SlotFrame.png",
+            "Roguelike_StarUI_PanelFrame.png",
+            "Roguelike_StarUI_CardFrame.png",
+            "Roguelike_StarUI_ButtonFrame.png",
+            "Roguelike_StarUI_DividerLine.png",
+            "Roguelike_StarUI_SliderFrame.png",
+            "Roguelike_StarUI_SliderFillRed.png",
+            "Roguelike_StarUI_SliderFillYellow.png",
+            "Roguelike_StarUI_SlotFrame.png",
         };
 
         [Test]
@@ -59,14 +59,14 @@ namespace GameLogic.Tests
         [Test]
         public void UiFactoryUsesSystemG6SpritesForCoreFramesAndBars()
         {
-            Assert.That(GetUiFactoryConstant("PanelFrameSprite"), Is.EqualTo("Roguelike_SystemG6_UI_PanelFrame"));
-            Assert.That(GetUiFactoryConstant("CardFrameSprite"), Is.EqualTo("Roguelike_SystemG6_UI_CardFrame"));
-            Assert.That(GetUiFactoryConstant("ButtonFrameSprite"), Is.EqualTo("Roguelike_SystemG6_UI_ButtonFrame"));
-            Assert.That(GetUiFactoryConstant("DividerFadeSprite"), Is.EqualTo("Roguelike_SystemG6_UI_DividerMetal"));
-            Assert.That(GetUiFactoryConstant("SliderFrameSprite"), Is.EqualTo("Roguelike_SystemG6_UI_SliderFrame"));
-            Assert.That(GetUiFactoryConstant("SliderFillRedSprite"), Is.EqualTo("Roguelike_SystemG6_UI_SliderFillRed"));
-            Assert.That(GetUiFactoryConstant("SliderFillYellowSprite"), Is.EqualTo("Roguelike_SystemG6_UI_SliderFillYellow"));
-            Assert.That(GetUiFactoryConstant("SlotFrameSprite"), Is.EqualTo("Roguelike_SystemG6_UI_SlotFrame"));
+            Assert.That(GetUiFactoryConstant("PanelFrameSprite"), Is.EqualTo("Roguelike_StarUI_PanelFrame"));
+            Assert.That(GetUiFactoryConstant("CardFrameSprite"), Is.EqualTo("Roguelike_StarUI_CardFrame"));
+            Assert.That(GetUiFactoryConstant("ButtonFrameSprite"), Is.EqualTo("Roguelike_StarUI_ButtonFrame"));
+            Assert.That(GetUiFactoryConstant("DividerFadeSprite"), Is.EqualTo("Roguelike_StarUI_DividerLine"));
+            Assert.That(GetUiFactoryConstant("SliderFrameSprite"), Is.EqualTo("Roguelike_StarUI_SliderFrame"));
+            Assert.That(GetUiFactoryConstant("SliderFillRedSprite"), Is.EqualTo("Roguelike_StarUI_SliderFillRed"));
+            Assert.That(GetUiFactoryConstant("SliderFillYellowSprite"), Is.EqualTo("Roguelike_StarUI_SliderFillYellow"));
+            Assert.That(GetUiFactoryConstant("SlotFrameSprite"), Is.EqualTo("Roguelike_StarUI_SlotFrame"));
         }
 
         [Test]
@@ -77,16 +77,16 @@ namespace GameLogic.Tests
             try
             {
                 RectTransform panel = InvokeCreatePanel("正式面板", root, Vector2.zero, Vector2.one, Color.white);
-                AssertSprite(panel.GetComponent<Image>(), "Roguelike_SystemG6_UI_PanelFrame", Image.Type.Sliced);
+                AssertSprite(panel.GetComponent<Image>(), "Roguelike_StarUI_PanelFrame", Image.Type.Sliced);
 
                 Slider slider = InvokeCreateSlider("正式生命条", root, Vector2.zero, Vector2.one, Color.white, GetUiFactoryConstant("SliderFillRedSprite"));
-                AssertSprite(slider.GetComponent<Image>(), "Roguelike_SystemG6_UI_SliderFrame", Image.Type.Sliced);
+                AssertSprite(slider.GetComponent<Image>(), "Roguelike_StarUI_SliderFrame", Image.Type.Sliced);
 
                 Image fill = slider.fillRect.GetComponent<Image>();
-                AssertSprite(fill, "Roguelike_SystemG6_UI_SliderFillRed", Image.Type.Sliced);
+                AssertSprite(fill, "Roguelike_StarUI_SliderFillRed", Image.Type.Sliced);
 
                 Image icon = InvokeCreateFramedIconSlot("正式图标槽", root, Vector2.zero, Vector2.one, Color.white, Color.white, "Roguelike_UI_WeaponIcon");
-                AssertSprite(FindImage(root, "正式图标槽框"), "Roguelike_SystemG6_UI_SlotFrame", Image.Type.Sliced);
+                AssertSprite(FindImage(root, "正式图标槽框"), "Roguelike_StarUI_SlotFrame", Image.Type.Sliced);
                 AssertSprite(icon, "Roguelike_UI_WeaponIcon", Image.Type.Simple);
             }
             finally

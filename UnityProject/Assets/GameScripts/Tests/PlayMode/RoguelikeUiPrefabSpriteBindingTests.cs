@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
@@ -11,9 +11,9 @@ namespace GameLogic.Tests
         private const string UiAtlasPath = "Assets/AssetRaw/UIRaw/Atlas/Roguelike";
         private const string LoginPanelSprite = "Roguelike_StarUI_LoginPanel";
         private const string InputFrameSprite = "Roguelike_StarUI_InputFrame";
-        private const string TestPanelSprite = "Roguelike_StarUI_TestPanel";
-        private const string ButtonFrameSprite = "Roguelike_SystemG6_UI_ButtonFrame";
-        private const string SliderFillBlueSprite = "Roguelike_SystemG6_UI_SliderFillBlue";
+        private const string TestPanelSprite = "Roguelike_StarUI_PanelFrame";
+        private const string ButtonFrameSprite = "Roguelike_StarUI_ButtonFrame";
+        private const string SliderFillBlueSprite = "Roguelike_StarUI_SliderFillBlue";
         private static readonly string[] UiPrefabPaths =
         {
             "Assets/AssetRaw/UI/BattleChoiceUI.prefab",
@@ -32,8 +32,8 @@ namespace GameLogic.Tests
         {
             AssertSpriteAsset(LoginPanelSprite, new Vector4(42f, 42f, 42f, 42f));
             AssertSpriteAsset(InputFrameSprite, new Vector4(28f, 18f, 28f, 18f));
-            AssertSpriteAsset(TestPanelSprite, new Vector4(28f, 28f, 28f, 28f));
-            AssertSpriteAsset(SliderFillBlueSprite, new Vector4(18f, 0f, 18f, 0f));
+            AssertSpriteAsset(TestPanelSprite, new Vector4(32f, 32f, 32f, 32f));
+            AssertSpriteAsset(SliderFillBlueSprite, new Vector4(10f, 0f, 10f, 0f));
         }
 
         [Test]

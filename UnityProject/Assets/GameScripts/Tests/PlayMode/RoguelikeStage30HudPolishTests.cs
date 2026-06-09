@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Reflection;
 using NUnit.Framework;
@@ -9,18 +9,18 @@ namespace GameLogic.Tests
 {
     public sealed class RoguelikeStage30HudPolishTests
     {
-        private const string PanelFrameSprite = "Roguelike_SystemG6_UI_PanelFrame";
-        private const string CardFrameSprite = "Roguelike_SystemG6_UI_CardFrame";
+        private const string PanelFrameSprite = "Roguelike_StarUI_PanelFrame";
+        private const string CardFrameSprite = "Roguelike_StarUI_CardFrame";
         private const string HeroPortraitSprite = "Roguelike_Kenney_PlayerPortrait";
         private const string WeaponIconSprite = "Roguelike_UI_WeaponIcon";
         private const string RelicIconSprite = "Roguelike_UI_RelicIcon";
         private const string MagicBoltIconSprite = "Roguelike_UI_Icon_MagicBolt";
         private const string GoldIconSprite = "Roguelike_UI_GoldIcon";
-        private const string SliderFrameSprite = "Roguelike_SystemG6_UI_SliderFrame";
-        private const string SliderFillRedSprite = "Roguelike_SystemG6_UI_SliderFillRed";
-        private const string SliderFillBlueSprite = "Roguelike_SystemG6_UI_SliderFillBlue";
-        private const string SliderFillYellowSprite = "Roguelike_SystemG6_UI_SliderFillYellow";
-        private const string SlotFrameSprite = "Roguelike_SystemG6_UI_SlotFrame";
+        private const string SliderFrameSprite = "Roguelike_StarUI_SliderFrame";
+        private const string SliderFillRedSprite = "Roguelike_StarUI_SliderFillRed";
+        private const string SliderFillBlueSprite = "Roguelike_StarUI_SliderFillBlue";
+        private const string SliderFillYellowSprite = "Roguelike_StarUI_SliderFillYellow";
+        private const string SlotFrameSprite = "Roguelike_StarUI_SlotFrame";
         private const string LightBandSprite = "Roguelike_UI_LightBand";
 
         [Test]
@@ -93,7 +93,7 @@ namespace GameLogic.Tests
             {
                 AssertSprite(FindImage(fixture.Root, "角色状态面板"), PanelFrameSprite, Image.Type.Sliced);
                 AssertSprite(FindImage(fixture.Root, "角色头像"), HeroPortraitSprite, Image.Type.Simple);
-                AssertSprite(FindImage(fixture.Root, "头像星辉"), LightBandSprite, Image.Type.Simple);
+                AssertSprite(FindImage(fixture.Root, "角色头像底座"), SlotFrameSprite, Image.Type.Sliced);
                 AssertSprite(FindImage(fixture.Root, "时间压力高光"), LightBandSprite, Image.Type.Simple);
                 AssertSprite(FindSliderBackground(fixture.Root, "生命条"), SliderFrameSprite, Image.Type.Sliced);
                 AssertSprite(FindSliderFill(fixture.Root, "生命条"), SliderFillRedSprite, Image.Type.Sliced);

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
 using NUnit.Framework;
@@ -27,9 +27,9 @@ namespace GameLogic.Tests
                 Image passiveRibbon = FindImage(fixture.Root, "卡牌顶部徽带_2");
                 Image unaffordableRibbon = FindImage(fixture.Root, "卡牌顶部徽带_3");
 
-                AssertSprite(weaponRibbon, "Roguelike_SystemG6_UI_DividerMetal", Image.Type.Simple);
-                AssertSprite(passiveRibbon, "Roguelike_SystemG6_UI_DividerMetal", Image.Type.Simple);
-                AssertSprite(unaffordableRibbon, "Roguelike_SystemG6_UI_DividerMetal", Image.Type.Simple);
+                AssertSprite(weaponRibbon, "Roguelike_StarUI_DividerLine", Image.Type.Simple);
+                AssertSprite(passiveRibbon, "Roguelike_StarUI_DividerLine", Image.Type.Simple);
+                AssertSprite(unaffordableRibbon, "Roguelike_StarUI_DividerLine", Image.Type.Simple);
                 Assert.IsTrue(weaponRibbon.preserveAspect);
                 Assert.Greater(weaponRibbon.color.r, weaponRibbon.color.b);
                 Assert.Greater(passiveRibbon.color.b, passiveRibbon.color.r);

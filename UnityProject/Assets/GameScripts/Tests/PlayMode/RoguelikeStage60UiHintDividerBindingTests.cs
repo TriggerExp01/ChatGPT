@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Reflection;
 using NUnit.Framework;
 using UnityEngine;
@@ -17,8 +17,8 @@ namespace GameLogic.Tests
             {
                 InvokeWindowMethod(fixture.Window, "InternalRefresh");
 
-                AssertSprite(FindImage(fixture.Root, "战斗提示面板"), "Roguelike_SystemG6_UI_PanelFrame", Image.Type.Sliced);
-                AssertSprite(FindImage(fixture.Root, "战斗提示外部装饰线"), "Roguelike_SystemG6_UI_DividerMetal", Image.Type.Simple);
+                AssertSprite(FindImage(fixture.Root, "战斗提示面板"), "Roguelike_StarUI_PanelFrame", Image.Type.Sliced);
+                AssertSprite(FindImage(fixture.Root, "战斗提示外部装饰线"), "Roguelike_StarUI_DividerLine", Image.Type.Simple);
             }
         }
 

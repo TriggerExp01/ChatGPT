@@ -12,11 +12,16 @@ namespace GameLogic
         public const string KenneyCardFrameSprite = "Roguelike_Kenney_UI_CardBorder";
         public const string KenneyButtonFrameSprite = "Roguelike_Kenney_UI_ButtonFrame";
         public const string KenneyDividerFadeSprite = "Roguelike_Kenney_UI_DividerFade";
-        public const string PanelFrameSprite = "Roguelike_SystemG6_UI_PanelFrame";
-        public const string CardFrameSprite = "Roguelike_SystemG6_UI_CardFrame";
-        public const string ButtonFrameSprite = "Roguelike_SystemG6_UI_ButtonFrame";
-        public const string DividerFadeSprite = "Roguelike_SystemG6_UI_DividerMetal";
-        public const string SlotFrameSprite = "Roguelike_SystemG6_UI_SlotFrame";
+        public const string SystemG6PanelFrameSprite = "Roguelike_SystemG6_UI_PanelFrame";
+        public const string SystemG6CardFrameSprite = "Roguelike_SystemG6_UI_CardFrame";
+        public const string SystemG6ButtonFrameSprite = "Roguelike_SystemG6_UI_ButtonFrame";
+        public const string SystemG6DividerFadeSprite = "Roguelike_SystemG6_UI_DividerMetal";
+        public const string SystemG6SlotFrameSprite = "Roguelike_SystemG6_UI_SlotFrame";
+        public const string PanelFrameSprite = "Roguelike_StarUI_PanelFrame";
+        public const string CardFrameSprite = "Roguelike_StarUI_CardFrame";
+        public const string ButtonFrameSprite = "Roguelike_StarUI_ButtonFrame";
+        public const string DividerFadeSprite = "Roguelike_StarUI_DividerLine";
+        public const string SlotFrameSprite = "Roguelike_StarUI_SlotFrame";
         public const string OriginalHeroPortraitSprite = "Roguelike_UI_HeroPortrait";
         public const string HeroPortraitSprite = "Roguelike_Kenney_PlayerPortrait";
         public const string WeaponIconSprite = "Roguelike_UI_WeaponIcon";
@@ -33,10 +38,10 @@ namespace GameLogic
         public const string BattleLightSprite = "Roguelike_UI_LightBand";
         public const string OriginalSliderFrameSprite = "Roguelike_UI_SliderFrame";
         public const string OriginalSliderFillRedSprite = "Roguelike_UI_SliderFill_Red";
-        public const string SliderFrameSprite = "Roguelike_SystemG6_UI_SliderFrame";
-        public const string SliderFillRedSprite = "Roguelike_SystemG6_UI_SliderFillRed";
-        public const string SliderFillBlueSprite = "Roguelike_SystemG6_UI_SliderFillBlue";
-        public const string SliderFillYellowSprite = "Roguelike_SystemG6_UI_SliderFillYellow";
+        public const string SliderFrameSprite = "Roguelike_StarUI_SliderFrame";
+        public const string SliderFillRedSprite = "Roguelike_StarUI_SliderFillRed";
+        public const string SliderFillBlueSprite = "Roguelike_StarUI_SliderFillBlue";
+        public const string SliderFillYellowSprite = "Roguelike_StarUI_SliderFillYellow";
 
         private static readonly Dictionary<string, Sprite> SpriteCache = new Dictionary<string, Sprite>();
 
@@ -144,7 +149,7 @@ namespace GameLogic
         {
             RectTransform root = CreateRect(name, parent, anchorMin, anchorMax, Vector2.zero, Vector2.zero);
             Image bg = root.gameObject.AddComponent<Image>();
-            bg.color = new Color(0.88f, 0.92f, 1f, 0.86f);
+            bg.color = new Color(0.78f, 0.90f, 1f, 0.92f);
             ApplySprite(bg, SliderFrameSprite, Image.Type.Sliced);
 
             RectTransform fillArea = CreateRect("Fill Area", root, Vector2.zero, Vector2.one, new Vector2(6f, 4f), new Vector2(-6f, -4f));
