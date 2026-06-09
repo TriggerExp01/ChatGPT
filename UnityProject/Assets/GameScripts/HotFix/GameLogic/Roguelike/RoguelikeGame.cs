@@ -45,6 +45,7 @@ namespace GameLogic
             new RoguelikeArenaObstacle(new Vector2(2.8f, -1.25f), new Vector2(1.25f, 0.9f)),
             new RoguelikeArenaObstacle(new Vector2(0.4f, 2.7f), new Vector2(1.6f, 0.55f)),
         };
+        private readonly RoguelikeSpawnDirector _spawnDirector = new RoguelikeSpawnDirector();
         private readonly System.Random _random = new System.Random();
         private Vector2 _moveInput;
         private Vector2 _attackDirection = Vector2.right;
@@ -60,7 +61,6 @@ namespace GameLogic
         private readonly Dictionary<string, float> _soundCooldowns = new Dictionary<string, float>();
         private readonly List<string> _configValidationIssues = new List<string>();
         private bool _metaSaved;
-        private bool _bossSpawned;
         private bool _configValidationDone;
         private GameConfig.Tables _configTables;
 
@@ -148,7 +148,7 @@ namespace GameLogic
             _projectileDamageMultiplier = 1f;
             _soundCooldowns.Clear();
             _metaSaved = false;
-            _bossSpawned = false;
+            _spawnDirector.Reset();
             ElapsedTime = 0f;
             Level = 1;
             Experience = 0;
@@ -1521,127 +1521,22 @@ namespace GameLogic
 
         private RoguelikeSpawnStage GetActiveSpawnStage()
         {
-            GameConfig.Tables tables = TryGetConfigTables();
-            List<RoguelikeSpawnStage> stages = tables?.TbRoguelikeSpawnStage?.DataList;
-            if (stages == null || stages.Count <= 0)
-            {
-                return null;
-            }
-
-            RoguelikeSpawnStage active = null;
-            for (int i = 0; i < stages.Count; i++)
-            {
-                RoguelikeSpawnStage stage = stages[i];
-                if (stage != null && ElapsedTime >= stage.StartTime && (active == null || stage.StartTime > active.StartTime))
-                {
-                    active = stage;
-                }
-            }
-
-            return active;
+            return _spawnDirector.GetActiveSpawnStage(TryGetConfigTables(), ElapsedTime);
         }
 
         private GameConfig.roguelike.RoguelikeEnemy PickEnemyConfig(int wave, RoguelikeSpawnStage spawnStage)
         {
-            GameConfig.Tables tables = TryGetConfigTables();
-            List<GameConfig.roguelike.RoguelikeEnemy> enemies = tables?.TbRoguelikeEnemy?.DataList;
-            if (enemies == null || enemies.Count <= 0)
-            {
-                return null;
-            }
-
-            if (spawnStage != null)
-            {
-                if (!_bossSpawned && !string.IsNullOrEmpty(spawnStage.BossEnemyId) && ElapsedTime >= spawnStage.BossStartTime)
-                {
-                    GameConfig.roguelike.RoguelikeEnemy boss = tables.TbRoguelikeEnemy.GetOrDefault(spawnStage.BossEnemyId);
-                    if (boss != null)
-                    {
-                        _bossSpawned = true;
-                        return boss;
-                    }
-                }
-
-                if (!string.IsNullOrEmpty(spawnStage.EliteEnemyId) && ElapsedTime >= spawnStage.EliteStartTime && _random.NextDouble() < 0.18)
-                {
-                    GameConfig.roguelike.RoguelikeEnemy elite = tables.TbRoguelikeEnemy.GetOrDefault(spawnStage.EliteEnemyId);
-                    if (elite != null)
-                    {
-                        return elite;
-                    }
-                }
-
-                GameConfig.roguelike.RoguelikeEnemy weighted = PickWeightedEnemy(tables, spawnStage);
-                if (weighted != null)
-                {
-                    return weighted;
-                }
-            }
-
-            GameConfig.roguelike.EEnemyTier maxTier = wave >= 8
-                ? GameConfig.roguelike.EEnemyTier.Boss
-                : wave >= 4
-                    ? GameConfig.roguelike.EEnemyTier.Elite
-                    : GameConfig.roguelike.EEnemyTier.Common;
-            List<GameConfig.roguelike.RoguelikeEnemy> candidates = new List<GameConfig.roguelike.RoguelikeEnemy>();
-            for (int i = 0; i < enemies.Count; i++)
-            {
-                if ((int)enemies[i].Tier <= (int)maxTier)
-                {
-                    candidates.Add(enemies[i]);
-                }
-            }
-
-            return candidates.Count > 0 ? candidates[_random.Next(candidates.Count)] : enemies[_random.Next(enemies.Count)];
+            return _spawnDirector.PickEnemyConfig(TryGetConfigTables(), spawnStage, wave, ElapsedTime, _random);
         }
 
         private GameConfig.roguelike.RoguelikeEnemy PickWeightedEnemy(GameConfig.Tables tables, RoguelikeSpawnStage spawnStage)
         {
-            if (tables == null || spawnStage.CommonEnemyIds == null || spawnStage.CommonEnemyIds.Count <= 0)
-            {
-                return null;
-            }
-
-            int totalWeight = 0;
-            for (int i = 0; i < spawnStage.CommonEnemyIds.Count; i++)
-            {
-                int weight = spawnStage.CommonWeights != null && i < spawnStage.CommonWeights.Count ? spawnStage.CommonWeights[i] : 1;
-                totalWeight += Mathf.Max(1, weight);
-            }
-
-            int roll = _random.Next(Mathf.Max(1, totalWeight));
-            for (int i = 0; i < spawnStage.CommonEnemyIds.Count; i++)
-            {
-                int weight = spawnStage.CommonWeights != null && i < spawnStage.CommonWeights.Count ? spawnStage.CommonWeights[i] : 1;
-                roll -= Mathf.Max(1, weight);
-                if (roll >= 0)
-                {
-                    continue;
-                }
-
-                GameConfig.roguelike.RoguelikeEnemy enemy = tables.TbRoguelikeEnemy.GetOrDefault(spawnStage.CommonEnemyIds[i]);
-                if (enemy != null)
-                {
-                    return enemy;
-                }
-            }
-
-            return null;
+            return _spawnDirector.PickWeightedEnemy(tables, spawnStage, _random);
         }
 
         private static float GetEnemyMoveSpeed(GameConfig.roguelike.RoguelikeEnemy config, int wave)
         {
-            float baseSpeed = config.Tier == GameConfig.roguelike.EEnemyTier.Boss
-                ? 1.18f
-                : config.Tier == GameConfig.roguelike.EEnemyTier.Elite
-                    ? 1.28f
-                    : 1.35f;
-            if (config.Id.Contains("bat"))
-            {
-                baseSpeed += 0.24f;
-            }
-
-            return baseSpeed + wave * 0.08f;
+            return RoguelikeSpawnDirector.GetEnemyMoveSpeed(config, wave);
         }
 
         private GameConfig.Tables TryGetConfigTables()
