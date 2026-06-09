@@ -47,6 +47,7 @@ namespace GameLogic
         };
         private readonly RoguelikeSpawnDirector _spawnDirector = new RoguelikeSpawnDirector();
         private readonly RoguelikeRewardDirector _rewardDirector = new RoguelikeRewardDirector();
+        private readonly RoguelikeWeaponDirector _weaponDirector = new RoguelikeWeaponDirector();
         private readonly System.Random _random = new System.Random();
         private Vector2 _moveInput;
         private Vector2 _attackDirection = Vector2.right;
@@ -626,172 +627,27 @@ namespace GameLogic
 
         private void UpdateWeapons(float dt)
         {
-            for (int i = 0; i < _weapons.Count; i++)
-            {
-                RoguelikeSurvivalWeapon weapon = _weapons[i];
-                weapon.CooldownRemaining = Mathf.Max(0f, weapon.CooldownRemaining - dt);
-                if (weapon.CooldownRemaining > 0f)
-                {
-                    continue;
-                }
-
-                bool fired = false;
-                switch (weapon.Type)
-                {
-                    case RoguelikeWeaponType.MagicBolt:
-                        fired = FireMagicBolt(weapon);
-                        break;
-                    case RoguelikeWeaponType.SpinningBlade:
-                        fired = FireSpinningBlade(weapon);
-                        break;
-                    case RoguelikeWeaponType.PiercingDart:
-                        fired = FirePiercingDart(weapon);
-                        break;
-                    case RoguelikeWeaponType.StarRingPulse:
-                        fired = FireStarRingPulse(weapon);
-                        break;
-                }
-
-                if (fired)
-                {
-                    weapon.CooldownRemaining = GetWeaponInterval(weapon);
-                }
-            }
-
-            _attackTimer = GetPrimaryCooldown();
+            _attackTimer = _weaponDirector.UpdateWeapons(CreateWeaponContext(), dt);
         }
 
         private bool FireMagicBolt(RoguelikeSurvivalWeapon weapon)
         {
-            RoguelikeSurvivalEnemy target = null;
-            float nearestDistance = AttackRange * AttackRange;
-            for (int i = 0; i < _enemies.Count; i++)
-            {
-                RoguelikeSurvivalEnemy enemy = _enemies[i];
-                Vector2 offset = enemy.Position - PlayerPosition;
-                float distance = offset.sqrMagnitude;
-                if (!enemy.IsAlive || distance > nearestDistance)
-                {
-                    continue;
-                }
-
-                target = enemy;
-                nearestDistance = distance;
-            }
-
-            if (target == null)
-            {
-                return false;
-            }
-
-            AttackFlash = 0.12f;
-            _attackDirection = (target.Position - PlayerPosition).normalized;
-            _projectiles.Add(CreateProjectile(
-                _nextProjectileId++,
-                RoguelikeWeaponType.MagicBolt,
-                PlayerPosition,
-                _attackDirection,
-                GetWeaponSpeed(weapon, 9f + weapon.Level * 0.4f),
-                GetWeaponRange(weapon, AttackRange + (weapon.Level - 1) * 0.35f),
-                RollProjectileDamage(GetWeaponDamage(weapon, CurrentRun.Player.Stats.Attack + (weapon.Level - 1) * 2))));
-            return true;
+            return _weaponDirector.FireMagicBolt(CreateWeaponContext(), weapon);
         }
 
         private bool FireSpinningBlade(RoguelikeSurvivalWeapon weapon)
         {
-            if (_enemies.Count <= 0)
-            {
-                return false;
-            }
-
-            int bladeCount = 4 + weapon.Level;
-            int baseDamage = GetWeaponDamage(weapon, Mathf.Max(1, Mathf.RoundToInt(CurrentRun.Player.Stats.Attack * 0.55f) + weapon.Level));
-            float range = GetWeaponRange(weapon, 2.2f + weapon.Level * 0.12f);
-            float angleOffset = (float)_random.NextDouble() * 360f;
-            for (int i = 0; i < bladeCount; i++)
-            {
-                float angle = angleOffset + 360f * i / bladeCount;
-                Vector2 direction = new Vector2(Mathf.Cos(angle * Mathf.Deg2Rad), Mathf.Sin(angle * Mathf.Deg2Rad));
-                _projectiles.Add(CreateProjectile(
-                    _nextProjectileId++,
-                    RoguelikeWeaponType.SpinningBlade,
-                    PlayerPosition,
-                    direction,
-                    GetWeaponSpeed(weapon, 6.5f),
-                    range,
-                    RollProjectileDamage(baseDamage)));
-            }
-
-            AttackFlash = 0.10f;
-            LastMessage = $"旋刃齐射，发射 {bladeCount} 枚刀刃。";
-            return true;
+            return _weaponDirector.FireSpinningBlade(CreateWeaponContext(), weapon);
         }
 
         private bool FirePiercingDart(RoguelikeSurvivalWeapon weapon)
         {
-            RoguelikeSurvivalEnemy target = null;
-            float nearestDistance = AttackRange * AttackRange * 1.8f;
-            for (int i = 0; i < _enemies.Count; i++)
-            {
-                RoguelikeSurvivalEnemy enemy = _enemies[i];
-                Vector2 offset = enemy.Position - PlayerPosition;
-                float distance = offset.sqrMagnitude;
-                if (!enemy.IsAlive || distance > nearestDistance)
-                {
-                    continue;
-                }
-
-                target = enemy;
-                nearestDistance = distance;
-            }
-
-            if (target == null)
-            {
-                return false;
-            }
-
-            _attackDirection = (target.Position - PlayerPosition).normalized;
-            _projectiles.Add(CreateProjectile(
-                _nextProjectileId++,
-                RoguelikeWeaponType.PiercingDart,
-                PlayerPosition,
-                _attackDirection,
-                GetWeaponSpeed(weapon, 10f),
-                GetWeaponRange(weapon, AttackRange * 1.25f),
-                RollProjectileDamage(GetWeaponDamage(weapon, Mathf.Max(1, CurrentRun.Player.Stats.Attack - 1 + weapon.Level)))));
-            AttackFlash = 0.10f;
-            LastMessage = "穿透飞镖出手。";
-            return true;
+            return _weaponDirector.FirePiercingDart(CreateWeaponContext(), weapon);
         }
 
         private bool FireStarRingPulse(RoguelikeSurvivalWeapon weapon)
         {
-            if (_enemies.Count <= 0)
-            {
-                return false;
-            }
-
-            int pulseCount = 6 + weapon.Level * 2;
-            int baseDamage = GetWeaponDamage(weapon, Mathf.Max(1, Mathf.RoundToInt(CurrentRun.Player.Stats.Attack * 0.45f) + weapon.Level));
-            float range = GetWeaponRange(weapon, 1.8f + weapon.Level * 0.10f);
-            float angleOffset = (float)_random.NextDouble() * 360f;
-            for (int i = 0; i < pulseCount; i++)
-            {
-                float angle = angleOffset + 360f * i / pulseCount;
-                Vector2 direction = new Vector2(Mathf.Cos(angle * Mathf.Deg2Rad), Mathf.Sin(angle * Mathf.Deg2Rad));
-                _projectiles.Add(CreateProjectile(
-                    _nextProjectileId++,
-                    RoguelikeWeaponType.StarRingPulse,
-                    PlayerPosition,
-                    direction,
-                    GetWeaponSpeed(weapon, 5.6f),
-                    range,
-                    RollProjectileDamage(baseDamage)));
-            }
-
-            AttackFlash = 0.14f;
-            LastMessage = $"星环脉冲展开，释放 {pulseCount} 道星环。";
-            return true;
+            return _weaponDirector.FireStarRingPulse(CreateWeaponContext(), weapon);
         }
 
         private void UpdateProjectiles(float dt)
@@ -1286,55 +1142,46 @@ namespace GameLogic
             return null;
         }
 
+        private RoguelikeWeaponDirector.Context CreateWeaponContext()
+        {
+            return new RoguelikeWeaponDirector.Context
+            {
+                Tables = TryGetConfigTables(),
+                Weapons = _weapons,
+                Enemies = _enemies,
+                PlayerPosition = PlayerPosition,
+                AttackRange = AttackRange,
+                AttackInterval = AttackInterval,
+                PlayerAttack = CurrentRun.Player.Stats.Attack,
+                Random = _random,
+                NextProjectileId = () => _nextProjectileId++,
+                CreateProjectile = CreateProjectile,
+                AddProjectile = projectile => _projectiles.Add(projectile),
+                RollProjectileDamage = RollProjectileDamage,
+                SetAttackDirection = direction => _attackDirection = direction,
+                SetAttackFlash = value => AttackFlash = value,
+                SetLastMessage = message => LastMessage = message,
+            };
+        }
+
         private float GetWeaponInterval(RoguelikeSurvivalWeapon weapon)
         {
-            RoguelikeWeapon config = GetWeaponConfig(weapon.Type);
-            if (config != null)
-            {
-                return Mathf.Max(0.12f, config.BaseInterval - (weapon.Level - 1) * config.IntervalGrowth);
-            }
-
-            switch (weapon.Type)
-            {
-                case RoguelikeWeaponType.MagicBolt:
-                    return Mathf.Max(0.12f, AttackInterval * Mathf.Pow(0.94f, weapon.Level - 1));
-                case RoguelikeWeaponType.SpinningBlade:
-                    return Mathf.Max(0.65f, 2.2f - weapon.Level * 0.16f);
-                case RoguelikeWeaponType.PiercingDart:
-                    return Mathf.Max(0.35f, 1.7f - weapon.Level * 0.10f);
-                case RoguelikeWeaponType.StarRingPulse:
-                    return Mathf.Max(0.45f, 1.15f - weapon.Level * 0.08f);
-                default:
-                    return AttackInterval;
-            }
+            return _weaponDirector.GetWeaponInterval(CreateWeaponContext(), weapon);
         }
 
         private int GetWeaponDamage(RoguelikeSurvivalWeapon weapon, int fallback)
         {
-            RoguelikeWeapon config = GetWeaponConfig(weapon.Type);
-            if (config == null)
-            {
-                return fallback;
-            }
-
-            return Mathf.Max(1, config.BaseDamage + (weapon.Level - 1) * config.DamageGrowth);
+            return _weaponDirector.GetWeaponDamage(CreateWeaponContext(), weapon, fallback);
         }
 
         private float GetWeaponRange(RoguelikeSurvivalWeapon weapon, float fallback)
         {
-            RoguelikeWeapon config = GetWeaponConfig(weapon.Type);
-            if (config == null)
-            {
-                return fallback;
-            }
-
-            return Mathf.Max(0.5f, config.BaseRange + (weapon.Level - 1) * 0.25f);
+            return _weaponDirector.GetWeaponRange(CreateWeaponContext(), weapon, fallback);
         }
 
         private float GetWeaponSpeed(RoguelikeSurvivalWeapon weapon, float fallback)
         {
-            RoguelikeWeapon config = GetWeaponConfig(weapon.Type);
-            return config == null ? fallback : Mathf.Max(0.5f, config.ProjectileSpeed);
+            return _weaponDirector.GetWeaponSpeed(CreateWeaponContext(), weapon, fallback);
         }
 
         private RoguelikeWeapon GetWeaponConfig(RoguelikeWeaponType type)
