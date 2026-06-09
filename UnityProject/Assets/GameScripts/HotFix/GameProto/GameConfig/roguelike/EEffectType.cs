@@ -23,6 +23,7 @@ namespace GameConfig.roguelike
         AddPickupRadius = 7,
         AddProjectileDamageMultiplier = 8,
         AddMoveSpeed = 9,
+        AddGoldMultiplier = 10,
     }
 
 } 

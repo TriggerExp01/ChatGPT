@@ -60,6 +60,7 @@ namespace GameLogic
         private int _nextEffectCueSequence;
         private float _pickupAttractRadius = BasePickupAttractRadius;
         private float _projectileDamageMultiplier = 1f;
+        private float _goldPickupMultiplier = 1f;
         private readonly Dictionary<string, float> _soundCooldowns = new Dictionary<string, float>();
         private readonly List<string> _configValidationIssues = new List<string>();
         private bool _metaSaved;
@@ -93,6 +94,7 @@ namespace GameLogic
         public float AttackRange { get; private set; }
         public float AttackInterval { get; private set; }
         public float PickupAttractRadius => _pickupAttractRadius;
+        public float GoldPickupMultiplier => _goldPickupMultiplier;
         public float AttackFlash { get; private set; }
         public float PickupFlash { get; private set; }
         public float CameraShake { get; private set; }
@@ -148,6 +150,7 @@ namespace GameLogic
             _effectCues.Clear();
             _pickupAttractRadius = BasePickupAttractRadius;
             _projectileDamageMultiplier = 1f;
+            _goldPickupMultiplier = 1f;
             _soundCooldowns.Clear();
             _metaSaved = false;
             _spawnDirector.Reset();
@@ -748,7 +751,7 @@ namespace GameLogic
                 }
                 else
                 {
-                    CurrentRun.AddGold(pickup.Amount);
+                    CurrentRun.AddGold(ScaleGoldPickupAmount(pickup.Amount));
                 }
 
                 PlayPickupSound();
@@ -1103,6 +1106,9 @@ namespace GameLogic
                     case GameConfig.roguelike.EEffectType.AddMoveSpeed:
                         MoveSpeed += effect.Value;
                         break;
+                    case GameConfig.roguelike.EEffectType.AddGoldMultiplier:
+                        _goldPickupMultiplier += effect.Value;
+                        break;
                 }
             }
         }
@@ -1283,6 +1289,16 @@ namespace GameLogic
         private int ScaleProjectileDamage(int baseDamage)
         {
             return Mathf.Max(1, Mathf.RoundToInt(baseDamage * _projectileDamageMultiplier));
+        }
+
+        private int ScaleGoldPickupAmount(int baseAmount)
+        {
+            if (baseAmount <= 0)
+            {
+                return 0;
+            }
+
+            return Mathf.Max(1, Mathf.RoundToInt(Mathf.Max(0, baseAmount) * _goldPickupMultiplier));
         }
 
         private RoguelikeDamageRoll RollProjectileDamage(int baseDamage)
