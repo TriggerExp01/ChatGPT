@@ -24,7 +24,7 @@ namespace GameLogic.Tests
                 RectTransform panel = FindRect(fixture.Root, "奖励选择面板");
                 Assert.NotNull(panel);
 
-                AssertSprite(FindImage(panel, "卡牌正式底纹_1"), "Roguelike_UI_LightBand", Image.Type.Simple);
+                AssertPlainImage(FindImage(panel, "卡牌正式底纹_1"));
                 AssertSprite(FindImage(panel, "卡牌顶部徽带_1"), "Roguelike_StarUI_DividerLine", Image.Type.Simple);
                 AssertSprite(FindImage(panel, "奖励图标底座_1"), "Roguelike_StarUI_SlotFrame", Image.Type.Sliced);
 
@@ -123,6 +123,13 @@ namespace GameLogic.Tests
             Assert.NotNull(image.sprite);
             Assert.That(image.sprite.name, Is.EqualTo(spriteName));
             Assert.That(image.type, Is.EqualTo(imageType));
+        }
+
+        private static void AssertPlainImage(Image image)
+        {
+            Assert.NotNull(image);
+            Assert.IsNull(image.sprite);
+            Assert.That(image.type, Is.EqualTo(Image.Type.Simple));
         }
 
         private static void InvokeWindowMethod(object window, string methodName)

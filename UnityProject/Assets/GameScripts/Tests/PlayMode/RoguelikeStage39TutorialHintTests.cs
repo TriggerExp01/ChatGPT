@@ -10,7 +10,6 @@ namespace GameLogic.Tests
     public sealed class RoguelikeStage39TutorialHintTests
     {
         private const string PanelFrameSprite = "Roguelike_StarUI_PanelFrame";
-        private const string BattleLightSprite = "Roguelike_UI_LightBand";
 
         [Test]
         public void StartHintExplainsMovementAutoAttackAndExperience()
@@ -41,7 +40,7 @@ namespace GameLogic.Tests
                 Assert.That(FindText(control.Root, "提示").text, Does.Contain("WASD"));
                 Assert.That(FindText(control.Root, "提示").text, Does.Contain("经验"));
                 AssertSprite(FindImage(control.Root, "操作提示"), PanelFrameSprite, Image.Type.Sliced);
-                AssertSprite(FindImage(control.Root, "操作提示光带"), BattleLightSprite, Image.Type.Simple);
+                AssertPlainImage(FindImage(control.Root, "操作提示光带"));
             }
         }
 
@@ -143,6 +142,13 @@ namespace GameLogic.Tests
             Assert.NotNull(image.sprite);
             Assert.That(image.sprite.name, Is.EqualTo(spriteName));
             Assert.That(image.type, Is.EqualTo(imageType));
+        }
+
+        private static void AssertPlainImage(Image image)
+        {
+            Assert.NotNull(image);
+            Assert.IsNull(image.sprite);
+            Assert.That(image.type, Is.EqualTo(Image.Type.Simple));
         }
 
         private static void InvokeWindowMethod(object window, string methodName)

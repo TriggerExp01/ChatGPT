@@ -21,7 +21,6 @@ namespace GameLogic.Tests
         private const string SliderFillBlueSprite = "Roguelike_StarUI_SliderFillBlue";
         private const string SliderFillYellowSprite = "Roguelike_StarUI_SliderFillYellow";
         private const string SlotFrameSprite = "Roguelike_StarUI_SlotFrame";
-        private const string LightBandSprite = "Roguelike_UI_LightBand";
 
         [Test]
         public void HudCreatesLowObstructionAnimeFantasyLayout()
@@ -94,7 +93,7 @@ namespace GameLogic.Tests
                 AssertSprite(FindImage(fixture.Root, "角色状态面板"), PanelFrameSprite, Image.Type.Sliced);
                 AssertSprite(FindImage(fixture.Root, "角色头像"), HeroPortraitSprite, Image.Type.Simple);
                 AssertSprite(FindImage(fixture.Root, "角色头像底座"), SlotFrameSprite, Image.Type.Sliced);
-                AssertSprite(FindImage(fixture.Root, "时间压力高光"), LightBandSprite, Image.Type.Simple);
+                AssertPlainImage(FindImage(fixture.Root, "时间压力高光"));
                 AssertSprite(FindSliderBackground(fixture.Root, "生命条"), SliderFrameSprite, Image.Type.Sliced);
                 AssertSprite(FindSliderFill(fixture.Root, "生命条"), SliderFillRedSprite, Image.Type.Sliced);
                 AssertSprite(FindSliderBackground(fixture.Root, "经验条"), SliderFrameSprite, Image.Type.Sliced);
@@ -122,7 +121,6 @@ namespace GameLogic.Tests
             Assert.IsTrue(File.Exists(Path.Combine(atlasPath, SliderFillBlueSprite + ".png")));
             Assert.IsTrue(File.Exists(Path.Combine(atlasPath, SliderFillYellowSprite + ".png")));
             Assert.IsTrue(File.Exists(Path.Combine(atlasPath, SlotFrameSprite + ".png")));
-            Assert.IsTrue(File.Exists(Path.Combine(atlasPath, LightBandSprite + ".png")));
         }
 
         private static RectTransform FindRect(Transform root, string name)
@@ -170,6 +168,13 @@ namespace GameLogic.Tests
             Assert.NotNull(image.sprite);
             Assert.That(image.sprite.name, Is.EqualTo(spriteName));
             Assert.That(image.type, Is.EqualTo(imageType));
+        }
+
+        private static void AssertPlainImage(Image image)
+        {
+            Assert.NotNull(image);
+            Assert.IsNull(image.sprite);
+            Assert.That(image.type, Is.EqualTo(Image.Type.Simple));
         }
 
         private static void InvokeWindowMethod(object window, string methodName)

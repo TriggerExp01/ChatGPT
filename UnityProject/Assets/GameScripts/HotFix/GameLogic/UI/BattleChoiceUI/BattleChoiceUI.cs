@@ -22,17 +22,17 @@ namespace GameLogic
         protected override void ScriptGenerator()
         {
             RectTransform root = RoguelikeUIFactory.ResolveContainer(this);
-            _panel = RoguelikeUIFactory.CreatePanel("奖励选择面板", root, new Vector2(0.08f, 0.20f), new Vector2(0.92f, 0.78f), new Color(0.82f, 0.90f, 1f, 0.96f));
+            _panel = RoguelikeUIFactory.CreatePanel("奖励选择面板", root, new Vector2(0.08f, 0.20f), new Vector2(0.92f, 0.78f), new Color(0.84f, 0.92f, 1f, 0.98f));
             RoguelikeUIFactory.CreateImage("奖励面板外部装饰线", _panel, new Vector2(0.32f, 0.795f), new Vector2(0.68f, 0.84f), new Color(1f, 0.86f, 0.38f, 0.72f), RoguelikeUIFactory.DividerFadeSprite, Image.Type.Simple, true);
-            RoguelikeUIFactory.CreateImage("奖励面板星辉", _panel, new Vector2(0.02f, 0.82f), new Vector2(0.22f, 0.98f), new Color(0.92f, 0.50f, 1f, 0.34f), RoguelikeUIFactory.BattleLightSprite, Image.Type.Simple, true);
-            RoguelikeUIFactory.CreateImage("奖励面板月辉", _panel, new Vector2(0.78f, 0.82f), new Vector2(0.98f, 0.98f), new Color(0.48f, 0.82f, 1f, 0.34f), RoguelikeUIFactory.BattleLightSprite, Image.Type.Simple, true);
+            RoguelikeUIFactory.CreateImage("奖励面板星辉", _panel, new Vector2(0.02f, 0.82f), new Vector2(0.22f, 0.98f), new Color(0.07f, 0.12f, 0.22f, 0.18f));
+            RoguelikeUIFactory.CreateImage("奖励面板月辉", _panel, new Vector2(0.78f, 0.82f), new Vector2(0.98f, 0.98f), new Color(0.06f, 0.16f, 0.25f, 0.18f));
             _promptText = RoguelikeUIFactory.CreateText("奖励提示", _panel, 22, TextAnchor.MiddleCenter, new Vector2(0.10f, 0.80f), new Vector2(0.90f, 0.96f), Vector2.zero, Vector2.zero);
             for (int i = 0; i < _choiceButtons.Length; i++)
             {
                 int captured = i;
                 float xMin = 0.04f + i * 0.315f;
                 float xMax = xMin + 0.275f;
-                _choiceButtons[i] = RoguelikeUIFactory.CreateButton($"奖励卡_{i + 1}", _panel, string.Empty, new Vector2(xMin, 0.09f), new Vector2(xMax, 0.76f), new Color(0.82f, 0.90f, 1f, 0.98f), 16, RoguelikeUIFactory.CardFrameSprite);
+                _choiceButtons[i] = RoguelikeUIFactory.CreateButton($"奖励卡_{i + 1}", _panel, string.Empty, new Vector2(xMin, 0.09f), new Vector2(xMax, 0.76f), new Color(0.84f, 0.92f, 1f, 0.98f), 16, RoguelikeUIFactory.CardFrameSprite);
                 Text label = _choiceButtons[i].GetComponentInChildren<Text>(true);
                 if (label != null)
                 {
@@ -40,16 +40,16 @@ namespace GameLogic
                 }
 
                 RectTransform card = _choiceButtons[i].GetComponent<RectTransform>();
-                RoguelikeUIFactory.CreateImage($"卡牌正式底纹_{i + 1}", card, new Vector2(0.075f, 0.075f), new Vector2(0.925f, 0.905f), new Color(0.24f, 0.40f, 0.86f, 0.24f), RoguelikeUIFactory.BattleLightSprite, Image.Type.Simple, false);
-                RectTransform categoryTint = RoguelikeUIFactory.CreateImage($"卡牌类别底纹_{i + 1}", card, new Vector2(0.08f, 0.54f), new Vector2(0.92f, 0.90f), new Color(0.42f, 0.72f, 1f, 0.16f), RoguelikeUIFactory.BattleLightSprite, Image.Type.Simple, false);
+                RoguelikeUIFactory.CreateImage($"卡牌正式底纹_{i + 1}", card, new Vector2(0.075f, 0.075f), new Vector2(0.925f, 0.905f), new Color(0.03f, 0.07f, 0.14f, 0.34f));
+                RectTransform categoryTint = RoguelikeUIFactory.CreateImage($"卡牌类别底纹_{i + 1}", card, new Vector2(0.08f, 0.54f), new Vector2(0.92f, 0.90f), new Color(0.06f, 0.18f, 0.28f, 0.18f));
                 _cardCategoryTints[i] = categoryTint.GetComponent<Image>();
                 RectTransform topRibbon = RoguelikeUIFactory.CreateImage($"卡牌顶部徽带_{i + 1}", card, new Vector2(0.16f, 0.905f), new Vector2(0.84f, 0.965f), new Color(1f, 0.86f, 0.38f, 0.72f), RoguelikeUIFactory.DividerFadeSprite, Image.Type.Simple, true);
                 _cardTopRibbons[i] = topRibbon.GetComponent<Image>();
-                RoguelikeUIFactory.CreateImage($"卡牌边框_{i + 1}", card, new Vector2(0.055f, 0.055f), new Vector2(0.945f, 0.945f), new Color(0.80f, 0.92f, 1f, 0.30f), RoguelikeUIFactory.CardFrameSprite, Image.Type.Sliced, false);
+                RoguelikeUIFactory.CreateImage($"卡牌边框_{i + 1}", card, new Vector2(0.055f, 0.055f), new Vector2(0.945f, 0.945f), new Color(0.76f, 0.90f, 1f, 0.22f), RoguelikeUIFactory.CardFrameSprite, Image.Type.Sliced, false);
                 RoguelikeUIFactory.CreateImage($"奖励图标底座_{i + 1}", card, new Vector2(0.315f, 0.665f), new Vector2(0.685f, 0.935f), new Color(0.82f, 0.92f, 1f, 0.92f), RoguelikeUIFactory.SlotFrameSprite, Image.Type.Sliced, false);
-                _disabledOverlayRects[i] = RoguelikeUIFactory.CreateImage($"卡牌不可选遮罩_{i + 1}", card, Vector2.zero, Vector2.one, new Color(0.05f, 0.07f, 0.13f, 0.58f), RoguelikeUIFactory.CardFrameSprite, Image.Type.Sliced, false);
+                _disabledOverlayRects[i] = RoguelikeUIFactory.CreateImage($"卡牌不可选遮罩_{i + 1}", card, Vector2.zero, Vector2.one, new Color(0.02f, 0.03f, 0.06f, 0.68f), RoguelikeUIFactory.CardFrameSprite, Image.Type.Sliced, false);
                 _iconRects[i] = RoguelikeUIFactory.CreateImage($"奖励图标_{i + 1}", card, new Vector2(0.365f, 0.705f), new Vector2(0.635f, 0.90f), Color.white, RoguelikeUIFactory.WeaponIconSprite, Image.Type.Simple, true);
-                RoguelikeUIFactory.CreateImage($"图标高光_{i + 1}", _iconRects[i], new Vector2(0.10f, 0.56f), new Vector2(0.90f, 0.90f), new Color(0.72f, 0.92f, 1f, 0.34f), RoguelikeUIFactory.BattleLightSprite, Image.Type.Simple, true);
+                RoguelikeUIFactory.CreateImage($"图标高光_{i + 1}", _iconRects[i], new Vector2(0.10f, 0.56f), new Vector2(0.90f, 0.90f), new Color(0.70f, 0.90f, 1f, 0.10f));
                 _titleTexts[i] = RoguelikeUIFactory.CreateText($"卡牌标题_{i + 1}", card, 18, TextAnchor.MiddleCenter, new Vector2(0.07f, 0.55f), new Vector2(0.93f, 0.67f), Vector2.zero, Vector2.zero);
                 _descriptionTexts[i] = RoguelikeUIFactory.CreateText($"卡牌描述_{i + 1}", card, 15, TextAnchor.UpperCenter, new Vector2(0.08f, 0.28f), new Vector2(0.92f, 0.53f), Vector2.zero, Vector2.zero);
                 Image costBadge = RoguelikeUIFactory.CreateFramedIconSlot($"卡牌金币徽章_{i + 1}", card, new Vector2(0.10f, 0.145f), new Vector2(0.225f, 0.27f), new Color(0.98f, 0.80f, 0.40f, 0.95f), Color.white, RoguelikeUIFactory.GoldIconSprite);

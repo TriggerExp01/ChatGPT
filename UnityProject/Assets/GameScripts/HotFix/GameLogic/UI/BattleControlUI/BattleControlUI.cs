@@ -14,13 +14,13 @@ namespace GameLogic
         protected override void ScriptGenerator()
         {
             RectTransform root = RoguelikeUIFactory.ResolveContainer(this);
-            _panel = RoguelikeUIFactory.CreatePanel("操作提示", root, new Vector2(0.16f, 0.02f), new Vector2(0.84f, 0.105f), new Color(0.82f, 0.90f, 1f, 0.92f));
-            RoguelikeUIFactory.CreateImage("操作提示光带", _panel, new Vector2(0.02f, 0.46f), new Vector2(0.18f, 0.92f), new Color(0.46f, 0.82f, 1f, 0.24f), RoguelikeUIFactory.BattleLightSprite, Image.Type.Simple, true);
+            _panel = RoguelikeUIFactory.CreatePanel("操作提示", root, new Vector2(0.16f, 0.02f), new Vector2(0.84f, 0.105f), new Color(0.84f, 0.92f, 1f, 0.96f));
+            RoguelikeUIFactory.CreateImage("操作提示光带", _panel, new Vector2(0.02f, 0.46f), new Vector2(0.18f, 0.92f), new Color(0.06f, 0.18f, 0.28f, 0.18f));
             _helpText = RoguelikeUIFactory.CreateText("提示", _panel, 17, TextAnchor.MiddleCenter, new Vector2(0.03f, 0.05f), new Vector2(0.71f, 0.95f), Vector2.zero, Vector2.zero);
             _helpText.text = "WASD 移动　武器自动攻击最近敌人　Esc 暂停　R 重开";
             RoguelikeUIFactory.CreateImage("操作提示外部装饰线", _panel, new Vector2(0.03f, 0.08f), new Vector2(0.70f, 0.22f), new Color(1f, 0.86f, 0.38f, 0.52f), RoguelikeUIFactory.DividerFadeSprite, Image.Type.Simple, true);
-            _pauseButton = RoguelikeUIFactory.CreateButton("暂停", _panel, "暂停", new Vector2(0.74f, 0.14f), new Vector2(0.86f, 0.86f), new Color(0.72f, 0.90f, 1f, 0.96f), 17, RoguelikeUIFactory.ButtonFrameSprite);
-            _restartButton = RoguelikeUIFactory.CreateButton("重开", _panel, "重开", new Vector2(0.87f, 0.14f), new Vector2(0.98f, 0.86f), new Color(1f, 0.70f, 0.86f, 0.96f), 17, RoguelikeUIFactory.ButtonFrameSprite);
+            _pauseButton = RoguelikeUIFactory.CreateButton("暂停", _panel, "暂停", new Vector2(0.74f, 0.14f), new Vector2(0.86f, 0.86f), new Color(0.62f, 0.82f, 1f, 0.94f), 17, RoguelikeUIFactory.ButtonFrameSprite);
+            _restartButton = RoguelikeUIFactory.CreateButton("重开", _panel, "重开", new Vector2(0.87f, 0.14f), new Vector2(0.98f, 0.86f), new Color(1f, 0.78f, 0.42f, 0.94f), 17, RoguelikeUIFactory.ButtonFrameSprite);
         }
 
         protected override void OnCreate()
