@@ -14,46 +14,16 @@ namespace GameConfig
 public partial class Tables
 {
     public item.TbItem TbItem {get; }
-    /// <summary>
-    /// 肉鸽敌人配置
-    /// </summary>
-    public roguelike.TbRoguelikeEnemy TbRoguelikeEnemy {get; }
-    /// <summary>
-    /// 肉鸽被动遗物配置
-    /// </summary>
-    public roguelike.TbRoguelikeRelic TbRoguelikeRelic {get; }
-    /// <summary>
-    /// 肉鸽奖励选项配置
-    /// </summary>
-    public roguelike.TbRoguelikeChoice TbRoguelikeChoice {get; }
-    /// <summary>
-    /// 肉鸽武器配置
-    /// </summary>
-    public roguelike.TbRoguelikeWeapon TbRoguelikeWeapon {get; }
-    /// <summary>
-    /// 肉鸽刷怪阶段配置
-    /// </summary>
-    public roguelike.TbRoguelikeSpawnStage TbRoguelikeSpawnStage {get; }
 
     public Tables(System.Func<string, ByteBuf> loader)
     {
         TbItem = new item.TbItem(loader("item_tbitem"));
-        TbRoguelikeEnemy = new roguelike.TbRoguelikeEnemy(loader("roguelike_tbroguelikeenemy"));
-        TbRoguelikeRelic = new roguelike.TbRoguelikeRelic(loader("roguelike_tbroguelikerelic"));
-        TbRoguelikeChoice = new roguelike.TbRoguelikeChoice(loader("roguelike_tbroguelikechoice"));
-        TbRoguelikeWeapon = new roguelike.TbRoguelikeWeapon(loader("roguelike_tbroguelikeweapon"));
-        TbRoguelikeSpawnStage = new roguelike.TbRoguelikeSpawnStage(loader("roguelike_tbroguelikespawnstage"));
         ResolveRef();
     }
     
     private void ResolveRef()
     {
         TbItem.ResolveRef(this);
-        TbRoguelikeEnemy.ResolveRef(this);
-        TbRoguelikeRelic.ResolveRef(this);
-        TbRoguelikeChoice.ResolveRef(this);
-        TbRoguelikeWeapon.ResolveRef(this);
-        TbRoguelikeSpawnStage.ResolveRef(this);
     }
 }
 

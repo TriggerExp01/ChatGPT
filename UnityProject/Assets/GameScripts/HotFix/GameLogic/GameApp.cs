@@ -35,12 +35,7 @@ public partial class GameApp
     
     private static void StartGameLogic()
     {
-        // GameEvent.Get<ILoginUI>().ShowLoginUI();
-        RoguelikeGame.Instance.StartNewRun();
-        GameModule.UI.ShowUIAsync<BattleHudUI>();
-        GameModule.UI.ShowUIAsync<BattleControlUI>();
-        GameModule.UI.ShowUIAsync<BattleChoiceUI>();
-        GameModule.UI.ShowUIAsync<BattleSettlementUI>();
+        Log.Warning("======= Empty TEngine project skeleton is ready. Add your game entry here. =======");
     }
     
     private static void Release()

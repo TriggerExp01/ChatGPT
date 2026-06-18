@@ -164,3 +164,29 @@ D:\Work\Unity_Project\TEngine_Game\Doc
 ```
 
 文档文件名和正文优先使用中文。
+
+## 项目内增强入口
+
+为了让 Unity MCP 更符合本项目的阶段验收习惯，项目内新增了不依赖上游 MCP 包改动的 Editor 静态入口：
+
+```text
+UnityProject/Assets/Editor/CodexMcpWorkflow/CodexUnityMcpWorkflow.cs
+```
+
+Codex 可通过 `execute_code` 调用：
+
+```csharp
+return CodexTools.CodexUnityMcpWorkflow.GetHealthSummary();
+```
+
+或生成落盘报告：
+
+```csharp
+return CodexTools.CodexUnityMcpWorkflow.GenerateHealthReportFile();
+```
+
+详细用法见：
+
+```text
+Doc/Unity MCP 增强操作入口.md
+```
