@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Reflection;
 using GameLogic;
+using GameLogic.Cultivation;
 #if ENABLE_OBFUZ
 using Obfuz;
 #endif
@@ -35,7 +36,11 @@ public partial class GameApp
     
     private static void StartGameLogic()
     {
-        Log.Warning("======= Empty TEngine project skeleton is ready. Add your game entry here. =======");
+        var engine = new BattleEngine(20260619);
+        var state = engine.CreateBattle(CultivationSeedData.CreateSwordSectStarterDeck(), CultivationSeedData.StoneDemon);
+        var enemy = state.Enemies[0];
+        Log.Warning(
+            $"======= Cultivation Phase 1 battle core ready: hand={state.Hand.Count}, spirit={state.Spirit}/{state.SpiritMax}, enemy={enemy.Body.Name}, intent={enemy.CurrentIntent.Description} =======");
     }
     
     private static void Release()
