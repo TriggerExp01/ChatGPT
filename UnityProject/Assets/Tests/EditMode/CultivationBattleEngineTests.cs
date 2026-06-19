@@ -1,6 +1,8 @@
 using System.Linq;
 using GameLogic.Cultivation;
 using NUnit.Framework;
+using UnityEngine;
+using UnityEngine.UI;
 
 namespace GameLogic.Tests
 {
@@ -135,6 +137,36 @@ namespace GameLogic.Tests
             engine.EndPlayerTurn(state);
 
             Assert.AreEqual(BattleOutcome.Defeat, state.Outcome);
+        }
+
+        [Test]
+        public void PrototypeUICanCreateBattleAndPlayCard()
+        {
+            var parent = new GameObject("PrototypeTestCanvas", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
+            try
+            {
+                var ui = CultivationBattlePrototypeUI.Open(parent.transform);
+                var before = ui.Snapshot;
+
+                Assert.AreEqual(5, before.HandCount);
+                Assert.AreEqual(3, before.Spirit);
+                Assert.AreEqual("石魔", before.EnemyName);
+
+                ui.PlayCardAt(0);
+                var after = ui.Snapshot;
+
+                Assert.Less(after.HandCount, before.HandCount);
+                Assert.LessOrEqual(after.Spirit, before.Spirit);
+            }
+            finally
+            {
+                Object.DestroyImmediate(parent);
+                var eventSystem = Object.FindObjectOfType<UnityEngine.EventSystems.EventSystem>();
+                if (eventSystem != null)
+                {
+                    Object.DestroyImmediate(eventSystem.gameObject);
+                }
+            }
         }
 
         private static BattleState CreateStoneBattle()

@@ -41,6 +41,7 @@ public partial class GameApp
         var enemy = state.Enemies[0];
         Log.Warning(
             $"======= Cultivation Phase 1 battle core ready: hand={state.Hand.Count}, spirit={state.Spirit}/{state.SpiritMax}, enemy={enemy.Body.Name}, intent={enemy.CurrentIntent.Description} =======");
+        CultivationBattlePrototypeUI.Open();
     }
     
     private static void Release()
