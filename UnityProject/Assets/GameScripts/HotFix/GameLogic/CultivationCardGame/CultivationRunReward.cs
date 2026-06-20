@@ -6,7 +6,8 @@ namespace GameLogic.Cultivation
     {
         Heal,
         Spirit,
-        Cleanse
+        Cleanse,
+        CostReduction
     }
 
     public sealed class PillDefinition
@@ -45,6 +46,8 @@ namespace GameLogic.Cultivation
         public int SpiritAmount => EffectType == PillEffectType.Spirit ? EffectValue : 0;
 
         public int CleanseHealAmount => EffectType == PillEffectType.Cleanse ? EffectValue : 0;
+
+        public int CostReductionAmount => EffectType == PillEffectType.CostReduction ? EffectValue : 0;
     }
 
     public sealed class CultivationRunReward

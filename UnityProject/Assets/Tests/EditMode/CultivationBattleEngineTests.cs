@@ -34,6 +34,19 @@ namespace GameLogic.Tests
         }
 
         [Test]
+        public void BattleStateEffectiveCostUsesBattleWideReductionAndNeverBelowZero()
+        {
+            var state = CreateStoneBattle();
+            var twoCostCard = new CardDefinition("two_cost_test", "二费测试", 2, new CardEffect(CardEffectType.Damage, 1));
+            var zeroCostCard = new CardDefinition("zero_cost_test", "零费测试", 0, new CardEffect(CardEffectType.Damage, 1));
+
+            state.AddSpiritCostReduction(1);
+
+            Assert.AreEqual(1, state.GetEffectiveSpiritCost(twoCostCard));
+            Assert.AreEqual(0, state.GetEffectiveSpiritCost(zeroCostCard));
+        }
+
+        [Test]
         public void DefenseCardAddsShieldAndEnemyAttackConsumesIt()
         {
             var engine = new BattleEngine(1);

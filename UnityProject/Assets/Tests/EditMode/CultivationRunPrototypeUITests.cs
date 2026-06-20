@@ -187,6 +187,26 @@ namespace GameLogic.Tests
         }
 
         [Test]
+        public void PrototypeUiCanUseBreakthroughPillInNextBattle()
+        {
+            ForceCurrentBattleVictory();
+            _ui.ResolveBattle();
+            _ui.SkipReward();
+            _ui.ChooseRoute(1);
+            _ui.Rest();
+            _ui.ChooseRoute(0);
+            SetRunSpiritStones(95);
+            _ui.BuyMarketItem(5);
+            _ui.LeaveMarket();
+
+            _ui.UsePillInBattle(0);
+
+            Assert.AreEqual(1, GetCurrentBattleSpiritCostReduction());
+            Assert.AreEqual(0, _ui.Snapshot.PillCount);
+            StringAssert.Contains("使用 破境丹，本场战斗功法灵力消耗 -1", GetCurrentBattleLogText());
+        }
+
+        [Test]
         public void PrototypeUiCanRemoveDeckCardInMarket()
         {
             ForceCurrentBattleVictory();
@@ -279,6 +299,11 @@ namespace GameLogic.Tests
         private int GetCurrentBattlePlayerBreakDefenseStacks()
         {
             return GetRun().CurrentBattle.Player.BreakDefenseStacks;
+        }
+
+        private int GetCurrentBattleSpiritCostReduction()
+        {
+            return GetRun().CurrentBattle.SpiritCostReduction;
         }
 
         private void SetRunSpiritStones(int value)

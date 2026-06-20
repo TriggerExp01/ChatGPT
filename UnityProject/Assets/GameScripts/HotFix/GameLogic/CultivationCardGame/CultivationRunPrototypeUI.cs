@@ -473,11 +473,23 @@ namespace GameLogic.Cultivation
             {
                 var index = i;
                 var card = _run.CurrentBattle.Hand[i];
-                var button = CreateButton($"Card_{i}_{card.Id}", _handRoot, $"{card.Name}\n{CultivationRunPrototypePresenter.FormatCardSummary(card)}");
+                var costText = FormatBattleCardCost(_run.CurrentBattle, card);
+                var button = CreateButton($"Card_{i}_{card.Id}", _handRoot, $"{card.Name}\n{costText}\n{string.Join("\n", card.Effects.Select(CultivationRunPrototypePresenter.FormatEffect))}");
                 button.interactable = _run.CurrentBattle.Outcome == BattleOutcome.InProgress && _battleEngine.CanPlay(_run.CurrentBattle, card);
                 button.onClick.AddListener(() => PlayCardAt(index));
                 SetLayout(button.gameObject, flexibleWidth: 1, preferredHeight: 130);
             }
+        }
+
+        private static string FormatBattleCardCost(BattleState battle, CardDefinition card)
+        {
+            var effectiveCost = battle.GetEffectiveSpiritCost(card);
+            if (effectiveCost == card.SpiritCost)
+            {
+                return $"灵力 {effectiveCost}";
+            }
+
+            return $"灵力 {effectiveCost}（原 {card.SpiritCost}）";
         }
 
         private static Transform ResolveParent()

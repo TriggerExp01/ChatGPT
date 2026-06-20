@@ -81,7 +81,7 @@ namespace GameLogic.Cultivation
                    && card != null
                    && state.Outcome == BattleOutcome.InProgress
                    && state.Hand.Contains(card)
-                   && state.Spirit >= card.SpiritCost;
+                   && state.Spirit >= state.GetEffectiveSpiritCost(card);
         }
 
         public void PlayCard(BattleState state, CardDefinition card, EnemyState target = null)
@@ -91,7 +91,7 @@ namespace GameLogic.Cultivation
                 throw new InvalidOperationException("Card cannot be played in the current battle state.");
             }
 
-            state.Spirit -= card.SpiritCost;
+            state.Spirit -= state.GetEffectiveSpiritCost(card);
             state.Hand.Remove(card);
 
             foreach (var effect in card.Effects)
@@ -791,6 +791,13 @@ namespace GameLogic.Cultivation
             PillEffectType.Cleanse,
             3);
 
+        public static PillDefinition BreakthroughPillItem { get; } = new PillDefinition(
+            "breakthrough_pill",
+            "破境丹",
+            "战斗内消耗品：本场战斗所有功法灵力消耗 -1，最低 0。",
+            PillEffectType.CostReduction,
+            1);
+
         public static IReadOnlyList<CardDefinition> CreateSwordSectStarterDeck()
         {
             return new List<CardDefinition>
@@ -856,6 +863,7 @@ namespace GameLogic.Cultivation
                 new CultivationMarketItem("market_small_restore_pill", SmallRestorePillItem, 15),
                 new CultivationMarketItem("market_spirit_boost_pill", SpiritBoostPillItem, 35),
                 new CultivationMarketItem("market_cleanse_pill", CleansePillItem, 15),
+                new CultivationMarketItem("market_breakthrough_pill", BreakthroughPillItem, 90),
             };
         }
 

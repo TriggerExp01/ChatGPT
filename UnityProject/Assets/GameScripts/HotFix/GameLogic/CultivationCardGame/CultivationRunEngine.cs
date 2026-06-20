@@ -330,6 +330,9 @@ namespace GameLogic.Cultivation
                     battle.Player.ClearNegativeStatuses();
                     battle.Player.Heal(pill.CleanseHealAmount);
                     return $"使用 {pill.Name}，清除负面状态并恢复 {pill.CleanseHealAmount} HP。";
+                case PillEffectType.CostReduction:
+                    battle.AddSpiritCostReduction(pill.CostReductionAmount);
+                    return $"使用 {pill.Name}，本场战斗功法灵力消耗 -{pill.CostReductionAmount}。";
                 default:
                     throw new ArgumentOutOfRangeException(nameof(pill.EffectType), pill.EffectType, "Unsupported pill effect type.");
             }
