@@ -33,4 +33,18 @@ namespace GameLogic.Cultivation
         Victory,
         Defeat,
     }
+
+    public enum CultivationRunNodeType
+    {
+        Battle,
+        Elite,
+    }
+
+    public enum CultivationRunStatus
+    {
+        InBattle,
+        Reward,
+        Completed,
+        Defeated,
+    }
 }

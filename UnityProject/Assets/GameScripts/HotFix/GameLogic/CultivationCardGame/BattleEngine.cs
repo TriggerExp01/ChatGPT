@@ -311,6 +311,25 @@ namespace GameLogic.Cultivation
             1,
             new CardEffect(CardEffectType.Heal, 6, CardTarget.Self));
 
+        public static CardDefinition FlyingSword { get; } = new CardDefinition(
+            "flying_sword",
+            "御剑式",
+            2,
+            new CardEffect(CardEffectType.Damage, 16));
+
+        public static CardDefinition CloudGuard { get; } = new CardDefinition(
+            "cloud_guard",
+            "流云护身",
+            1,
+            new CardEffect(CardEffectType.Shield, 6, CardTarget.Self),
+            new CardEffect(CardEffectType.Draw, 1, CardTarget.Self));
+
+        public static CardDefinition SmallRestorePill { get; } = new CardDefinition(
+            "small_restore_pill",
+            "小还丹",
+            1,
+            new CardEffect(CardEffectType.Heal, 10, CardTarget.Self));
+
         public static IReadOnlyList<CardDefinition> CreateSwordSectStarterDeck()
         {
             return new List<CardDefinition>
@@ -342,5 +361,38 @@ namespace GameLogic.Cultivation
             new EnemyIntent(EnemyIntentType.AttackAndBurn, 4, 1, "攻击 4 + 灼烧 1"),
             new EnemyIntent(EnemyIntentType.Buff, description: "强化"),
             new EnemyIntent(EnemyIntentType.Attack, 8, description: "攻击 8"));
+
+        public static EnemyDefinition StoneDemonLeader { get; } = new EnemyDefinition(
+            "stone_demon_leader",
+            "石魔首领",
+            65,
+            3,
+            new EnemyIntent(EnemyIntentType.Attack, 8, description: "攻击 8"),
+            new EnemyIntent(EnemyIntentType.Summon, 20, description: "召唤石魔 20"),
+            new EnemyIntent(EnemyIntentType.Sweep, 5, description: "横扫 5"),
+            new EnemyIntent(EnemyIntentType.Defend, 10, description: "防御 10"));
+
+        public static IReadOnlyList<CultivationRunReward> CreateSwordSectRewardPool()
+        {
+            return new List<CultivationRunReward>
+            {
+                new CultivationRunReward("reward_flying_sword", FlyingSword),
+                new CultivationRunReward("reward_cloud_guard", CloudGuard),
+                new CultivationRunReward("reward_small_restore_pill", SmallRestorePill),
+                new CultivationRunReward("reward_sword_step", SwordStep),
+                new CultivationRunReward("reward_break_armor", BreakArmor),
+            };
+        }
+
+        public static IReadOnlyList<CultivationRunNode> CreateFirstPrototypeRoute()
+        {
+            var rewards = CreateSwordSectRewardPool();
+            return new List<CultivationRunNode>
+            {
+                new CultivationRunNode("node_stone_demon", "山门石魔", CultivationRunNodeType.Battle, StoneDemon, rewards),
+                new CultivationRunNode("node_fire_bat", "火蝠洞", CultivationRunNodeType.Battle, FireBat, rewards),
+                new CultivationRunNode("node_stone_demon_leader", "石魔首领", CultivationRunNodeType.Elite, StoneDemonLeader, rewards),
+            };
+        }
     }
 }
