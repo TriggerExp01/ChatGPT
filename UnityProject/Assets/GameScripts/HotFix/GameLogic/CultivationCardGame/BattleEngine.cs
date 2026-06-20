@@ -931,6 +931,16 @@ namespace GameLogic.Cultivation
             new EnemyIntent(EnemyIntentType.Attack, 10, description: "冰火扑咬 10"),
             new EnemyIntent(EnemyIntentType.Defend, 12, description: "鳞甲护体 12"));
 
+        public static EnemyDefinition GoldenCoreDemonicCultivator { get; } = new EnemyDefinition(
+            "golden_core_demonic_cultivator",
+            "金丹魔修",
+            95,
+            4,
+            new EnemyIntent(EnemyIntentType.Attack, 14, description: "灵品功法 14"),
+            new EnemyIntent(EnemyIntentType.Defend, 10, description: "吞丹调息 10"),
+            new EnemyIntent(EnemyIntentType.Attack, 18, description: "金丹之力 18"),
+            new EnemyIntent(EnemyIntentType.Sweep, 10, description: "金丹连击 10x2"));
+
         public static IReadOnlyList<CultivationRunReward> CreateSwordSectRewardPool()
         {
             return new List<CultivationRunReward>
@@ -1112,9 +1122,18 @@ namespace GameLogic.Cultivation
                     CultivationRunNodeType.Elite,
                     DualHeadIceFireSerpent,
                     rewards,
+                    nextNodeIndices: new[] { 12 },
                     spiritStoneReward: 35,
                     artifactRewardPool: artifactRewards,
                     realm: CultivationRealm.Foundation),
+                new CultivationRunNode(
+                    "node_golden_core_demonic_cultivator",
+                    "金丹魔修",
+                    CultivationRunNodeType.Battle,
+                    GoldenCoreDemonicCultivator,
+                    rewards,
+                    spiritStoneReward: 28,
+                    realm: CultivationRealm.GoldenCore),
             };
         }
     }

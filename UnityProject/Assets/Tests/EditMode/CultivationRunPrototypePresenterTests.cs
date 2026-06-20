@@ -1,6 +1,7 @@
 using GameLogic.Cultivation;
 using NUnit.Framework;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace GameLogic.Tests
 {
@@ -64,6 +65,63 @@ namespace GameLogic.Tests
 
             StringAssert.Contains("冰冻 1/2", text.BattleText);
             StringAssert.Contains("寒冰吐息 5 + 冰冻 1", text.BattleText);
+        }
+
+        [Test]
+        public void BuildTextIncludesGoldenCoreRealmSummary()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var run = engine.StartRun(CreateDefensiveDeck(), CreateGoldenCoreRoute());
+
+            var text = CultivationRunPrototypePresenter.BuildText(run);
+            var snapshot = CultivationRunPrototypePresenter.CreateSnapshot(run);
+
+            Assert.AreEqual(CultivationRealm.GoldenCore, snapshot.CurrentRealm);
+            StringAssert.Contains("境界：金丹", text.RunText);
+            StringAssert.Contains("境界层：金丹", text.NodeText);
+            StringAssert.Contains("敌人：金丹魔修", text.NodeText);
+        }
+
+        [Test]
+        public void BuildViewModelIncludesCompleteRunUiSections()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var run = engine.StartRun(CultivationSeedData.CreateSwordSectStarterDeck(), CultivationSeedData.CreateFirstPrototypeBranchingRoute());
+
+            var view = CultivationRunPrototypePresenter.BuildViewModel(run);
+
+            Assert.AreEqual("仙途·天命", view.Title);
+            StringAssert.Contains("炼气", view.PhaseTitle);
+            StringAssert.Contains("战斗中", view.StatusSummary);
+            Assert.GreaterOrEqual(view.Stats.Length, 8);
+            Assert.GreaterOrEqual(view.MapNodes.Length, 10);
+            Assert.IsTrue(view.MapNodes.Any(node => node.IsCurrent && node.Name == "山门石魔"));
+            Assert.IsTrue(view.DeckItems.Any(card => card.Name == "剑气诀"));
+            Assert.IsTrue(view.PrimaryActions.Any(action => action.Label == "出牌"));
+            Assert.IsTrue(view.ContextActions.Any(action => action.Label == "手牌"));
+        }
+
+        [Test]
+        public void BuildViewModelMarksRouteChoicesAndGoldenCoreNode()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var run = engine.StartRun(CreateInstantWinDeck(), CultivationSeedData.CreateFirstPrototypeBranchingRoute());
+
+            WinCurrentBattle(engine, run);
+            engine.SkipReward(run);
+            var routeChoiceView = CultivationRunPrototypePresenter.BuildViewModel(run);
+
+            Assert.AreEqual(CultivationRunStatus.RouteChoice, run.Status);
+            Assert.AreEqual(2, routeChoiceView.MapNodes.Count(node => node.IsChoice));
+            Assert.IsTrue(routeChoiceView.PrimaryActions.Any(action => action.Label == "选择路线"));
+
+            var goldenCoreRun = engine.StartRun(CreateInstantWinDeck(), CultivationSeedData.CreateFirstPrototypeBranchingRoute());
+            ReachGoldenCoreDemonicCultivator(engine, goldenCoreRun);
+            var goldenCoreView = CultivationRunPrototypePresenter.BuildViewModel(goldenCoreRun);
+
+            StringAssert.Contains("金丹", goldenCoreView.PhaseTitle);
+            Assert.IsTrue(goldenCoreView.MapNodes.Any(node => node.IsCurrent && node.Name == "金丹魔修" && node.RealmName == "金丹"));
+            Assert.IsTrue(goldenCoreView.Stats.Any(stat => stat.Label == "境界" && stat.Value == "金丹"));
         }
 
         [Test]
@@ -319,6 +377,40 @@ namespace GameLogic.Tests
             engine.PlayCard(run.CurrentBattle, card, run.CurrentBattle.Enemies[0]);
         }
 
+        private static void WinCurrentBattle(CultivationRunEngine engine, CultivationRunState run)
+        {
+            var card = run.CurrentBattle.Hand.First(item => item.Id == "instant_win");
+            var battleEngine = new BattleEngine(1);
+            battleEngine.PlayCard(run.CurrentBattle, card, run.CurrentBattle.Enemies[0]);
+            Assert.AreEqual(BattleOutcome.Victory, run.CurrentBattle.Outcome);
+            engine.ResolveBattleResult(run);
+        }
+
+        private static void ReachFoundationSwordCultivator(CultivationRunEngine engine, CultivationRunState run)
+        {
+            WinCurrentBattle(engine, run);
+            engine.SkipReward(run);
+            engine.ChooseRoute(run, 1);
+            engine.Rest(run);
+            engine.ChooseRoute(run, 3);
+            WinCurrentBattle(engine, run);
+            engine.SkipReward(run);
+        }
+
+        private static void ReachGoldenCoreDemonicCultivator(CultivationRunEngine engine, CultivationRunState run)
+        {
+            ReachFoundationSwordCultivator(engine, run);
+            WinCurrentBattle(engine, run);
+            engine.SkipReward(run);
+            engine.ChooseRoute(run, 0);
+            WinCurrentBattle(engine, run);
+            engine.SkipReward(run);
+            WinCurrentBattle(engine, run);
+            engine.SkipReward(run);
+            WinCurrentBattle(engine, run);
+            engine.SkipReward(run);
+        }
+
         private static CardDefinition[] CreateInstantWinDeck()
         {
             var instantWin = new CardDefinition("instant_win", "instant_win", 0, new CardEffect(CardEffectType.Damage, 999));
@@ -398,6 +490,20 @@ namespace GameLogic.Tests
                     CultivationSeedData.FrostSerpentDemon,
                     CultivationSeedData.CreateSwordSectRewardPool(),
                     realm: CultivationRealm.Foundation),
+            };
+        }
+
+        private static IReadOnlyList<CultivationRunNode> CreateGoldenCoreRoute()
+        {
+            return new List<CultivationRunNode>
+            {
+                new CultivationRunNode(
+                    "golden_core",
+                    "golden_core",
+                    CultivationRunNodeType.Battle,
+                    CultivationSeedData.GoldenCoreDemonicCultivator,
+                    CultivationSeedData.CreateSwordSectRewardPool(),
+                    realm: CultivationRealm.GoldenCore),
             };
         }
 

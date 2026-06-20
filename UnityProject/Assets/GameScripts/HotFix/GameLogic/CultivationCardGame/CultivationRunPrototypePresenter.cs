@@ -28,6 +28,27 @@ namespace GameLogic.Cultivation
                 BuildLogText(state, maxLogLines));
         }
 
+        public static RunPrototypeViewModel BuildViewModel(CultivationRunState state, int maxLogLines = DefaultMaxLogLines)
+        {
+            if (state == null)
+            {
+                return RunPrototypeViewModel.Empty;
+            }
+
+            return new RunPrototypeViewModel(
+                "仙途·天命",
+                BuildPhaseTitle(state),
+                BuildStatusSummary(state),
+                BuildText(state, maxLogLines),
+                BuildResourceStats(state),
+                BuildMapNodes(state),
+                BuildDeckItems(state),
+                BuildPillItems(state),
+                BuildArtifactItems(state),
+                BuildPrimaryActions(state),
+                BuildContextActions(state));
+        }
+
         public static string FormatCardSummary(CardDefinition card)
         {
             if (card == null)
@@ -139,6 +160,215 @@ namespace GameLogic.Cultivation
             }
 
             return builder.ToString();
+        }
+
+        private static RunPrototypeStat[] BuildResourceStats(CultivationRunState state)
+        {
+            var playerHp = state.CurrentBattle?.Player.CurrentHp ?? state.PlayerCurrentHp;
+            var playerMaxHp = state.CurrentBattle?.Player.MaxHp ?? state.PlayerMaxHp;
+            var spirit = state.CurrentBattle != null ? $"{state.CurrentBattle.Spirit}/{state.CurrentBattle.SpiritMax}" : state.SpiritMax.ToString();
+            return new[]
+            {
+                new RunPrototypeStat("境界", FormatRealmName(state.CurrentRealm), state.RealmBreakthroughCount > 0 ? $"突破 {state.RealmBreakthroughCount}" : "炼气起步"),
+                new RunPrototypeStat("HP", $"{playerHp}/{playerMaxHp}", "当前血量"),
+                new RunPrototypeStat("灵力", spirit, $"上限 {state.SpiritMax}"),
+                new RunPrototypeStat("手牌", state.HandLimit.ToString(), "上限"),
+                new RunPrototypeStat("灵石", state.SpiritStones.ToString(), "坊市资源"),
+                new RunPrototypeStat("牌组", $"{state.Deck.Count} 张", $"{state.ClaimedRewards.Count} 奖励"),
+                new RunPrototypeStat("丹药", $"{state.Pills.Count}/{state.PillSlotLimit}", $"{state.PurchasedMarketPills.Count} 购入"),
+                new RunPrototypeStat("法宝", state.Artifacts.Count.ToString(), $"掉落 {state.DroppedArtifacts.Count} / 宝箱 {state.ChestArtifacts.Count}"),
+            };
+        }
+
+        private static RunPrototypeMapNode[] BuildMapNodes(CultivationRunState state)
+        {
+            return state.Route
+                .Select((node, index) => new RunPrototypeMapNode(
+                    index,
+                    node.Id,
+                    node.Name,
+                    FormatNodeTypeName(node.Type),
+                    FormatRealmName(node.Realm),
+                    index == state.CurrentNodeIndex,
+                    state.CurrentRouteChoices.Any(choice => choice.TargetNodeIndex == index),
+                    index < state.CurrentNodeIndex))
+                .ToArray();
+        }
+
+        private static RunPrototypeDeckItem[] BuildDeckItems(CultivationRunState state)
+        {
+            return state.Deck
+                .Select((card, index) => new RunPrototypeDeckItem(
+                    index,
+                    card.Id,
+                    card.Name,
+                    card.SpiritCost,
+                    card.CanUpgrade,
+                    string.Join(" / ", card.Effects.Select(FormatEffect))))
+                .ToArray();
+        }
+
+        private static RunPrototypeInventoryItem[] BuildPillItems(CultivationRunState state)
+        {
+            return state.Pills
+                .Select((pill, index) => new RunPrototypeInventoryItem(
+                    index,
+                    pill.Id,
+                    pill.Name,
+                    "丹药",
+                    pill.Description,
+                    state.Status == CultivationRunStatus.InBattle ? pill.IsBattleEffect : pill.IsRunEffect))
+                .ToArray();
+        }
+
+        private static RunPrototypeInventoryItem[] BuildArtifactItems(CultivationRunState state)
+        {
+            return state.Artifacts
+                .Select((artifact, index) => new RunPrototypeInventoryItem(
+                    index,
+                    artifact.Id,
+                    artifact.Name,
+                    "法宝",
+                    artifact.Description,
+                    false))
+                .ToArray();
+        }
+
+        private static RunPrototypeAction[] BuildPrimaryActions(CultivationRunState state)
+        {
+            switch (state.Status)
+            {
+                case CultivationRunStatus.InBattle:
+                    if (state.CurrentBattle != null && state.CurrentBattle.Outcome != BattleOutcome.InProgress)
+                    {
+                        return new[]
+                        {
+                            new RunPrototypeAction("结算战斗", state.CurrentBattle.Outcome == BattleOutcome.Victory ? "领取胜利结算" : "查看失败结果", true),
+                        };
+                    }
+
+                    return new[]
+                    {
+                        new RunPrototypeAction("出牌", "点击手牌区卡牌"),
+                        new RunPrototypeAction("结束回合", "让敌人行动"),
+                    };
+                case CultivationRunStatus.Reward:
+                    return state.CurrentRewards
+                        .Select(reward => new RunPrototypeAction("选择奖励", reward.Card.Name, true))
+                        .Concat(new[] { new RunPrototypeAction("跳过奖励", "保持牌组精简", true) })
+                        .ToArray();
+                case CultivationRunStatus.Rest:
+                    return new[]
+                    {
+                        new RunPrototypeAction("闭关恢复", $"+{state.CurrentNode.RestHealAmount} HP", true),
+                        new RunPrototypeAction("闭关升级", $"{state.RestUpgradeChoices.Count} 张可升级", state.RestUpgradeChoices.Count > 0),
+                    };
+                case CultivationRunStatus.RouteChoice:
+                    return state.CurrentRouteChoices
+                        .Select(choice => new RunPrototypeAction("选择路线", $"{choice.TargetNode.Name} / {FormatNodeTypeName(choice.TargetNode.Type)}", true))
+                        .ToArray();
+                case CultivationRunStatus.Market:
+                    return new[]
+                    {
+                        new RunPrototypeAction("购买", $"{state.CurrentMarketItems.Count} 件商品", state.CurrentMarketItems.Count > 0),
+                        new RunPrototypeAction("整理牌组", $"删牌 {CultivationRunEngine.MarketCardRemovalCost} / 升级 {CultivationRunEngine.MarketCardUpgradeCost}", true),
+                        new RunPrototypeAction("离开坊市", "进入下个节点", true),
+                    };
+                case CultivationRunStatus.Chest:
+                    return new[] { new RunPrototypeAction("打开宝箱", $"{state.CurrentNode.ArtifactRewardPool.Count} 件法宝池", state.CurrentNode.ArtifactRewardPool.Count > 0) };
+                case CultivationRunStatus.Mystic:
+                    return state.MysticEventChoices
+                        .Select(option => new RunPrototypeAction("秘境抉择", option.Name, true))
+                        .ToArray();
+                case CultivationRunStatus.Completed:
+                    return new[] { new RunPrototypeAction("本轮完成", "可以重开 Run") };
+                case CultivationRunStatus.Defeated:
+                    return new[] { new RunPrototypeAction("本轮失败", "可以重开 Run") };
+                default:
+                    return new RunPrototypeAction[0];
+            }
+        }
+
+        private static RunPrototypeAction[] BuildContextActions(CultivationRunState state)
+        {
+            if (state.Status == CultivationRunStatus.Market)
+            {
+                return state.Deck
+                    .Select(card => new RunPrototypeAction("坊市牌组", $"{card.Name} / 移除、出售、升级", true))
+                    .ToArray();
+            }
+
+            if (state.Status == CultivationRunStatus.InBattle && state.CurrentBattle != null)
+            {
+                return state.Pills
+                    .Select(pill => new RunPrototypeAction("战斗丹药", pill.Name, pill.IsBattleEffect))
+                    .Concat(state.CurrentBattle.Hand.Select(card => new RunPrototypeAction("手牌", $"{card.Name} / 灵力 {state.CurrentBattle.GetEffectiveSpiritCost(card)}", true)))
+                    .ToArray();
+            }
+
+            return state.Pills
+                .Select(pill => new RunPrototypeAction("行囊丹药", pill.Name, pill.IsRunEffect))
+                .ToArray();
+        }
+
+        private static string BuildPhaseTitle(CultivationRunState state)
+        {
+            return $"{FormatRealmName(state.CurrentRealm)} · 节点 {state.CurrentNodeIndex + 1}/{state.Route.Count} · {state.CurrentNode.Name}";
+        }
+
+        private static string BuildStatusSummary(CultivationRunState state)
+        {
+            var battle = state.CurrentBattle;
+            var outcome = battle == null ? string.Empty : $" / 战斗：{battle.Outcome}";
+            return $"{FormatStatusName(state.Status)}{outcome}";
+        }
+
+        public static string FormatNodeTypeName(CultivationRunNodeType type)
+        {
+            switch (type)
+            {
+                case CultivationRunNodeType.Battle:
+                    return "战斗";
+                case CultivationRunNodeType.Elite:
+                    return "精英";
+                case CultivationRunNodeType.Rest:
+                    return "闭关";
+                case CultivationRunNodeType.Market:
+                    return "坊市";
+                case CultivationRunNodeType.Chest:
+                    return "宝箱";
+                case CultivationRunNodeType.Mystic:
+                    return "秘境";
+                default:
+                    return type.ToString();
+            }
+        }
+
+        public static string FormatStatusName(CultivationRunStatus status)
+        {
+            switch (status)
+            {
+                case CultivationRunStatus.InBattle:
+                    return "战斗中";
+                case CultivationRunStatus.Reward:
+                    return "奖励选择";
+                case CultivationRunStatus.Rest:
+                    return "闭关休整";
+                case CultivationRunStatus.Market:
+                    return "坊市交易";
+                case CultivationRunStatus.Chest:
+                    return "开启宝箱";
+                case CultivationRunStatus.Mystic:
+                    return "秘境事件";
+                case CultivationRunStatus.RouteChoice:
+                    return "路线选择";
+                case CultivationRunStatus.Completed:
+                    return "修行完成";
+                case CultivationRunStatus.Defeated:
+                    return "修行失败";
+                default:
+                    return status.ToString();
+            }
         }
 
         public static string FormatMarketItemName(CultivationMarketItem item)
@@ -265,6 +495,183 @@ namespace GameLogic.Cultivation
         public string DeckText { get; }
 
         public string LogText { get; }
+    }
+
+    public sealed class RunPrototypeViewModel
+    {
+        public static RunPrototypeViewModel Empty { get; } = new RunPrototypeViewModel(
+            string.Empty,
+            string.Empty,
+            string.Empty,
+            RunPrototypeText.Empty,
+            new RunPrototypeStat[0],
+            new RunPrototypeMapNode[0],
+            new RunPrototypeDeckItem[0],
+            new RunPrototypeInventoryItem[0],
+            new RunPrototypeInventoryItem[0],
+            new RunPrototypeAction[0],
+            new RunPrototypeAction[0]);
+
+        public RunPrototypeViewModel(
+            string title,
+            string phaseTitle,
+            string statusSummary,
+            RunPrototypeText text,
+            RunPrototypeStat[] stats,
+            RunPrototypeMapNode[] mapNodes,
+            RunPrototypeDeckItem[] deckItems,
+            RunPrototypeInventoryItem[] pillItems,
+            RunPrototypeInventoryItem[] artifactItems,
+            RunPrototypeAction[] primaryActions,
+            RunPrototypeAction[] contextActions)
+        {
+            Title = title ?? string.Empty;
+            PhaseTitle = phaseTitle ?? string.Empty;
+            StatusSummary = statusSummary ?? string.Empty;
+            Text = text ?? RunPrototypeText.Empty;
+            Stats = stats ?? new RunPrototypeStat[0];
+            MapNodes = mapNodes ?? new RunPrototypeMapNode[0];
+            DeckItems = deckItems ?? new RunPrototypeDeckItem[0];
+            PillItems = pillItems ?? new RunPrototypeInventoryItem[0];
+            ArtifactItems = artifactItems ?? new RunPrototypeInventoryItem[0];
+            PrimaryActions = primaryActions ?? new RunPrototypeAction[0];
+            ContextActions = contextActions ?? new RunPrototypeAction[0];
+        }
+
+        public string Title { get; }
+
+        public string PhaseTitle { get; }
+
+        public string StatusSummary { get; }
+
+        public RunPrototypeText Text { get; }
+
+        public RunPrototypeStat[] Stats { get; }
+
+        public RunPrototypeMapNode[] MapNodes { get; }
+
+        public RunPrototypeDeckItem[] DeckItems { get; }
+
+        public RunPrototypeInventoryItem[] PillItems { get; }
+
+        public RunPrototypeInventoryItem[] ArtifactItems { get; }
+
+        public RunPrototypeAction[] PrimaryActions { get; }
+
+        public RunPrototypeAction[] ContextActions { get; }
+    }
+
+    public sealed class RunPrototypeStat
+    {
+        public RunPrototypeStat(string label, string value, string note)
+        {
+            Label = label ?? string.Empty;
+            Value = value ?? string.Empty;
+            Note = note ?? string.Empty;
+        }
+
+        public string Label { get; }
+
+        public string Value { get; }
+
+        public string Note { get; }
+    }
+
+    public sealed class RunPrototypeMapNode
+    {
+        public RunPrototypeMapNode(int index, string id, string name, string typeName, string realmName, bool isCurrent, bool isChoice, bool isPast)
+        {
+            Index = index;
+            Id = id ?? string.Empty;
+            Name = name ?? string.Empty;
+            TypeName = typeName ?? string.Empty;
+            RealmName = realmName ?? string.Empty;
+            IsCurrent = isCurrent;
+            IsChoice = isChoice;
+            IsPast = isPast;
+        }
+
+        public int Index { get; }
+
+        public string Id { get; }
+
+        public string Name { get; }
+
+        public string TypeName { get; }
+
+        public string RealmName { get; }
+
+        public bool IsCurrent { get; }
+
+        public bool IsChoice { get; }
+
+        public bool IsPast { get; }
+    }
+
+    public sealed class RunPrototypeDeckItem
+    {
+        public RunPrototypeDeckItem(int index, string id, string name, int spiritCost, bool canUpgrade, string effectSummary)
+        {
+            Index = index;
+            Id = id ?? string.Empty;
+            Name = name ?? string.Empty;
+            SpiritCost = spiritCost;
+            CanUpgrade = canUpgrade;
+            EffectSummary = effectSummary ?? string.Empty;
+        }
+
+        public int Index { get; }
+
+        public string Id { get; }
+
+        public string Name { get; }
+
+        public int SpiritCost { get; }
+
+        public bool CanUpgrade { get; }
+
+        public string EffectSummary { get; }
+    }
+
+    public sealed class RunPrototypeInventoryItem
+    {
+        public RunPrototypeInventoryItem(int index, string id, string name, string category, string description, bool canUse)
+        {
+            Index = index;
+            Id = id ?? string.Empty;
+            Name = name ?? string.Empty;
+            Category = category ?? string.Empty;
+            Description = description ?? string.Empty;
+            CanUse = canUse;
+        }
+
+        public int Index { get; }
+
+        public string Id { get; }
+
+        public string Name { get; }
+
+        public string Category { get; }
+
+        public string Description { get; }
+
+        public bool CanUse { get; }
+    }
+
+    public sealed class RunPrototypeAction
+    {
+        public RunPrototypeAction(string label, string detail, bool enabled = true)
+        {
+            Label = label ?? string.Empty;
+            Detail = detail ?? string.Empty;
+            Enabled = enabled;
+        }
+
+        public string Label { get; }
+
+        public string Detail { get; }
+
+        public bool Enabled { get; }
     }
 
     public sealed class RunPrototypeSnapshot

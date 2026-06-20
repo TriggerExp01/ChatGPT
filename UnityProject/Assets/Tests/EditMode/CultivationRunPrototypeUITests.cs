@@ -36,7 +36,11 @@ namespace GameLogic.Tests
         [Test]
         public void OpenBuildsCompleteRunUiLayout()
         {
-            Assert.NotNull(_root.transform.Find("CultivationRunPrototypeUI/Header/StageText"));
+            Assert.NotNull(_root.transform.Find("CultivationRunPrototypeUI/Header/TitleRow/TitleBox/Title"));
+            Assert.NotNull(_root.transform.Find("CultivationRunPrototypeUI/Header/TitleRow/TitleBox/StageText"));
+            Assert.NotNull(_root.transform.Find("CultivationRunPrototypeUI/Header/TitleRow/StatusText"));
+            Assert.NotNull(_root.transform.Find("CultivationRunPrototypeUI/Header/StatsBar"));
+            Assert.NotNull(_root.transform.Find("CultivationRunPrototypeUI/Header/MapBar"));
             Assert.NotNull(_root.transform.Find("CultivationRunPrototypeUI/Body/RunPanel/RunText"));
             Assert.NotNull(_root.transform.Find("CultivationRunPrototypeUI/Body/BattlePanel/BattleText"));
             Assert.NotNull(_root.transform.Find("CultivationRunPrototypeUI/Body/DeckPanel/DeckText"));
@@ -44,6 +48,23 @@ namespace GameLogic.Tests
             Assert.NotNull(_root.transform.Find("CultivationRunPrototypeUI/Lower/HandScrollPanel/Viewport/Content"));
             Assert.NotNull(_root.transform.Find("CultivationRunPrototypeUI/Lower/ActionBar/ResetButton"));
             Assert.NotNull(_root.transform.Find("CultivationRunPrototypeUI/Lower/ActionBar/EndTurnButton"));
+        }
+
+        [Test]
+        public void OpenBuildsResourceAndMapBarsWithReadableStatus()
+        {
+            var statusText = _root.transform.Find("CultivationRunPrototypeUI/Header/TitleRow/StatusText").GetComponent<UnityEngine.UI.Text>();
+            var stageText = _root.transform.Find("CultivationRunPrototypeUI/Header/TitleRow/TitleBox/StageText").GetComponent<UnityEngine.UI.Text>();
+            var statsBar = _root.transform.Find("CultivationRunPrototypeUI/Header/StatsBar");
+            var mapBar = _root.transform.Find("CultivationRunPrototypeUI/Header/MapBar");
+
+            StringAssert.Contains("战斗中", statusText.text);
+            StringAssert.Contains("炼气", stageText.text);
+            Assert.NotNull(statsBar.Find("Stat_境界"));
+            Assert.NotNull(statsBar.Find("Stat_HP"));
+            Assert.NotNull(statsBar.Find("Stat_灵石"));
+            Assert.NotNull(mapBar.Find("MapNode_0_node_stone_demon"));
+            Assert.NotNull(mapBar.Find("MapNode_12_node_golden_core_demonic_cultivator"));
         }
 
         [Test]
@@ -456,7 +477,7 @@ namespace GameLogic.Tests
         }
 
         [Test]
-        public void PrototypeUiCanContinueThroughFoundationShortRoute()
+        public void PrototypeUiCanBreakThroughToGoldenCoreEntry()
         {
             ReachFoundationSwordCultivator();
 
@@ -486,9 +507,29 @@ namespace GameLogic.Tests
             _ui.ResolveBattle();
             _ui.SkipReward();
 
-            Assert.AreEqual(CultivationRunStatus.Completed, _ui.Snapshot.Status);
-            Assert.AreEqual(CultivationRealm.Foundation, _ui.Snapshot.CurrentRealm);
+            Assert.AreEqual(CultivationRunStatus.InBattle, _ui.Snapshot.Status);
+            Assert.AreEqual(CultivationRealm.GoldenCore, _ui.Snapshot.CurrentRealm);
+            Assert.AreEqual(2, _ui.Snapshot.RealmBreakthroughCount);
+            Assert.AreEqual("金丹魔修", _ui.Snapshot.CurrentNodeName);
+            Assert.AreEqual(120, _ui.Snapshot.PlayerMaxHp);
+            Assert.AreEqual(120, _ui.Snapshot.PlayerHp);
+            Assert.AreEqual(5, _ui.Snapshot.SpiritMax);
+            Assert.AreEqual(7, _ui.Snapshot.HandLimit);
             Assert.AreEqual(2, _ui.Snapshot.DroppedArtifactCount);
+        }
+
+        [Test]
+        public void PrototypeUiCanCompleteGoldenCoreEntryBattle()
+        {
+            ReachGoldenCoreDemonicCultivator();
+
+            ForceCurrentBattleVictory();
+            _ui.ResolveBattle();
+            _ui.SkipReward();
+
+            Assert.AreEqual(CultivationRunStatus.Completed, _ui.Snapshot.Status);
+            Assert.AreEqual(CultivationRealm.GoldenCore, _ui.Snapshot.CurrentRealm);
+            Assert.AreEqual(2, _ui.Snapshot.RealmBreakthroughCount);
         }
 
         private string GetCurrentBattleLogText()
@@ -557,6 +598,24 @@ namespace GameLogic.Tests
             _ui.ChooseRoute(1);
             _ui.Rest();
             _ui.ChooseRoute(3);
+            ForceCurrentBattleVictory();
+            _ui.ResolveBattle();
+            _ui.SkipReward();
+        }
+
+        private void ReachGoldenCoreDemonicCultivator()
+        {
+            ReachFoundationSwordCultivator();
+            ForceCurrentBattleVictory();
+            _ui.ResolveBattle();
+            _ui.SkipReward();
+            _ui.ChooseRoute(0);
+            ForceCurrentBattleVictory();
+            _ui.ResolveBattle();
+            _ui.SkipReward();
+            ForceCurrentBattleVictory();
+            _ui.ResolveBattle();
+            _ui.SkipReward();
             ForceCurrentBattleVictory();
             _ui.ResolveBattle();
             _ui.SkipReward();

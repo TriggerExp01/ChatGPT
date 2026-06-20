@@ -189,7 +189,7 @@ namespace GameLogic.Tests
         }
 
         [Test]
-        public void BranchingPrototypeFoundationShortRouteCanReachEliteAndComplete()
+        public void BranchingPrototypeFoundationShortRouteCanBreakThroughToGoldenCoreBattle()
         {
             var engine = new CultivationRunEngine(new BattleEngine(1));
             var run = engine.StartRun(CreateInstantWinDeck(), CultivationSeedData.CreateFirstPrototypeBranchingRoute());
@@ -216,11 +216,33 @@ namespace GameLogic.Tests
             WinCurrentBattle(engine, run);
             engine.SkipReward(run);
 
-            Assert.AreEqual(CultivationRunStatus.Completed, run.Status);
-            Assert.AreEqual(CultivationRealm.Foundation, run.CurrentRealm);
-            Assert.AreEqual(1, run.RealmBreakthroughCount);
+            Assert.AreEqual(CultivationRunStatus.InBattle, run.Status);
+            Assert.AreEqual("node_golden_core_demonic_cultivator", run.CurrentNode.Id);
+            Assert.AreEqual(CultivationRealm.GoldenCore, run.CurrentRealm);
+            Assert.AreEqual(2, run.RealmBreakthroughCount);
+            Assert.AreEqual(120, run.PlayerMaxHp);
+            Assert.AreEqual(120, run.PlayerCurrentHp);
+            Assert.AreEqual(5, run.SpiritMax);
+            Assert.AreEqual(7, run.HandLimit);
+            Assert.AreEqual(5, run.CurrentBattle.SpiritMax);
+            Assert.AreEqual(7, run.CurrentBattle.HandLimit);
             Assert.AreEqual(2, run.DroppedArtifacts.Count);
             Assert.GreaterOrEqual(run.SpiritStones, 135);
+        }
+
+        [Test]
+        public void BranchingPrototypeGoldenCoreEntryCanCompleteCurrentRoute()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var run = engine.StartRun(CreateInstantWinDeck(), CultivationSeedData.CreateFirstPrototypeBranchingRoute());
+
+            ReachGoldenCoreDemonicCultivator(engine, run);
+            WinCurrentBattle(engine, run);
+            engine.SkipReward(run);
+
+            Assert.AreEqual(CultivationRunStatus.Completed, run.Status);
+            Assert.AreEqual(CultivationRealm.GoldenCore, run.CurrentRealm);
+            Assert.AreEqual(2, run.RealmBreakthroughCount);
         }
 
         [Test]
@@ -1128,6 +1150,20 @@ namespace GameLogic.Tests
             engine.ChooseRoute(run, 1);
             engine.Rest(run);
             engine.ChooseRoute(run, 3);
+            WinCurrentBattle(engine, run);
+            engine.SkipReward(run);
+        }
+
+        private static void ReachGoldenCoreDemonicCultivator(CultivationRunEngine engine, CultivationRunState run)
+        {
+            ReachFoundationSwordCultivator(engine, run);
+            WinCurrentBattle(engine, run);
+            engine.SkipReward(run);
+            engine.ChooseRoute(run, 0);
+            WinCurrentBattle(engine, run);
+            engine.SkipReward(run);
+            WinCurrentBattle(engine, run);
+            engine.SkipReward(run);
             WinCurrentBattle(engine, run);
             engine.SkipReward(run);
         }
