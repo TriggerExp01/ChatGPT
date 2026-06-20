@@ -17,6 +17,8 @@ namespace GameLogic.Cultivation
             CurrentRouteChoices = new List<CultivationRunRouteChoice>();
             CurrentMarketItems = new List<CultivationMarketItem>();
             PurchasedMarketItems = new List<CultivationMarketItem>();
+            Artifacts = new List<ArtifactDefinition>();
+            PurchasedMarketArtifacts = new List<ArtifactDefinition>();
             Pills = new List<PillDefinition>();
             PurchasedMarketPills = new List<PillDefinition>();
             RemovedMarketCards = new List<CardDefinition>();
@@ -76,6 +78,10 @@ namespace GameLogic.Cultivation
         public List<CultivationMarketItem> CurrentMarketItems { get; }
 
         public List<CultivationMarketItem> PurchasedMarketItems { get; }
+
+        public List<ArtifactDefinition> Artifacts { get; }
+
+        public List<ArtifactDefinition> PurchasedMarketArtifacts { get; }
 
         public int PillSlotLimit { get; }
 

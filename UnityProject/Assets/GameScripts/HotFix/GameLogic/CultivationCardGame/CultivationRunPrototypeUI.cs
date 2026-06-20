@@ -417,7 +417,11 @@ namespace GameLogic.Cultivation
                     {
                         var index = i;
                         var item = _run.CurrentMarketItems[i];
-                        var detail = item.IsCard ? CultivationRunPrototypePresenter.FormatCardSummary(item.Card) : item.Pill.Description;
+                        var detail = item.IsCard
+                            ? CultivationRunPrototypePresenter.FormatCardSummary(item.Card)
+                            : item.IsPill
+                                ? item.Pill.Description
+                                : item.Artifact.Description;
                         var button = CreateButton($"Market_{i}_{item.Id}", _choiceRoot, $"购买\n{CultivationRunPrototypePresenter.FormatMarketItemName(item)}\n{item.Price} 灵石\n{detail}");
                         button.interactable = _run.SpiritStones >= item.Price && (!item.IsPill || _run.Pills.Count < _run.PillSlotLimit);
                         button.onClick.AddListener(() => BuyMarketItem(index));

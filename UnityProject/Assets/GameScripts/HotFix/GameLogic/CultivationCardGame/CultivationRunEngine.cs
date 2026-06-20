@@ -50,10 +50,18 @@ namespace GameLogic.Cultivation
             {
                 case BattleOutcome.Victory:
                     state.PlayerCurrentHp = state.CurrentBattle.Player.CurrentHp;
-                    state.SpiritStones += state.CurrentNode.SpiritStoneReward;
-                    if (state.CurrentNode.SpiritStoneReward > 0)
+                    var baseSpiritStoneReward = state.CurrentNode.SpiritStoneReward;
+                    var artifactSpiritStoneReward = GetBonusSpiritStonesOnVictory(state);
+                    var totalSpiritStoneReward = baseSpiritStoneReward + artifactSpiritStoneReward;
+                    state.SpiritStones += totalSpiritStoneReward;
+                    if (baseSpiritStoneReward > 0)
                     {
-                        state.CurrentBattle.Logs.Add(new BattleLogEntry($"获得 {state.CurrentNode.SpiritStoneReward} 灵石。"));
+                        state.CurrentBattle.Logs.Add(new BattleLogEntry($"获得 {baseSpiritStoneReward} 灵石。"));
+                    }
+
+                    if (artifactSpiritStoneReward > 0)
+                    {
+                        state.CurrentBattle.Logs.Add(new BattleLogEntry($"法宝额外获得 {artifactSpiritStoneReward} 灵石。"));
                     }
 
                     RemoveExhaustedCardsFromDeck(state);
@@ -225,6 +233,13 @@ namespace GameLogic.Cultivation
                 return;
             }
 
+            if (item.IsArtifact)
+            {
+                state.Artifacts.Add(item.Artifact);
+                state.PurchasedMarketArtifacts.Add(item.Artifact);
+                return;
+            }
+
             state.Pills.Add(item.Pill);
             state.PurchasedMarketPills.Add(item.Pill);
         }
@@ -391,6 +406,11 @@ namespace GameLogic.Cultivation
             }
 
             return rewards.Take(choiceCount).ToArray();
+        }
+
+        private static int GetBonusSpiritStonesOnVictory(CultivationRunState state)
+        {
+            return state.Artifacts.Sum(artifact => artifact.BonusSpiritStonesOnVictory);
         }
 
         private static void RemoveExhaustedCardsFromDeck(CultivationRunState state)

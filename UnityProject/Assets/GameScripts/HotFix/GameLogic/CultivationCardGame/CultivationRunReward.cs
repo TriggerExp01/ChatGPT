@@ -75,26 +75,71 @@ namespace GameLogic.Cultivation
         public CardDefinition Card { get; }
     }
 
+    public enum ArtifactEffectType
+    {
+        BonusSpiritStonesOnVictory
+    }
+
+    public sealed class ArtifactDefinition
+    {
+        public ArtifactDefinition(string id, string name, string description, ArtifactEffectType effectType, int effectValue)
+        {
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                throw new ArgumentException("Artifact id is required.", nameof(id));
+            }
+
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                throw new ArgumentException("Artifact name is required.", nameof(name));
+            }
+
+            Id = id;
+            Name = name;
+            Description = description ?? string.Empty;
+            EffectType = effectType;
+            EffectValue = Math.Max(0, effectValue);
+        }
+
+        public string Id { get; }
+
+        public string Name { get; }
+
+        public string Description { get; }
+
+        public ArtifactEffectType EffectType { get; }
+
+        public int EffectValue { get; }
+
+        public int BonusSpiritStonesOnVictory => EffectType == ArtifactEffectType.BonusSpiritStonesOnVictory ? EffectValue : 0;
+    }
+
     public sealed class CultivationMarketItem
     {
         public CultivationMarketItem(string id, CardDefinition card, int price)
-            : this(id, card, null, price)
+            : this(id, card, null, null, price)
         {
         }
 
         public CultivationMarketItem(string id, PillDefinition pill, int price)
-            : this(id, null, pill, price)
+            : this(id, null, pill, null, price)
         {
         }
 
-        private CultivationMarketItem(string id, CardDefinition card, PillDefinition pill, int price)
+        public CultivationMarketItem(string id, ArtifactDefinition artifact, int price)
+            : this(id, null, null, artifact, price)
+        {
+        }
+
+        private CultivationMarketItem(string id, CardDefinition card, PillDefinition pill, ArtifactDefinition artifact, int price)
         {
             if (string.IsNullOrWhiteSpace(id))
             {
                 throw new ArgumentException("Market item id is required.", nameof(id));
             }
 
-            if ((card == null && pill == null) || (card != null && pill != null))
+            var payloadCount = (card != null ? 1 : 0) + (pill != null ? 1 : 0) + (artifact != null ? 1 : 0);
+            if (payloadCount != 1)
             {
                 throw new ArgumentException("Market item requires exactly one payload.");
             }
@@ -102,6 +147,7 @@ namespace GameLogic.Cultivation
             Id = id;
             Card = card;
             Pill = pill;
+            Artifact = artifact;
             Price = Math.Max(0, price);
         }
 
@@ -111,10 +157,14 @@ namespace GameLogic.Cultivation
 
         public PillDefinition Pill { get; }
 
+        public ArtifactDefinition Artifact { get; }
+
         public int Price { get; }
 
         public bool IsCard => Card != null;
 
         public bool IsPill => Pill != null;
+
+        public bool IsArtifact => Artifact != null;
     }
 }

@@ -248,6 +248,30 @@ namespace GameLogic.Tests
         }
 
         [Test]
+        public void PrototypeUiCanBuySpiritStoneMineAndGainBonusAfterBattle()
+        {
+            ForceCurrentBattleVictory();
+            _ui.ResolveBattle();
+            _ui.SkipReward();
+            _ui.ChooseRoute(1);
+            _ui.Rest();
+            _ui.ChooseRoute(0);
+            SetRunSpiritStones(30);
+
+            _ui.BuyMarketItem(8);
+
+            Assert.AreEqual(1, _ui.Snapshot.ArtifactCount);
+            Assert.AreEqual(1, _ui.Snapshot.PurchasedMarketArtifactCount);
+            Assert.AreEqual(5, _ui.Snapshot.SpiritStones);
+
+            _ui.LeaveMarket();
+            ForceCurrentBattleVictory();
+            _ui.ResolveBattle();
+
+            Assert.AreEqual(45, _ui.Snapshot.SpiritStones);
+        }
+
+        [Test]
         public void PrototypeUiCanRemoveDeckCardInMarket()
         {
             ForceCurrentBattleVictory();

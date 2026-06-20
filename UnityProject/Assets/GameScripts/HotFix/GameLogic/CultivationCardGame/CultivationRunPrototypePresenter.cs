@@ -73,7 +73,7 @@ namespace GameLogic.Cultivation
         {
             var playerHp = state.CurrentBattle?.Player.CurrentHp ?? state.PlayerCurrentHp;
             var playerMaxHp = state.CurrentBattle?.Player.MaxHp ?? state.PlayerMaxHp;
-            return $"状态：{state.Status}\n节点：{state.CurrentNodeIndex + 1}/{state.Route.Count}\nHP：{playerHp}/{playerMaxHp}\n灵石：{state.SpiritStones}\n牌组：{state.Deck.Count} 张\n丹药：{state.Pills.Count}/{state.PillSlotLimit}\n已拿奖励：{state.ClaimedRewards.Count}\n坊市删牌：{state.RemovedMarketCards.Count}\n坊市售牌：{state.SoldMarketCards.Count}";
+            return $"状态：{state.Status}\n节点：{state.CurrentNodeIndex + 1}/{state.Route.Count}\nHP：{playerHp}/{playerMaxHp}\n灵石：{state.SpiritStones}\n牌组：{state.Deck.Count} 张\n丹药：{state.Pills.Count}/{state.PillSlotLimit}\n法宝：{state.Artifacts.Count}\n已拿奖励：{state.ClaimedRewards.Count}\n坊市删牌：{state.RemovedMarketCards.Count}\n坊市售牌：{state.SoldMarketCards.Count}";
         }
 
         private static string BuildNodeText(CultivationRunState state)
@@ -127,7 +127,12 @@ namespace GameLogic.Cultivation
                 return item.Card.Name;
             }
 
-            return $"{item.Pill.Name}（丹药）";
+            if (item.IsPill)
+            {
+                return $"{item.Pill.Name}（丹药）";
+            }
+
+            return $"{item.Artifact.Name}（法宝）";
         }
 
         private static string BuildBattleText(CultivationRunState state)
@@ -237,6 +242,10 @@ namespace GameLogic.Cultivation
 
         public int PurchasedMarketPillCount { get; private set; }
 
+        public int ArtifactCount { get; private set; }
+
+        public int PurchasedMarketArtifactCount { get; private set; }
+
         public int HandCount { get; private set; }
 
         public int RewardCount { get; private set; }
@@ -276,6 +285,8 @@ namespace GameLogic.Cultivation
                 PillCount = state.Pills.Count,
                 PillSlotLimit = state.PillSlotLimit,
                 PurchasedMarketPillCount = state.PurchasedMarketPills.Count,
+                ArtifactCount = state.Artifacts.Count,
+                PurchasedMarketArtifactCount = state.PurchasedMarketArtifacts.Count,
                 HandCount = state.CurrentBattle?.Hand.Count ?? 0,
                 RewardCount = state.CurrentRewards.Count,
                 RestUpgradeChoiceCount = state.RestUpgradeChoices.Count,

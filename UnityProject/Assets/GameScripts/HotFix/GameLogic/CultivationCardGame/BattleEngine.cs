@@ -811,6 +811,13 @@ namespace GameLogic.Cultivation
             PillEffectType.MaxHp,
             10);
 
+        public static ArtifactDefinition SpiritStoneMineArtifact { get; } = new ArtifactDefinition(
+            "spirit_stone_mine",
+            "灵石矿",
+            "法宝：每场战斗胜利额外获得 5 灵石。",
+            ArtifactEffectType.BonusSpiritStonesOnVictory,
+            5);
+
         public static IReadOnlyList<CardDefinition> CreateSwordSectStarterDeck()
         {
             return new List<CardDefinition>
@@ -879,6 +886,7 @@ namespace GameLogic.Cultivation
                 new CultivationMarketItem("market_cleanse_pill", CleansePillItem, 15),
                 new CultivationMarketItem("market_breakthrough_pill", BreakthroughPillItem, 90),
                 new CultivationMarketItem("market_foundation_pill", FoundationPillItem, 70),
+                new CultivationMarketItem("market_spirit_stone_mine", SpiritStoneMineArtifact, 25),
             };
         }
 

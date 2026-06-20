@@ -368,7 +368,7 @@ namespace GameLogic.Tests
             var run = engine.StartRun(CreateInstantWinDeck(), CreateMarketRoute(), initialSpiritStones: 25);
 
             Assert.AreEqual(CultivationRunStatus.Market, run.Status);
-            Assert.AreEqual(8, run.CurrentMarketItems.Count);
+            Assert.AreEqual(9, run.CurrentMarketItems.Count);
 
             var deckCount = run.Deck.Count;
             engine.BuyMarketItem(run, 0);
@@ -377,7 +377,7 @@ namespace GameLogic.Tests
             Assert.AreEqual(deckCount + 1, run.Deck.Count);
             Assert.AreEqual("cloud_guard", run.Deck.Last().Id);
             Assert.AreEqual(1, run.PurchasedMarketItems.Count);
-            Assert.AreEqual(7, run.CurrentMarketItems.Count);
+            Assert.AreEqual(8, run.CurrentMarketItems.Count);
         }
 
         [Test]
@@ -394,7 +394,7 @@ namespace GameLogic.Tests
             Assert.AreEqual(1, run.Pills.Count);
             Assert.AreEqual(1, run.PurchasedMarketPills.Count);
             Assert.AreEqual("small_restore_pill", run.Pills[0].Id);
-            Assert.AreEqual(7, run.CurrentMarketItems.Count);
+            Assert.AreEqual(8, run.CurrentMarketItems.Count);
         }
 
         [Test]
@@ -410,7 +410,7 @@ namespace GameLogic.Tests
             Assert.AreEqual(20, run.SpiritStones);
             Assert.AreEqual(5, run.Deck.Count);
             Assert.AreEqual(3, run.Pills.Count);
-            Assert.AreEqual(8, run.CurrentMarketItems.Count);
+            Assert.AreEqual(9, run.CurrentMarketItems.Count);
             Assert.AreEqual(0, run.PurchasedMarketPills.Count);
         }
 
@@ -552,6 +552,26 @@ namespace GameLogic.Tests
             Assert.AreEqual(60, run.PlayerCurrentHp);
             Assert.AreEqual(0, run.Pills.Count);
             StringAssert.Contains("使用 筑基丹，本 Run 最大 HP +10", logMessage);
+        }
+
+        [Test]
+        public void MarketBuyingSpiritStoneMineAddsBonusSpiritStonesOnVictory()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var run = engine.StartRun(CreateInstantWinDeck(), CreateMarketRoute(), initialSpiritStones: 30);
+            engine.BuyMarketItem(run, 8);
+
+            Assert.AreEqual(5, run.SpiritStones);
+            Assert.AreEqual(1, run.Artifacts.Count);
+            Assert.AreEqual(1, run.PurchasedMarketArtifacts.Count);
+            Assert.AreEqual("spirit_stone_mine", run.Artifacts[0].Id);
+
+            engine.LeaveMarket(run);
+            new BattleEngine(1).PlayCard(run.CurrentBattle, run.CurrentBattle.Hand[0], run.CurrentBattle.Enemies[0]);
+            engine.ResolveBattleResult(run);
+
+            Assert.AreEqual(10, run.SpiritStones);
+            Assert.IsTrue(run.CurrentBattle.Logs.Any(log => log.Message.Contains("法宝额外获得 5 灵石")));
         }
 
         [Test]
@@ -989,6 +1009,7 @@ namespace GameLogic.Tests
                         new CultivationMarketItem("market_cleanse_pill", CultivationSeedData.CleansePillItem, 15),
                         new CultivationMarketItem("market_breakthrough_pill", CultivationSeedData.BreakthroughPillItem, 90),
                         new CultivationMarketItem("market_foundation_pill", CultivationSeedData.FoundationPillItem, 70),
+                        new CultivationMarketItem("market_spirit_stone_mine", CultivationSeedData.SpiritStoneMineArtifact, 25),
                     }),
                 new CultivationRunNode(
                     "after_market",

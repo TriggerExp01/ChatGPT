@@ -67,6 +67,7 @@ namespace GameLogic.Tests
             StringAssert.Contains("坊市商品", text.NodeText);
             StringAssert.Contains("流云护身 / 20 灵石", text.NodeText);
             StringAssert.Contains("丹药：0/3", text.RunText);
+            StringAssert.Contains("法宝：0", text.RunText);
             StringAssert.Contains("移除卡牌：35 灵石", text.NodeText);
             StringAssert.Contains("升级卡牌：50 灵石", text.NodeText);
             StringAssert.Contains("出售卡牌：半价回收", text.NodeText);
@@ -90,10 +91,26 @@ namespace GameLogic.Tests
             StringAssert.Contains("解毒丹（丹药） / 15 灵石", text.NodeText);
             StringAssert.Contains("破境丹（丹药） / 90 灵石", text.NodeText);
             StringAssert.Contains("筑基丹（丹药） / 70 灵石", text.NodeText);
+            StringAssert.Contains("灵石矿（法宝） / 25 灵石", text.NodeText);
             Assert.AreEqual(1, snapshot.PillCount);
             Assert.AreEqual(3, snapshot.PillSlotLimit);
             Assert.AreEqual(1, snapshot.PurchasedMarketPillCount);
             StringAssert.Contains("丹药：1/3", updatedText.RunText);
+        }
+
+        [Test]
+        public void BuildTextIncludesMarketArtifactsAndArtifactCount()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var run = engine.StartRun(CreateInstantWinDeck(), CreateMarketRouteWithPill(), initialSpiritStones: 30);
+
+            engine.BuyMarketItem(run, 7);
+            var snapshot = CultivationRunPrototypePresenter.CreateSnapshot(run);
+            var text = CultivationRunPrototypePresenter.BuildText(run);
+
+            Assert.AreEqual(1, snapshot.ArtifactCount);
+            Assert.AreEqual(1, snapshot.PurchasedMarketArtifactCount);
+            StringAssert.Contains("法宝：1", text.RunText);
         }
 
         [Test]
@@ -244,6 +261,7 @@ namespace GameLogic.Tests
                         new CultivationMarketItem("market_cleanse_pill", CultivationSeedData.CleansePillItem, 15),
                         new CultivationMarketItem("market_breakthrough_pill", CultivationSeedData.BreakthroughPillItem, 90),
                         new CultivationMarketItem("market_foundation_pill", CultivationSeedData.FoundationPillItem, 70),
+                        new CultivationMarketItem("market_spirit_stone_mine", CultivationSeedData.SpiritStoneMineArtifact, 25),
                     }),
             };
         }
