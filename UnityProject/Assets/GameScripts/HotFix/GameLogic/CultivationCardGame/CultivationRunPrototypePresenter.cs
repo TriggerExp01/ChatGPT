@@ -323,8 +323,176 @@ namespace GameLogic.Cultivation
                     artifact.Name,
                     "法宝",
                     artifact.Description,
-                    false))
+                    false,
+                    BuildArtifactIconKey(artifact),
+                    BuildArtifactSourceTag(state, artifact),
+                    BuildArtifactStatusSummary(state.CurrentBattle, artifact)))
                 .ToArray();
+        }
+
+        public static string FormatArtifactEffectSummary(ArtifactDefinition artifact)
+        {
+            if (artifact == null)
+            {
+                return string.Empty;
+            }
+
+            switch (artifact.EffectType)
+            {
+                case ArtifactEffectType.BonusSpiritStonesOnVictory:
+                    return $"胜利灵石 +{artifact.BonusSpiritStonesOnVictory}";
+                case ArtifactEffectType.HealAfterVictory:
+                    return $"战后恢复 {artifact.HealAfterVictoryAmount} HP";
+                case ArtifactEffectType.PreventFirstSelfHpLossEachBattle:
+                    return $"每战免疫前 {artifact.PreventFirstSelfHpLossEachBattleCharges} 次自伤";
+                case ArtifactEffectType.MissingHpDamageBonus:
+                    return $"每损失 10% HP，伤害 +{artifact.MissingHpDamageBonusPerStepPercent}%";
+                case ArtifactEffectType.FirstAttackSwordMarkEachTurn:
+                    return $"每回合首次攻击附带 {artifact.FirstAttackSwordMarkStacksEachTurn} 层剑气印记";
+                case ArtifactEffectType.EveryThirdAttackCardDamageBonus:
+                    return $"每第 3 张攻击功法伤害 +{artifact.EveryThirdAttackCardDamageBonusPercent}%";
+                case ArtifactEffectType.TurnStartBurn:
+                    return $"每回合开始施加 {artifact.TurnStartBurnStacks} 层灼烧";
+                case ArtifactEffectType.BurnDamageBonus:
+                    return $"灼烧伤害 +{artifact.BurnDamageBonusPercent}%";
+                case ArtifactEffectType.FirstBattlePillDoubleNoConsume:
+                    return $"每战首次丹药效果翻倍且不消耗";
+                case ArtifactEffectType.PoisonStackLimitBonus:
+                    return $"中毒层数上限 +{artifact.PoisonStackLimitBonus}";
+                case ArtifactEffectType.FirstChanceFailureOverride:
+                    return $"每战首次概率失败改为成功";
+                case ArtifactEffectType.ChainDamageNoDecay:
+                    return "连锁伤害不再衰减";
+                case ArtifactEffectType.BattleStartShield:
+                    return $"战斗开始获得 {artifact.BattleStartShield} 点护盾";
+                case ArtifactEffectType.AttackCounterPierceAndFirstDamageReduction:
+                    return $"反击穿防，首次受击伤害 -{artifact.AttackCounterPierceAndFirstDamageReductionPercent}%";
+                default:
+                    return artifact.Description;
+            }
+        }
+
+        private static string BuildArtifactIconKey(ArtifactDefinition artifact)
+        {
+            if (artifact == null)
+            {
+                return "artifact_unknown";
+            }
+
+            switch (artifact.EffectType)
+            {
+                case ArtifactEffectType.BonusSpiritStonesOnVictory:
+                    return "artifact_spirit_stone";
+                case ArtifactEffectType.HealAfterVictory:
+                    return "artifact_heal";
+                case ArtifactEffectType.PreventFirstSelfHpLossEachBattle:
+                    return "artifact_blood";
+                case ArtifactEffectType.MissingHpDamageBonus:
+                    return "artifact_demon_heart";
+                case ArtifactEffectType.FirstAttackSwordMarkEachTurn:
+                case ArtifactEffectType.EveryThirdAttackCardDamageBonus:
+                    return "artifact_sword";
+                case ArtifactEffectType.TurnStartBurn:
+                case ArtifactEffectType.BurnDamageBonus:
+                    return "artifact_fire";
+                case ArtifactEffectType.FirstBattlePillDoubleNoConsume:
+                    return "artifact_cauldron";
+                case ArtifactEffectType.PoisonStackLimitBonus:
+                    return "artifact_poison";
+                case ArtifactEffectType.FirstChanceFailureOverride:
+                case ArtifactEffectType.ChainDamageNoDecay:
+                    return "artifact_thunder";
+                case ArtifactEffectType.BattleStartShield:
+                case ArtifactEffectType.AttackCounterPierceAndFirstDamageReduction:
+                    return "artifact_earth";
+                default:
+                    return "artifact_generic";
+            }
+        }
+
+        private static string BuildArtifactSourceTag(CultivationRunState state, ArtifactDefinition artifact)
+        {
+            if (state == null || artifact == null)
+            {
+                return string.Empty;
+            }
+
+            if (state.PurchasedMarketArtifacts.Contains(artifact))
+            {
+                return "坊市";
+            }
+
+            if (state.DroppedArtifacts.Contains(artifact))
+            {
+                return "精英";
+            }
+
+            if (state.ChestArtifacts.Contains(artifact))
+            {
+                return "宝箱";
+            }
+
+            return "秘境/其他";
+        }
+
+        private static string BuildArtifactStatusSummary(BattleState battle, ArtifactDefinition artifact)
+        {
+            if (artifact == null)
+            {
+                return string.Empty;
+            }
+
+            if (battle == null)
+            {
+                return FormatArtifactEffectSummary(artifact);
+            }
+
+            switch (artifact.EffectType)
+            {
+                case ArtifactEffectType.PreventFirstSelfHpLossEachBattle:
+                    return battle.PreventSelfHpLossCharges > 0
+                        ? $"本战剩余免疫自伤 {battle.PreventSelfHpLossCharges} 次"
+                        : "本战自伤免疫已消耗";
+                case ArtifactEffectType.MissingHpDamageBonus:
+                    var missingHpPercent = battle.Player.GetMissingHpTenthSteps() * artifact.MissingHpDamageBonusPerStepPercent;
+                    var lowHpPercent = battle.Player.IsCurrentHpAtOrBelowPercent(20) ? 20 : 0;
+                    return lowHpPercent > 0
+                        ? $"当前伤害 +{missingHpPercent + lowHpPercent}%（含低血加成）"
+                        : $"当前伤害 +{missingHpPercent}%";
+                case ArtifactEffectType.FirstAttackSwordMarkEachTurn:
+                    return battle.HasTriggeredArtifactFirstAttackSwordMarkThisTurn
+                        ? "本回合首次攻击印记已触发"
+                        : $"本回合首次攻击将附带 {battle.ArtifactFirstAttackSwordMarkStacks} 层剑气印记";
+                case ArtifactEffectType.EveryThirdAttackCardDamageBonus:
+                    var nextAttackIndex = battle.ArtifactAttackCardCounter % 3 + 1;
+                    return nextAttackIndex == 3
+                        ? $"下一张攻击功法伤害 +{battle.ArtifactEveryThirdAttackCardDamageBonusPercent}%"
+                        : $"攻击计数 {battle.ArtifactAttackCardCounter}/3";
+                case ArtifactEffectType.TurnStartBurn:
+                    return $"回合开始灼烧 {battle.ArtifactTurnStartBurnStacks} 层";
+                case ArtifactEffectType.BurnDamageBonus:
+                    return $"灼烧伤害 +{battle.ArtifactBurnDamageBonusPercent}%";
+                case ArtifactEffectType.FirstBattlePillDoubleNoConsume:
+                    return battle.ArtifactFirstBattlePillDoubleNoConsumeCharges > 0
+                        ? "本战首次丹药翻倍待触发"
+                        : "本战丹药翻倍已消耗";
+                case ArtifactEffectType.PoisonStackLimitBonus:
+                    return $"中毒上限 {99 + battle.ArtifactPoisonStackLimitBonus}";
+                case ArtifactEffectType.FirstChanceFailureOverride:
+                    return battle.ArtifactFirstChanceFailureOverrideCharges > 0
+                        ? "首次概率失败保底待触发"
+                        : "概率保底已消耗";
+                case ArtifactEffectType.ChainDamageNoDecay:
+                    return battle.ArtifactChainDamageNoDecay ? "连锁伤害不衰减已生效" : FormatArtifactEffectSummary(artifact);
+                case ArtifactEffectType.BattleStartShield:
+                    return $"开战护盾 +{artifact.BattleStartShield}，当前护盾 {battle.Player.Shield}";
+                case ArtifactEffectType.AttackCounterPierceAndFirstDamageReduction:
+                    return battle.HasTriggeredArtifactFirstDamageReductionThisTurn
+                        ? "本回合首次受击减伤已触发，反击穿防生效"
+                        : $"本回合首次受击 -{battle.ArtifactAttackCounterPierceDamageReductionPercent}%，反击穿防";
+                default:
+                    return FormatArtifactEffectSummary(artifact);
+            }
         }
 
         private static RunPrototypeAction[] BuildPrimaryActions(CultivationRunState state)
@@ -551,7 +719,68 @@ namespace GameLogic.Cultivation
 
             var battle = state.CurrentBattle;
             var enemy = battle.Enemies.FirstOrDefault();
-            return $"玩家\nHP {battle.Player.CurrentHp}/{battle.Player.MaxHp}  护盾 {battle.Player.Shield}\n灵力 {battle.Spirit}/{battle.SpiritMax}  回合 {battle.TurnNumber}\n锋锐 {battle.Player.Sharpness}/{battle.Player.SharpnessTurns}  破防 {battle.Player.BreakDefenseStacks}  灼烧 {battle.Player.BurnStacks}/{battle.Player.BurnTurns}  中毒 {battle.Player.PoisonStacks}  冰冻 {battle.Player.FreezeStacks}/{battle.Player.FreezeTurns}  眩晕 {battle.Player.StunTurns}\n灵力消耗 -{battle.SpiritCostReduction}  额外抽牌 +{battle.ExtraDrawPerTurn}  蓄力 x{battle.ChargedDamageMultiplier}/{battle.ChargedDamageUses}  闪避 {battle.DodgeCharges}  反击 {battle.DodgeCounterDamage}  生生不息 {battle.RegenerationPerTurn}/{battle.RegenerationTurns}  毒瘴 {battle.PoisonCounterStacks}/{battle.PoisonCounterTurns}  血护 {battle.BloodGuardHealAmount}/{battle.BloodGuardHealTurns}\n\n敌人：{enemy?.Body.Name ?? string.Empty}\nHP {enemy?.Body.CurrentHp ?? 0}/{enemy?.Body.MaxHp ?? 0}  护盾 {enemy?.Body.Shield ?? 0}\n攻击强化 +{enemy?.AttackBonus ?? 0}  破防 {enemy?.Body.BreakDefenseStacks ?? 0}  灼烧 {enemy?.Body.BurnStacks ?? 0}/{enemy?.Body.BurnTurns ?? 0}  中毒 {enemy?.Body.PoisonStacks ?? 0}  冰冻 {enemy?.Body.FreezeStacks ?? 0}/{enemy?.Body.FreezeTurns ?? 0}  眩晕 {enemy?.Body.StunTurns ?? 0}  剑气印记 {enemy?.Body.SwordMarkStacks ?? 0}\n意图：{enemy?.CurrentIntent.Description ?? string.Empty}\n\n战斗结果：{battle.Outcome}";
+            var builder = new StringBuilder();
+            builder.Append("玩家").AppendLine();
+            builder.Append("HP ").Append(battle.Player.CurrentHp).Append('/').Append(battle.Player.MaxHp)
+                .Append("  护盾 ").Append(battle.Player.Shield).AppendLine();
+            builder.Append("灵力 ").Append(battle.Spirit).Append('/').Append(battle.SpiritMax)
+                .Append("  回合 ").Append(battle.TurnNumber).AppendLine();
+            builder.Append("锋锐 ").Append(battle.Player.Sharpness).Append('/').Append(battle.Player.SharpnessTurns)
+                .Append("  破防 ").Append(battle.Player.BreakDefenseStacks)
+                .Append("  灼烧 ").Append(battle.Player.BurnStacks).Append('/').Append(battle.Player.BurnTurns)
+                .Append("  中毒 ").Append(battle.Player.PoisonStacks)
+                .Append("  冰冻 ").Append(battle.Player.FreezeStacks).Append('/').Append(battle.Player.FreezeTurns)
+                .Append("  眩晕 ").Append(battle.Player.StunTurns).AppendLine();
+            builder.Append("灵力消耗 -").Append(battle.SpiritCostReduction)
+                .Append("  额外抽牌 +").Append(battle.ExtraDrawPerTurn)
+                .Append("  蓄力 x").Append(battle.ChargedDamageMultiplier).Append('/').Append(battle.ChargedDamageUses)
+                .Append("  闪避 ").Append(battle.DodgeCharges)
+                .Append("  反击 ").Append(battle.DodgeCounterDamage)
+                .Append("  生生不息 ").Append(battle.RegenerationPerTurn).Append('/').Append(battle.RegenerationTurns)
+                .Append("  毒瘴 ").Append(battle.PoisonCounterStacks).Append('/').Append(battle.PoisonCounterTurns)
+                .Append("  血护 ").Append(battle.BloodGuardHealAmount).Append('/').Append(battle.BloodGuardHealTurns).AppendLine();
+            AppendArtifactBattleSummary(builder, state);
+            builder.AppendLine();
+            builder.Append("敌人：").Append(enemy?.Body.Name ?? string.Empty).AppendLine();
+            builder.Append("HP ").Append(enemy?.Body.CurrentHp ?? 0).Append('/').Append(enemy?.Body.MaxHp ?? 0)
+                .Append("  护盾 ").Append(enemy?.Body.Shield ?? 0).AppendLine();
+            builder.Append("攻击强化 +").Append(enemy?.AttackBonus ?? 0)
+                .Append("  破防 ").Append(enemy?.Body.BreakDefenseStacks ?? 0)
+                .Append("  灼烧 ").Append(enemy?.Body.BurnStacks ?? 0).Append('/').Append(enemy?.Body.BurnTurns ?? 0)
+                .Append("  中毒 ").Append(enemy?.Body.PoisonStacks ?? 0)
+                .Append("  冰冻 ").Append(enemy?.Body.FreezeStacks ?? 0).Append('/').Append(enemy?.Body.FreezeTurns ?? 0)
+                .Append("  眩晕 ").Append(enemy?.Body.StunTurns ?? 0)
+                .Append("  剑气印记 ").Append(enemy?.Body.SwordMarkStacks ?? 0).AppendLine();
+            builder.Append("意图：").Append(enemy?.CurrentIntent.Description ?? string.Empty).AppendLine();
+            builder.AppendLine();
+            builder.Append("战斗结果：").Append(battle.Outcome);
+            return builder.ToString();
+        }
+
+        private static void AppendArtifactBattleSummary(StringBuilder builder, CultivationRunState state)
+        {
+            if (state.Artifacts.Count == 0)
+            {
+                return;
+            }
+
+            builder.AppendLine();
+            builder.Append("法宝生效：");
+            for (var i = 0; i < state.Artifacts.Count; i++)
+            {
+                var artifact = state.Artifacts[i];
+                if (i > 0)
+                {
+                    builder.Append("；");
+                }
+
+                builder.Append(artifact.Name)
+                    .Append('(')
+                    .Append(BuildArtifactStatusSummary(state.CurrentBattle, artifact))
+                    .Append(')');
+            }
+
+            builder.AppendLine();
         }
 
         private static string BuildDeckText(CultivationRunState state)
@@ -755,7 +984,16 @@ namespace GameLogic.Cultivation
 
     public sealed class RunPrototypeInventoryItem
     {
-        public RunPrototypeInventoryItem(int index, string id, string name, string category, string description, bool canUse)
+        public RunPrototypeInventoryItem(
+            int index,
+            string id,
+            string name,
+            string category,
+            string description,
+            bool canUse,
+            string iconKey = "",
+            string sourceTag = "",
+            string statusSummary = "")
         {
             Index = index;
             Id = id ?? string.Empty;
@@ -763,6 +1001,9 @@ namespace GameLogic.Cultivation
             Category = category ?? string.Empty;
             Description = description ?? string.Empty;
             CanUse = canUse;
+            IconKey = iconKey ?? string.Empty;
+            SourceTag = sourceTag ?? string.Empty;
+            StatusSummary = statusSummary ?? string.Empty;
         }
 
         public int Index { get; }
@@ -776,6 +1017,12 @@ namespace GameLogic.Cultivation
         public string Description { get; }
 
         public bool CanUse { get; }
+
+        public string IconKey { get; }
+
+        public string SourceTag { get; }
+
+        public string StatusSummary { get; }
     }
 
     public sealed class RunPrototypeAction

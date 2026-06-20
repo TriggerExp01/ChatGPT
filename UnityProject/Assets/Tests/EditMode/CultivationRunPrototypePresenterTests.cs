@@ -234,10 +234,14 @@ namespace GameLogic.Tests
             engine.BuyMarketItem(run, 7);
             var snapshot = CultivationRunPrototypePresenter.CreateSnapshot(run);
             var text = CultivationRunPrototypePresenter.BuildText(run);
+            var view = CultivationRunPrototypePresenter.BuildViewModel(run);
 
             Assert.AreEqual(1, snapshot.ArtifactCount);
             Assert.AreEqual(1, snapshot.PurchasedMarketArtifactCount);
             StringAssert.Contains("法宝：1", text.RunText);
+            Assert.AreEqual("artifact_spirit_stone", view.ArtifactItems[0].IconKey);
+            Assert.AreEqual("坊市", view.ArtifactItems[0].SourceTag);
+            Assert.AreEqual("胜利灵石 +5", view.ArtifactItems[0].StatusSummary);
         }
 
         [Test]
@@ -264,6 +268,62 @@ namespace GameLogic.Tests
             Assert.AreEqual(1, snapshot.ArtifactCount);
             Assert.AreEqual(1, snapshot.DroppedArtifactCount);
             StringAssert.Contains("精英法宝：1", text.RunText);
+        }
+
+        [Test]
+        public void BuildViewModelIncludesArtifactDisplayMetadataAndBattleStatus()
+        {
+            var battleEngine = new BattleEngine(1);
+            var engine = new CultivationRunEngine(battleEngine);
+            var run = engine.StartRun(
+                CreateArtifactDisplayDeck(),
+                CreateArtifactDisplayRoute(),
+                playerCurrentHp: 10,
+                sect: CultivationSect.Demonic);
+
+            engine.OpenChest(run);
+            engine.OpenChest(run);
+            engine.OpenChest(run);
+            var viewBefore = CultivationRunPrototypePresenter.BuildViewModel(run);
+            var textBefore = viewBefore.Text;
+
+            Assert.AreEqual(3, viewBefore.ArtifactItems.Length);
+            Assert.AreEqual("artifact_demon_heart", viewBefore.ArtifactItems[0].IconKey);
+            Assert.AreEqual("宝箱", viewBefore.ArtifactItems[0].SourceTag);
+            StringAssert.Contains("当前伤害 +47%", viewBefore.ArtifactItems[0].StatusSummary);
+            Assert.AreEqual("artifact_sword", viewBefore.ArtifactItems[1].IconKey);
+            StringAssert.Contains("攻击计数 0/3", viewBefore.ArtifactItems[1].StatusSummary);
+            Assert.AreEqual("artifact_cauldron", viewBefore.ArtifactItems[2].IconKey);
+            StringAssert.Contains("丹药翻倍待触发", viewBefore.ArtifactItems[2].StatusSummary);
+            StringAssert.Contains("法宝生效：", textBefore.BattleText);
+            StringAssert.Contains("天魔心(当前伤害 +47%（含低血加成）)", textBefore.BattleText);
+            StringAssert.Contains("万剑归宗剑(攻击计数 0/3)", textBefore.BattleText);
+
+            battleEngine.PlayCard(run.CurrentBattle, run.CurrentBattle.Hand[0], run.CurrentBattle.Enemies[0]);
+            battleEngine.PlayCard(run.CurrentBattle, run.CurrentBattle.Hand[0], run.CurrentBattle.Enemies[0]);
+            var viewBeforeThirdAttack = CultivationRunPrototypePresenter.BuildViewModel(run);
+            run.Pills.Add(CultivationSeedData.SmallRestorePillItem);
+            engine.UsePillInBattle(run, 0);
+            var viewAfter = CultivationRunPrototypePresenter.BuildViewModel(run);
+
+            StringAssert.Contains("下一张攻击功法伤害 +50%", viewBeforeThirdAttack.ArtifactItems[1].StatusSummary);
+            StringAssert.Contains("下一张攻击功法伤害 +50%", viewAfter.ArtifactItems[1].StatusSummary);
+            StringAssert.Contains("丹药翻倍已消耗", viewAfter.ArtifactItems[2].StatusSummary);
+        }
+
+        [Test]
+        public void FormatArtifactEffectSummaryCoversExclusiveArtifactKeywords()
+        {
+            StringAssert.Contains("首次攻击附带 1 层剑气印记", CultivationRunPrototypePresenter.FormatArtifactEffectSummary(CultivationSeedData.SwordHeartJadeArtifact));
+            StringAssert.Contains("伤害 +50%", CultivationRunPrototypePresenter.FormatArtifactEffectSummary(CultivationSeedData.TenThousandSwordsArtifact));
+            StringAssert.Contains("施加 1 层灼烧", CultivationRunPrototypePresenter.FormatArtifactEffectSummary(CultivationSeedData.FireCloudTokenArtifact));
+            StringAssert.Contains("灼烧伤害 +50%", CultivationRunPrototypePresenter.FormatArtifactEffectSummary(CultivationSeedData.BurningHeavenFurnaceArtifact));
+            StringAssert.Contains("丹药效果翻倍", CultivationRunPrototypePresenter.FormatArtifactEffectSummary(CultivationSeedData.MedicineKingCauldronArtifact));
+            StringAssert.Contains("中毒层数上限 +50", CultivationRunPrototypePresenter.FormatArtifactEffectSummary(CultivationSeedData.TenThousandPoisonPearlArtifact));
+            StringAssert.Contains("概率失败改为成功", CultivationRunPrototypePresenter.FormatArtifactEffectSummary(CultivationSeedData.ThunderSpiritPearlArtifact));
+            StringAssert.Contains("连锁伤害不再衰减", CultivationRunPrototypePresenter.FormatArtifactEffectSummary(CultivationSeedData.LightningRodArtifact));
+            StringAssert.Contains("战斗开始获得 5 点护盾", CultivationRunPrototypePresenter.FormatArtifactEffectSummary(CultivationSeedData.XuanhuangCauldronArtifact));
+            StringAssert.Contains("反击穿防", CultivationRunPrototypePresenter.FormatArtifactEffectSummary(CultivationSeedData.ImmovableMingwangSealArtifact));
         }
 
         [Test]
@@ -544,6 +604,19 @@ namespace GameLogic.Tests
             };
         }
 
+        private static CardDefinition[] CreateArtifactDisplayDeck()
+        {
+            var weakAttack = new CardDefinition("artifact_display_attack", "artifact_display_attack", 0, new CardEffect(CardEffectType.Damage, 1));
+            return new[]
+            {
+                weakAttack,
+                weakAttack,
+                weakAttack,
+                weakAttack,
+                weakAttack,
+            };
+        }
+
         private static IReadOnlyList<CultivationRunNode> CreateMarketRoute()
         {
             return new List<CultivationRunNode>
@@ -595,6 +668,40 @@ namespace GameLogic.Tests
                     "battle",
                     CultivationRunNodeType.Battle,
                     new EnemyDefinition("enemy", "enemy", 1, 0, new EnemyIntent(EnemyIntentType.Attack, 1)),
+                    CultivationSeedData.CreateSwordSectRewardPool()),
+            };
+        }
+
+        private static IReadOnlyList<CultivationRunNode> CreateArtifactDisplayRoute()
+        {
+            return new List<CultivationRunNode>
+            {
+                new CultivationRunNode(
+                    "artifact_chest_demon_heart",
+                    "artifact_chest_demon_heart",
+                    CultivationRunNodeType.Chest,
+                    null,
+                    null,
+                    artifactRewardPool: new[] { CultivationSeedData.HeavenlyDemonHeartArtifact }),
+                new CultivationRunNode(
+                    "artifact_chest_sword",
+                    "artifact_chest_sword",
+                    CultivationRunNodeType.Chest,
+                    null,
+                    null,
+                    artifactRewardPool: new[] { CultivationSeedData.TenThousandSwordsArtifact }),
+                new CultivationRunNode(
+                    "artifact_chest_pill",
+                    "artifact_chest_pill",
+                    CultivationRunNodeType.Chest,
+                    null,
+                    null,
+                    artifactRewardPool: new[] { CultivationSeedData.MedicineKingCauldronArtifact }),
+                new CultivationRunNode(
+                    "artifact_display_battle",
+                    "artifact_display_battle",
+                    CultivationRunNodeType.Battle,
+                    new EnemyDefinition("artifact_display_enemy", "artifact_display_enemy", 120, 0, new EnemyIntent(EnemyIntentType.Attack, 1)),
                     CultivationSeedData.CreateSwordSectRewardPool()),
             };
         }
