@@ -30,6 +30,9 @@ namespace GameLogic.Cultivation
         ChanceChainDamageRepeatTarget,
         ChanceDamageWithStun,
         ChanceDamageWithChain,
+        DamageAfterCriticalTriggered,
+        DamageAfterCriticalTriggeredWithStun,
+        DamageAfterCriticalTriggeredChainAll,
     }
 
     public enum EnemyIntentType

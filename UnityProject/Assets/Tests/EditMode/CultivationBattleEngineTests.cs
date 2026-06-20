@@ -189,6 +189,26 @@ namespace GameLogic.Tests
         }
 
         [Test]
+        public void CriticalStateResetsAtPlayerTurnStart()
+        {
+            var engine = new BattleEngine(1);
+            var criticalCard = new CardDefinition(
+                "critical_state_reset_test",
+                "暴击状态重置测试",
+                0,
+                new CardEffect(CardEffectType.ChanceDamage, 10, chancePercent: 100, fallbackValue: 5));
+            var state = CreateOrderedBattle(engine, criticalCard, CultivationSeedData.GuardQi);
+
+            engine.PlayCard(state, state.Hand[0], state.Enemies[0]);
+
+            Assert.IsTrue(state.HasTriggeredCriticalThisTurn);
+
+            engine.EndPlayerTurn(state);
+
+            Assert.IsFalse(state.HasTriggeredCriticalThisTurn);
+        }
+
+        [Test]
         public void ChanceStunOnlyAppliesWhenProbabilityHits()
         {
             var engine = new BattleEngine(1);
@@ -373,6 +393,94 @@ namespace GameLogic.Tests
             Assert.AreEqual(34, state.Enemies[0].Body.CurrentHp);
             Assert.AreEqual(80, state.Enemies[1].Body.CurrentHp + state.Enemies[2].Body.CurrentHp);
             Assert.AreEqual(3, state.Logs.Count(log => log.Message.Contains("连锁至")));
+        }
+
+        [Test]
+        public void ThunderHammerOnlyDealsBaseDamageBeforeCriticalTriggers()
+        {
+            var engine = new BattleEngine(1);
+            var hammer = new CardDefinition(
+                "thunder_hammer_base_test",
+                "雷神之锤基础测试",
+                0,
+                new CardEffect(CardEffectType.DamageAfterCriticalTriggered, 22, fallbackValue: 10));
+            var state = CreateOrderedBattle(engine, hammer);
+
+            engine.PlayCard(state, state.Hand[0], state.Enemies[0]);
+
+            Assert.AreEqual(20, state.Enemies[0].Body.CurrentHp);
+            Assert.IsTrue(state.Logs.Any(log => log.Message.Contains("暴击奖励未触发")));
+        }
+
+        [Test]
+        public void ThunderHammerAddsBonusAfterCriticalTriggersThisTurn()
+        {
+            var engine = new BattleEngine(1);
+            var criticalCard = new CardDefinition(
+                "thunder_hammer_critical_setup_test",
+                "雷神之锤暴击前置测试",
+                0,
+                new CardEffect(CardEffectType.ChanceDamage, 10, chancePercent: 100, fallbackValue: 5));
+            var hammer = new CardDefinition(
+                "thunder_hammer_bonus_test",
+                "雷神之锤奖励测试",
+                0,
+                new CardEffect(CardEffectType.DamageAfterCriticalTriggered, 22, fallbackValue: 10));
+            var state = CreateOrderedBattle(engine, criticalCard, hammer);
+
+            engine.PlayCard(state, state.Hand[0], state.Enemies[0]);
+            engine.PlayCard(state, state.Hand[0], state.Enemies[0]);
+
+            Assert.AreEqual(4, state.Enemies[0].Body.CurrentHp);
+            Assert.IsTrue(state.Logs.Any(log => log.Message.Contains("触发暴击奖励")));
+        }
+
+        [Test]
+        public void ThunderHammerStunUpgradeStunsWhenBonusTriggers()
+        {
+            var engine = new BattleEngine(1);
+            var criticalCard = new CardDefinition(
+                "thunder_hammer_stun_setup_test",
+                "雷神之锤眩晕前置测试",
+                0,
+                new CardEffect(CardEffectType.ChanceDamage, 10, chancePercent: 100, fallbackValue: 5));
+            var hammer = new CardDefinition(
+                "thunder_hammer_stun_test",
+                "雷神之锤眩晕测试",
+                0,
+                new CardEffect(CardEffectType.DamageAfterCriticalTriggeredWithStun, 22, duration: 1, fallbackValue: 18));
+            var state = CreateOrderedBattle(engine, criticalCard, hammer);
+
+            engine.PlayCard(state, state.Hand[0], state.Enemies[0]);
+            engine.PlayCard(state, state.Hand[0], state.Enemies[0]);
+
+            Assert.AreEqual(1, state.Enemies[0].Body.StunTurns);
+            Assert.IsTrue(state.Logs.Any(log => log.Message.Contains("暴击奖励附加眩晕")));
+        }
+
+        [Test]
+        public void ThunderHammerChainUpgradeChainsBonusToAllEnemies()
+        {
+            var engine = new BattleEngine(1);
+            var criticalCard = new CardDefinition(
+                "thunder_hammer_chain_setup_test",
+                "雷神之锤连锁前置测试",
+                0,
+                new CardEffect(CardEffectType.ChanceDamage, 10, chancePercent: 100, fallbackValue: 5));
+            var hammer = new CardDefinition(
+                "thunder_hammer_chain_test",
+                "雷神之锤连锁测试",
+                0,
+                new CardEffect(CardEffectType.DamageAfterCriticalTriggeredChainAll, 27, fallbackValue: 10));
+            var state = CreateMultiEnemyBattle(engine, criticalCard, hammer);
+
+            engine.PlayCard(state, state.Hand[0], state.Enemies[0]);
+            engine.PlayCard(state, state.Hand[0], state.Enemies[0]);
+
+            Assert.AreEqual(0, state.Enemies[0].Body.CurrentHp);
+            Assert.AreEqual(32, state.Enemies[1].Body.CurrentHp);
+            Assert.AreEqual(32, state.Enemies[2].Body.CurrentHp);
+            Assert.AreEqual(3, state.Logs.Count(log => log.Message.Contains("暴击奖励连锁至")));
         }
 
         [Test]

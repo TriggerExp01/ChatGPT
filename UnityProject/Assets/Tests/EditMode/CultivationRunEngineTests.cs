@@ -57,12 +57,14 @@ namespace GameLogic.Tests
             CollectionAssert.DoesNotContain(deckIds, CultivationSeedData.ThunderCharge.Id);
             CollectionAssert.DoesNotContain(deckIds, CultivationSeedData.FiveThunderOrthodoxy.Id);
             CollectionAssert.DoesNotContain(deckIds, CultivationSeedData.ThunderousBarrage.Id);
+            CollectionAssert.DoesNotContain(deckIds, CultivationSeedData.ThunderHammer.Id);
             CollectionAssert.DoesNotContain(deckIds, CultivationSeedData.SwordQi.Id);
             Assert.IsTrue(run.CurrentNode.RewardPool.Any(reward => reward.Card.Id == CultivationSeedData.HeavenlyThunderSpell.Id));
             Assert.IsTrue(run.CurrentNode.RewardPool.Any(reward => reward.Card.Id == CultivationSeedData.LightningChain.Id));
             Assert.IsTrue(run.CurrentNode.RewardPool.Any(reward => reward.Card.Id == CultivationSeedData.ThunderCharge.Id));
             Assert.IsTrue(run.CurrentNode.RewardPool.Any(reward => reward.Card.Id == CultivationSeedData.FiveThunderOrthodoxy.Id));
             Assert.IsTrue(run.CurrentNode.RewardPool.Any(reward => reward.Card.Id == CultivationSeedData.ThunderousBarrage.Id));
+            Assert.IsTrue(run.CurrentNode.RewardPool.Any(reward => reward.Card.Id == CultivationSeedData.ThunderHammer.Id));
         }
 
         [Test]
@@ -622,6 +624,28 @@ namespace GameLogic.Tests
             Assert.AreEqual(25, barrageCritical.Effects[0].ChancePercent);
             Assert.AreEqual(CardEffectType.ChanceDamageWithStun, barrageCritical.UpgradeOptions[0].UpgradedCard.Effects[0].Type);
             Assert.AreEqual(CardEffectType.ChanceDamageWithChain, barrageCritical.UpgradeOptions[1].UpgradedCard.Effects[0].Type);
+        }
+
+        [Test]
+        public void ThunderHammerFirstLayerUpgradesKeepSecondLayerChoices()
+        {
+            var hammerStrong = CultivationSeedData.ThunderHammer.UpgradeOptions[0].UpgradedCard;
+            var hammerStable = CultivationSeedData.ThunderHammer.UpgradeOptions[1].UpgradedCard;
+
+            Assert.IsTrue(hammerStrong.CanUpgrade);
+            Assert.AreEqual("thunder_hammer_bonus_2_damage", hammerStrong.UpgradeOptions[0].UpgradedCard.Id);
+            Assert.AreEqual("thunder_hammer_bonus_2_stun", hammerStrong.UpgradeOptions[1].UpgradedCard.Id);
+            Assert.AreEqual(CardEffectType.DamageAfterCriticalTriggered, hammerStrong.Effects[0].Type);
+            Assert.AreEqual(18, hammerStrong.Effects[0].FallbackValue);
+            Assert.AreEqual(26, hammerStrong.UpgradeOptions[0].UpgradedCard.Effects[0].FallbackValue);
+            Assert.AreEqual(CardEffectType.DamageAfterCriticalTriggeredWithStun, hammerStrong.UpgradeOptions[1].UpgradedCard.Effects[0].Type);
+
+            Assert.IsTrue(hammerStable.CanUpgrade);
+            Assert.AreEqual("thunder_hammer_stable_2_cost", hammerStable.UpgradeOptions[0].UpgradedCard.Id);
+            Assert.AreEqual("thunder_hammer_stable_2_chain", hammerStable.UpgradeOptions[1].UpgradedCard.Id);
+            Assert.AreEqual(27, hammerStable.Effects[0].Value);
+            Assert.AreEqual(2, hammerStable.UpgradeOptions[0].UpgradedCard.SpiritCost);
+            Assert.AreEqual(CardEffectType.DamageAfterCriticalTriggeredChainAll, hammerStable.UpgradeOptions[1].UpgradedCard.Effects[0].Type);
         }
 
         [Test]

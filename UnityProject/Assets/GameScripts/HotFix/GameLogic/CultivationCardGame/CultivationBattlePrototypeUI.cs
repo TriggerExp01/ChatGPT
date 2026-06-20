@@ -266,6 +266,12 @@ namespace GameLogic.Cultivation
                     return $"造成 {effect.Value} 伤害 × {effect.RepeatCount}，每击 {effect.ChancePercent}% 概率暴击；每击 {effect.SecondaryValue}% 概率连锁 {effect.FallbackValue} 伤害";
                 case CardEffectType.ChainOnChanceDamage:
                     return $"{effect.ChancePercent}% 概率造成 {effect.Value} 伤害，失败造成 {effect.FallbackValue} 伤害；命中连锁 {effect.SecondaryValue} 伤害";
+                case CardEffectType.DamageAfterCriticalTriggered:
+                    return $"造成 {effect.Value} 伤害；本回合已暴击时额外造成 {effect.FallbackValue} 伤害";
+                case CardEffectType.DamageAfterCriticalTriggeredWithStun:
+                    return $"造成 {effect.Value} 伤害；本回合已暴击时额外造成 {effect.FallbackValue} 伤害并眩晕 {Math.Max(1, effect.Duration)} 回合";
+                case CardEffectType.DamageAfterCriticalTriggeredChainAll:
+                    return $"造成 {effect.Value} 伤害；本回合已暴击时奖励连锁全体，各造成 {effect.FallbackValue} 伤害";
                 case CardEffectType.ChanceStun:
                     return $"{effect.ChancePercent}% 概率眩晕 {Math.Max(1, effect.Duration)} 回合";
                 case CardEffectType.ChainOnChanceStun:

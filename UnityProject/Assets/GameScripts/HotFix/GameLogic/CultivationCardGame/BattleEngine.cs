@@ -73,6 +73,7 @@ namespace GameLogic.Cultivation
             EnsureBattleActive(state);
 
             state.TurnNumber++;
+            state.ResetTurnCriticalState();
             state.Player.ClearShield();
             state.Player.ResolveSharpnessAtTurnStart();
             state.Spirit = state.SpiritMax;
@@ -295,8 +296,30 @@ namespace GameLogic.Cultivation
 
                         if (triggered)
                         {
+                            state.MarkCriticalTriggered();
                             ChainToOneAdditionalEnemy(state, card, enemy, effect.SecondaryValue);
                         }
+                    }
+
+                    break;
+                case CardEffectType.DamageAfterCriticalTriggered:
+                    foreach (var enemy in SelectTargets(state, effect, explicitTarget))
+                    {
+                        DealDamageAfterCriticalTriggered(state, card, effect, enemy, stunOnBonus: false, chainBonusToAll: false);
+                    }
+
+                    break;
+                case CardEffectType.DamageAfterCriticalTriggeredWithStun:
+                    foreach (var enemy in SelectTargets(state, effect, explicitTarget))
+                    {
+                        DealDamageAfterCriticalTriggered(state, card, effect, enemy, stunOnBonus: true, chainBonusToAll: false);
+                    }
+
+                    break;
+                case CardEffectType.DamageAfterCriticalTriggeredChainAll:
+                    foreach (var enemy in SelectTargets(state, effect, explicitTarget))
+                    {
+                        DealDamageAfterCriticalTriggered(state, card, effect, enemy, stunOnBonus: false, chainBonusToAll: true);
                     }
 
                     break;
@@ -411,6 +434,11 @@ namespace GameLogic.Cultivation
                 var chargeText = multiplier > 1 ? $" 蓄力 x{multiplier}" : string.Empty;
                 state.Logs.Add(new BattleLogEntry($"{card.Name}{hitText} {resultText}{chargeText}，对 {enemy.Body.Name} 造成 {dealt} 点伤害。"));
 
+                if (triggered)
+                {
+                    state.MarkCriticalTriggered();
+                }
+
                 if (triggered && stunOnHit && RollChance(effect.FallbackValue))
                 {
                     enemy.Body.AddStun(Math.Max(1, effect.Duration));
@@ -421,6 +449,51 @@ namespace GameLogic.Cultivation
                 {
                     ChainToOneAdditionalEnemy(state, card, enemy, Math.Max(0, effect.FallbackValue));
                 }
+            }
+        }
+
+        private static void DealDamageAfterCriticalTriggered(
+            BattleState state,
+            CardDefinition card,
+            CardEffect effect,
+            EnemyState enemy,
+            bool stunOnBonus,
+            bool chainBonusToAll)
+        {
+            if (enemy == null || enemy.Body.IsDefeated)
+            {
+                return;
+            }
+
+            var multiplier = state.TryConsumeChargedDamageMultiplier();
+            var dealt = enemy.Body.TakeDamage(effect.Value * multiplier, state.Player.Sharpness);
+            var chargeText = multiplier > 1 ? $" 蓄力 x{multiplier}" : string.Empty;
+            state.Logs.Add(new BattleLogEntry($"{card.Name}{chargeText} 对 {enemy.Body.Name} 造成 {dealt} 点伤害。"));
+
+            if (!state.HasTriggeredCriticalThisTurn || effect.FallbackValue <= 0)
+            {
+                state.Logs.Add(new BattleLogEntry($"{card.Name} 未检测到本回合暴击，暴击奖励未触发。"));
+                return;
+            }
+
+            if (chainBonusToAll)
+            {
+                foreach (var chainedEnemy in state.Enemies.Where(target => !target.Body.IsDefeated).ToList())
+                {
+                    var chainDealt = chainedEnemy.Body.TakeDamage(effect.FallbackValue, state.Player.Sharpness);
+                    state.Logs.Add(new BattleLogEntry($"{card.Name} 暴击奖励连锁至 {chainedEnemy.Body.Name}，造成 {chainDealt} 点伤害。"));
+                }
+
+                return;
+            }
+
+            var bonusDealt = enemy.Body.TakeDamage(effect.FallbackValue, state.Player.Sharpness);
+            state.Logs.Add(new BattleLogEntry($"{card.Name} 触发暴击奖励，对 {enemy.Body.Name} 额外造成 {bonusDealt} 点伤害。"));
+
+            if (stunOnBonus)
+            {
+                enemy.Body.AddStun(Math.Max(1, effect.Duration));
+                state.Logs.Add(new BattleLogEntry($"{card.Name} 暴击奖励附加眩晕，使 {enemy.Body.Name} 眩晕 {Math.Max(1, effect.Duration)} 回合。"));
             }
         }
 
@@ -1449,6 +1522,59 @@ namespace GameLogic.Cultivation
             },
             new CardEffect(CardEffectType.ChanceDamage, 4, repeatCount: 3, chancePercent: 10, fallbackValue: 4));
 
+        public static CardDefinition ThunderHammer { get; } = new CardDefinition(
+            "thunder_hammer",
+            "雷神之锤",
+            3,
+            new[]
+            {
+                new CardUpgradeOption(
+                    "thunder_hammer_bonus_1",
+                    "雷神之锤·强",
+                    "造成 22 伤害；若本回合已触发暴击，额外造成 18 伤害。",
+                    new CardDefinition(
+                        "thunder_hammer_bonus_1",
+                        "雷神之锤·强",
+                        3,
+                        new[]
+                        {
+                            new CardUpgradeOption(
+                                "thunder_hammer_bonus_2_damage",
+                                "雷神之锤·极",
+                                "造成 22 伤害；若本回合已触发暴击，额外造成 26 伤害。",
+                                new CardDefinition("thunder_hammer_bonus_2_damage", "雷神之锤·极", 3, new CardEffect(CardEffectType.DamageAfterCriticalTriggered, 22, fallbackValue: 26))),
+                            new CardUpgradeOption(
+                                "thunder_hammer_bonus_2_stun",
+                                "雷神之锤·晕",
+                                "造成 22 伤害；若本回合已触发暴击，额外造成 18 伤害并眩晕。",
+                                new CardDefinition("thunder_hammer_bonus_2_stun", "雷神之锤·晕", 3, new CardEffect(CardEffectType.DamageAfterCriticalTriggeredWithStun, 22, duration: 1, fallbackValue: 18))),
+                        },
+                        new CardEffect(CardEffectType.DamageAfterCriticalTriggered, 22, fallbackValue: 18))),
+                new CardUpgradeOption(
+                    "thunder_hammer_stable_1",
+                    "雷神之锤·稳",
+                    "造成 27 伤害；若本回合已触发暴击，额外造成 10 伤害。",
+                    new CardDefinition(
+                        "thunder_hammer_stable_1",
+                        "雷神之锤·稳",
+                        3,
+                        new[]
+                        {
+                            new CardUpgradeOption(
+                                "thunder_hammer_stable_2_cost",
+                                "雷神之锤·速",
+                                "灵力消耗降为 2，造成 27 伤害；若本回合已触发暴击，额外造成 10 伤害。",
+                                new CardDefinition("thunder_hammer_stable_2_cost", "雷神之锤·速", 2, new CardEffect(CardEffectType.DamageAfterCriticalTriggered, 27, fallbackValue: 10))),
+                            new CardUpgradeOption(
+                                "thunder_hammer_stable_2_chain",
+                                "雷神之锤·连",
+                                "造成 27 伤害；若本回合已触发暴击，暴击奖励连锁全体敌人，各造成 10 伤害。",
+                                new CardDefinition("thunder_hammer_stable_2_chain", "雷神之锤·连", 3, new CardEffect(CardEffectType.DamageAfterCriticalTriggeredChainAll, 27, fallbackValue: 10))),
+                        },
+                        new CardEffect(CardEffectType.DamageAfterCriticalTriggered, 27, fallbackValue: 10))),
+            },
+            new CardEffect(CardEffectType.DamageAfterCriticalTriggered, 22, fallbackValue: 10));
+
         public static PillDefinition SmallRestorePillItem { get; } = new PillDefinition(
             "small_restore_pill",
             "小还丹",
@@ -1701,6 +1827,7 @@ namespace GameLogic.Cultivation
                 new CultivationRunReward("reward_thunder_escape", ThunderEscape),
                 new CultivationRunReward("reward_five_thunder_orthodoxy", FiveThunderOrthodoxy),
                 new CultivationRunReward("reward_thunderous_barrage", ThunderousBarrage),
+                new CultivationRunReward("reward_thunder_hammer", ThunderHammer),
                 new CultivationRunReward("reward_guard_qi", GuardQi),
                 new CultivationRunReward("reward_light_body", LightBody),
                 new CultivationRunReward("reward_healing_pill", HealingPill),

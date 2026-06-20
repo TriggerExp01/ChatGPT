@@ -47,6 +47,8 @@ namespace GameLogic.Cultivation
 
         public int ChargedDamageUses { get; private set; }
 
+        public bool HasTriggeredCriticalThisTurn { get; private set; }
+
         public int TurnNumber { get; set; }
 
         public BattleOutcome Outcome { get; set; } = BattleOutcome.InProgress;
@@ -87,6 +89,16 @@ namespace GameLogic.Cultivation
             }
 
             return multiplier;
+        }
+
+        public void MarkCriticalTriggered()
+        {
+            HasTriggeredCriticalThisTurn = true;
+        }
+
+        public void ResetTurnCriticalState()
+        {
+            HasTriggeredCriticalThisTurn = false;
         }
 
         public int GetEffectiveSpiritCost(CardDefinition card)
