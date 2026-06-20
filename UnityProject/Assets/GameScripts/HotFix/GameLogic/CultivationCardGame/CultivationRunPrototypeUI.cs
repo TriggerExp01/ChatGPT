@@ -14,6 +14,7 @@ namespace GameLogic.Cultivation
         private BattleEngine _battleEngine;
         private CultivationRunEngine _runEngine;
         private CultivationRunState _run;
+        private string _lastRunPillMessage;
         private RectTransform _handRoot;
         private RectTransform _choiceRoot;
         private Text _runText;
@@ -102,6 +103,17 @@ namespace GameLogic.Cultivation
             }
 
             _runEngine.UsePillInBattle(_run, pillIndex);
+            Refresh();
+        }
+
+        public void UsePillInRun(int pillIndex)
+        {
+            if (_run == null || _run.Status == CultivationRunStatus.InBattle)
+            {
+                return;
+            }
+
+            _lastRunPillMessage = _runEngine.UsePillInRun(_run, pillIndex);
             Refresh();
         }
 
@@ -456,6 +468,23 @@ namespace GameLogic.Cultivation
 
             if (_run.Status != CultivationRunStatus.InBattle || _run.CurrentBattle == null)
             {
+                for (var i = 0; i < _run.Pills.Count; i++)
+                {
+                    var index = i;
+                    var pill = _run.Pills[i];
+                    var button = CreateButton($"RunPill_{i}_{pill.Id}", _handRoot, $"丹药\n{pill.Name}\n{pill.Description}");
+                    button.interactable = pill.IsRunEffect;
+                    button.onClick.AddListener(() => UsePillInRun(index));
+                    SetLayout(button.gameObject, flexibleWidth: 1, preferredHeight: 130);
+                }
+
+                if (!string.IsNullOrEmpty(_lastRunPillMessage))
+                {
+                    var message = CreateText("RunPillMessage", _handRoot, _lastRunPillMessage, 15, FontStyle.Bold, TextAnchor.MiddleCenter);
+                    message.color = new Color(0.95f, 0.89f, 0.72f, 1f);
+                    SetLayout(message.gameObject, flexibleWidth: 1, preferredHeight: 130);
+                }
+
                 return;
             }
 
@@ -464,7 +493,7 @@ namespace GameLogic.Cultivation
                 var index = i;
                 var pill = _run.Pills[i];
                 var button = CreateButton($"Pill_{i}_{pill.Id}", _handRoot, $"丹药\n{pill.Name}\n{pill.Description}");
-                button.interactable = _run.CurrentBattle.Outcome == BattleOutcome.InProgress && pill.EffectValue > 0;
+                button.interactable = _run.CurrentBattle.Outcome == BattleOutcome.InProgress && pill.EffectValue > 0 && pill.IsBattleEffect;
                 button.onClick.AddListener(() => UsePillInBattle(index));
                 SetLayout(button.gameObject, flexibleWidth: 1, preferredHeight: 130);
             }

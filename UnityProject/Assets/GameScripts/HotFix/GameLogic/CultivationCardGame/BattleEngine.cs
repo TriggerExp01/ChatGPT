@@ -798,6 +798,13 @@ namespace GameLogic.Cultivation
             PillEffectType.CostReduction,
             1);
 
+        public static PillDefinition FoundationPillItem { get; } = new PillDefinition(
+            "foundation_pill",
+            "筑基丹",
+            "Run 内消耗品：永久增加最大 HP 10。",
+            PillEffectType.MaxHp,
+            10);
+
         public static IReadOnlyList<CardDefinition> CreateSwordSectStarterDeck()
         {
             return new List<CardDefinition>
@@ -864,6 +871,7 @@ namespace GameLogic.Cultivation
                 new CultivationMarketItem("market_spirit_boost_pill", SpiritBoostPillItem, 35),
                 new CultivationMarketItem("market_cleanse_pill", CleansePillItem, 15),
                 new CultivationMarketItem("market_breakthrough_pill", BreakthroughPillItem, 90),
+                new CultivationMarketItem("market_foundation_pill", FoundationPillItem, 70),
             };
         }
 

@@ -155,7 +155,7 @@ namespace GameLogic.Cultivation
             }
 
             var pill = state.Pills[pillIndex];
-            if (pill.EffectValue <= 0)
+            if (pill.EffectValue <= 0 || !pill.IsBattleEffect)
             {
                 throw new InvalidOperationException("Selected pill does not have a battle effect.");
             }
@@ -163,6 +163,36 @@ namespace GameLogic.Cultivation
             var logMessage = ResolvePillEffect(state.CurrentBattle, pill);
             state.Pills.RemoveAt(pillIndex);
             state.CurrentBattle.Logs.Add(new BattleLogEntry(logMessage));
+        }
+
+        public string UsePillInRun(CultivationRunState state, int pillIndex)
+        {
+            EnsureState(state);
+
+            if (state.Status == CultivationRunStatus.InBattle)
+            {
+                throw new InvalidOperationException("Run-level pills cannot be used during battle.");
+            }
+
+            if (state.Status == CultivationRunStatus.Completed || state.Status == CultivationRunStatus.Defeated)
+            {
+                throw new InvalidOperationException("Run is not active.");
+            }
+
+            if (pillIndex < 0 || pillIndex >= state.Pills.Count)
+            {
+                throw new ArgumentOutOfRangeException(nameof(pillIndex), "Pill index is outside the current pill slots.");
+            }
+
+            var pill = state.Pills[pillIndex];
+            if (pill.EffectValue <= 0 || !pill.IsRunEffect)
+            {
+                throw new InvalidOperationException("Selected pill does not have a run effect.");
+            }
+
+            var logMessage = ResolveRunPillEffect(state, pill);
+            state.Pills.RemoveAt(pillIndex);
+            return logMessage;
         }
 
         public void BuyMarketItem(CultivationRunState state, int itemIndex)
@@ -335,6 +365,18 @@ namespace GameLogic.Cultivation
                     return $"使用 {pill.Name}，本场战斗功法灵力消耗 -{pill.CostReductionAmount}。";
                 default:
                     throw new ArgumentOutOfRangeException(nameof(pill.EffectType), pill.EffectType, "Unsupported pill effect type.");
+            }
+        }
+
+        private static string ResolveRunPillEffect(CultivationRunState state, PillDefinition pill)
+        {
+            switch (pill.EffectType)
+            {
+                case PillEffectType.MaxHp:
+                    state.IncreasePlayerMaxHp(pill.MaxHpAmount);
+                    return $"使用 {pill.Name}，本 Run 最大 HP +{pill.MaxHpAmount}。";
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(pill.EffectType), pill.EffectType, "Unsupported run pill effect type.");
             }
         }
 

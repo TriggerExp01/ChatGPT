@@ -207,6 +207,26 @@ namespace GameLogic.Tests
         }
 
         [Test]
+        public void PrototypeUiCanUseFoundationPillInMarket()
+        {
+            ForceCurrentBattleVictory();
+            _ui.ResolveBattle();
+            _ui.SkipReward();
+            _ui.ChooseRoute(1);
+            _ui.Rest();
+            _ui.ChooseRoute(0);
+            SetRunSpiritStones(75);
+            SetRunPlayerCurrentHp(50);
+            _ui.BuyMarketItem(6);
+
+            _ui.UsePillInRun(0);
+
+            Assert.AreEqual(110, _ui.Snapshot.PlayerMaxHp);
+            Assert.AreEqual(60, _ui.Snapshot.PlayerHp);
+            Assert.AreEqual(0, _ui.Snapshot.PillCount);
+        }
+
+        [Test]
         public void PrototypeUiCanRemoveDeckCardInMarket()
         {
             ForceCurrentBattleVictory();
@@ -309,6 +329,11 @@ namespace GameLogic.Tests
         private void SetRunSpiritStones(int value)
         {
             GetRun().SpiritStones = value;
+        }
+
+        private void SetRunPlayerCurrentHp(int value)
+        {
+            GetRun().PlayerCurrentHp = value;
         }
 
         private void ForceCurrentBattleVictory()

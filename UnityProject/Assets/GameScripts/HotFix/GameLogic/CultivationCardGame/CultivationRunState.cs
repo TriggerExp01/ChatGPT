@@ -55,7 +55,7 @@ namespace GameLogic.Cultivation
 
         public int CurrentNodeIndex { get; set; }
 
-        public int PlayerMaxHp { get; }
+        public int PlayerMaxHp { get; private set; }
 
         public int PlayerCurrentHp { get; set; }
 
@@ -90,5 +90,12 @@ namespace GameLogic.Cultivation
         public List<CardDefinition> SoldMarketCards { get; }
 
         public CultivationRunNode CurrentNode => Route[CurrentNodeIndex];
+
+        public void IncreasePlayerMaxHp(int amount)
+        {
+            var increase = Math.Max(0, amount);
+            PlayerMaxHp += increase;
+            PlayerCurrentHp = Math.Min(PlayerMaxHp, PlayerCurrentHp + increase);
+        }
     }
 }

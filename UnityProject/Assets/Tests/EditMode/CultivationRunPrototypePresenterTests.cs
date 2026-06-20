@@ -88,6 +88,7 @@ namespace GameLogic.Tests
             StringAssert.Contains("增元丹（丹药） / 35 灵石", text.NodeText);
             StringAssert.Contains("解毒丹（丹药） / 15 灵石", text.NodeText);
             StringAssert.Contains("破境丹（丹药） / 90 灵石", text.NodeText);
+            StringAssert.Contains("筑基丹（丹药） / 70 灵石", text.NodeText);
             Assert.AreEqual(1, snapshot.PillCount);
             Assert.AreEqual(3, snapshot.PillSlotLimit);
             Assert.AreEqual(1, snapshot.PurchasedMarketPillCount);
@@ -240,6 +241,7 @@ namespace GameLogic.Tests
                         new CultivationMarketItem("market_spirit_boost_pill", CultivationSeedData.SpiritBoostPillItem, 35),
                         new CultivationMarketItem("market_cleanse_pill", CultivationSeedData.CleansePillItem, 15),
                         new CultivationMarketItem("market_breakthrough_pill", CultivationSeedData.BreakthroughPillItem, 90),
+                        new CultivationMarketItem("market_foundation_pill", CultivationSeedData.FoundationPillItem, 70),
                     }),
             };
         }

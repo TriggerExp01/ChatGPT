@@ -368,7 +368,7 @@ namespace GameLogic.Tests
             var run = engine.StartRun(CreateInstantWinDeck(), CreateMarketRoute(), initialSpiritStones: 25);
 
             Assert.AreEqual(CultivationRunStatus.Market, run.Status);
-            Assert.AreEqual(6, run.CurrentMarketItems.Count);
+            Assert.AreEqual(7, run.CurrentMarketItems.Count);
 
             var deckCount = run.Deck.Count;
             engine.BuyMarketItem(run, 0);
@@ -377,7 +377,7 @@ namespace GameLogic.Tests
             Assert.AreEqual(deckCount + 1, run.Deck.Count);
             Assert.AreEqual("cloud_guard", run.Deck.Last().Id);
             Assert.AreEqual(1, run.PurchasedMarketItems.Count);
-            Assert.AreEqual(5, run.CurrentMarketItems.Count);
+            Assert.AreEqual(6, run.CurrentMarketItems.Count);
         }
 
         [Test]
@@ -394,7 +394,7 @@ namespace GameLogic.Tests
             Assert.AreEqual(1, run.Pills.Count);
             Assert.AreEqual(1, run.PurchasedMarketPills.Count);
             Assert.AreEqual("small_restore_pill", run.Pills[0].Id);
-            Assert.AreEqual(5, run.CurrentMarketItems.Count);
+            Assert.AreEqual(6, run.CurrentMarketItems.Count);
         }
 
         [Test]
@@ -410,7 +410,7 @@ namespace GameLogic.Tests
             Assert.AreEqual(20, run.SpiritStones);
             Assert.AreEqual(5, run.Deck.Count);
             Assert.AreEqual(3, run.Pills.Count);
-            Assert.AreEqual(6, run.CurrentMarketItems.Count);
+            Assert.AreEqual(7, run.CurrentMarketItems.Count);
             Assert.AreEqual(0, run.PurchasedMarketPills.Count);
         }
 
@@ -517,6 +517,35 @@ namespace GameLogic.Tests
             Assert.IsTrue(new BattleEngine(1).CanPlay(run.CurrentBattle, twoCostCard));
             Assert.AreEqual(0, run.Pills.Count);
             Assert.IsTrue(run.CurrentBattle.Logs.Any(log => log.Message.Contains("使用 破境丹，本场战斗功法灵力消耗 -1")));
+        }
+
+        [Test]
+        public void MarketBuyingFoundationPillAndUsingItPermanentlyIncreasesRunMaxHp()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var run = engine.StartRun(CreateInstantWinDeck(), CreateMarketRoute(), playerCurrentHp: 50, initialSpiritStones: 75);
+            engine.BuyMarketItem(run, 6);
+
+            var logMessage = engine.UsePillInRun(run, 0);
+
+            Assert.AreEqual(5, run.SpiritStones);
+            Assert.AreEqual("foundation_pill", run.PurchasedMarketPills[0].Id);
+            Assert.AreEqual(110, run.PlayerMaxHp);
+            Assert.AreEqual(60, run.PlayerCurrentHp);
+            Assert.AreEqual(0, run.Pills.Count);
+            StringAssert.Contains("使用 筑基丹，本 Run 最大 HP +10", logMessage);
+        }
+
+        [Test]
+        public void UsePillInRunRejectsBattleStateAndKeepsPill()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var run = engine.StartRun(CreateInstantWinDeck(), CreateTestRoute());
+            run.Pills.Add(CultivationSeedData.FoundationPillItem);
+
+            Assert.Throws<System.InvalidOperationException>(() => engine.UsePillInRun(run, 0));
+            Assert.AreEqual(100, run.PlayerMaxHp);
+            Assert.AreEqual(1, run.Pills.Count);
         }
 
         [Test]
@@ -940,6 +969,7 @@ namespace GameLogic.Tests
                         new CultivationMarketItem("market_spirit_boost_pill", CultivationSeedData.SpiritBoostPillItem, 35),
                         new CultivationMarketItem("market_cleanse_pill", CultivationSeedData.CleansePillItem, 15),
                         new CultivationMarketItem("market_breakthrough_pill", CultivationSeedData.BreakthroughPillItem, 90),
+                        new CultivationMarketItem("market_foundation_pill", CultivationSeedData.FoundationPillItem, 70),
                     }),
                 new CultivationRunNode(
                     "after_market",

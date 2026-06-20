@@ -7,7 +7,8 @@ namespace GameLogic.Cultivation
         Heal,
         Spirit,
         Cleanse,
-        CostReduction
+        CostReduction,
+        MaxHp
     }
 
     public sealed class PillDefinition
@@ -48,6 +49,12 @@ namespace GameLogic.Cultivation
         public int CleanseHealAmount => EffectType == PillEffectType.Cleanse ? EffectValue : 0;
 
         public int CostReductionAmount => EffectType == PillEffectType.CostReduction ? EffectValue : 0;
+
+        public int MaxHpAmount => EffectType == PillEffectType.MaxHp ? EffectValue : 0;
+
+        public bool IsBattleEffect => EffectType != PillEffectType.MaxHp;
+
+        public bool IsRunEffect => EffectType == PillEffectType.MaxHp;
     }
 
     public sealed class CultivationRunReward
