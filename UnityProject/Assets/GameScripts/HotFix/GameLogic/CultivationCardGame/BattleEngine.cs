@@ -775,7 +775,14 @@ namespace GameLogic.Cultivation
             "small_restore_pill",
             "小还丹",
             "战斗内消耗品：恢复 10 HP。",
-            healAmount: 10);
+            effectValue: 10);
+
+        public static PillDefinition SpiritBoostPillItem { get; } = new PillDefinition(
+            "spirit_boost_pill",
+            "增元丹",
+            "战斗内消耗品：本回合灵力 +2。",
+            PillEffectType.Spirit,
+            2);
 
         public static IReadOnlyList<CardDefinition> CreateSwordSectStarterDeck()
         {
@@ -840,6 +847,7 @@ namespace GameLogic.Cultivation
                 new CultivationMarketItem("market_cloud_guard", CloudGuard, 20),
                 new CultivationMarketItem("market_thrust", Thrust, 25),
                 new CultivationMarketItem("market_small_restore_pill", SmallRestorePillItem, 15),
+                new CultivationMarketItem("market_spirit_boost_pill", SpiritBoostPillItem, 35),
             };
         }
 

@@ -155,14 +155,14 @@ namespace GameLogic.Cultivation
             }
 
             var pill = state.Pills[pillIndex];
-            if (pill.HealAmount <= 0)
+            if (pill.EffectValue <= 0)
             {
                 throw new InvalidOperationException("Selected pill does not have a battle effect.");
             }
 
-            state.CurrentBattle.Player.Heal(pill.HealAmount);
+            var logMessage = ResolvePillEffect(state.CurrentBattle, pill);
             state.Pills.RemoveAt(pillIndex);
-            state.CurrentBattle.Logs.Add(new BattleLogEntry($"使用 {pill.Name}，恢复 {pill.HealAmount} HP。"));
+            state.CurrentBattle.Logs.Add(new BattleLogEntry(logMessage));
         }
 
         public void BuyMarketItem(CultivationRunState state, int itemIndex)
@@ -314,6 +314,21 @@ namespace GameLogic.Cultivation
             state.CurrentRouteChoices.Clear();
             state.CurrentBattle = _battleEngine.CreateBattle(state.Deck, state.CurrentNode.Enemy, state.PlayerCurrentHp, state.PlayerMaxHp);
             state.Status = CultivationRunStatus.InBattle;
+        }
+
+        private static string ResolvePillEffect(BattleState battle, PillDefinition pill)
+        {
+            switch (pill.EffectType)
+            {
+                case PillEffectType.Heal:
+                    battle.Player.Heal(pill.HealAmount);
+                    return $"使用 {pill.Name}，恢复 {pill.HealAmount} HP。";
+                case PillEffectType.Spirit:
+                    battle.Spirit += pill.SpiritAmount;
+                    return $"使用 {pill.Name}，本回合灵力 +{pill.SpiritAmount}。";
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(pill.EffectType), pill.EffectType, "Unsupported pill effect type.");
+            }
         }
 
         private IReadOnlyList<CultivationRunReward> CreateRewardChoices(CultivationRunNode node)

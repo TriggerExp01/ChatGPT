@@ -2,9 +2,15 @@ using System;
 
 namespace GameLogic.Cultivation
 {
+    public enum PillEffectType
+    {
+        Heal,
+        Spirit
+    }
+
     public sealed class PillDefinition
     {
-        public PillDefinition(string id, string name, string description, int healAmount = 0)
+        public PillDefinition(string id, string name, string description, PillEffectType effectType = PillEffectType.Heal, int effectValue = 0)
         {
             if (string.IsNullOrWhiteSpace(id))
             {
@@ -19,7 +25,8 @@ namespace GameLogic.Cultivation
             Id = id;
             Name = name;
             Description = description ?? string.Empty;
-            HealAmount = Math.Max(0, healAmount);
+            EffectType = effectType;
+            EffectValue = Math.Max(0, effectValue);
         }
 
         public string Id { get; }
@@ -28,7 +35,13 @@ namespace GameLogic.Cultivation
 
         public string Description { get; }
 
-        public int HealAmount { get; }
+        public PillEffectType EffectType { get; }
+
+        public int EffectValue { get; }
+
+        public int HealAmount => EffectType == PillEffectType.Heal ? EffectValue : 0;
+
+        public int SpiritAmount => EffectType == PillEffectType.Spirit ? EffectValue : 0;
     }
 
     public sealed class CultivationRunReward

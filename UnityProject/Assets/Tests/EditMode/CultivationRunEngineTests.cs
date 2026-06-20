@@ -368,7 +368,7 @@ namespace GameLogic.Tests
             var run = engine.StartRun(CreateInstantWinDeck(), CreateMarketRoute(), initialSpiritStones: 25);
 
             Assert.AreEqual(CultivationRunStatus.Market, run.Status);
-            Assert.AreEqual(3, run.CurrentMarketItems.Count);
+            Assert.AreEqual(4, run.CurrentMarketItems.Count);
 
             var deckCount = run.Deck.Count;
             engine.BuyMarketItem(run, 0);
@@ -377,7 +377,7 @@ namespace GameLogic.Tests
             Assert.AreEqual(deckCount + 1, run.Deck.Count);
             Assert.AreEqual("cloud_guard", run.Deck.Last().Id);
             Assert.AreEqual(1, run.PurchasedMarketItems.Count);
-            Assert.AreEqual(2, run.CurrentMarketItems.Count);
+            Assert.AreEqual(3, run.CurrentMarketItems.Count);
         }
 
         [Test]
@@ -394,7 +394,7 @@ namespace GameLogic.Tests
             Assert.AreEqual(1, run.Pills.Count);
             Assert.AreEqual(1, run.PurchasedMarketPills.Count);
             Assert.AreEqual("small_restore_pill", run.Pills[0].Id);
-            Assert.AreEqual(2, run.CurrentMarketItems.Count);
+            Assert.AreEqual(3, run.CurrentMarketItems.Count);
         }
 
         [Test]
@@ -410,7 +410,7 @@ namespace GameLogic.Tests
             Assert.AreEqual(20, run.SpiritStones);
             Assert.AreEqual(5, run.Deck.Count);
             Assert.AreEqual(3, run.Pills.Count);
-            Assert.AreEqual(3, run.CurrentMarketItems.Count);
+            Assert.AreEqual(4, run.CurrentMarketItems.Count);
             Assert.AreEqual(0, run.PurchasedMarketPills.Count);
         }
 
@@ -451,6 +451,24 @@ namespace GameLogic.Tests
 
             Assert.Throws<System.InvalidOperationException>(() => engine.UsePillInBattle(run, 0));
             Assert.AreEqual(1, run.Pills.Count);
+        }
+
+        [Test]
+        public void MarketBuyingSpiritPillAndUsingItAddsTemporarySpirit()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var run = engine.StartRun(CreateInstantWinDeck(), CreateMarketRoute(), initialSpiritStones: 40);
+            engine.BuyMarketItem(run, 3);
+            engine.LeaveMarket(run);
+            var spiritBefore = run.CurrentBattle.Spirit;
+
+            engine.UsePillInBattle(run, 0);
+
+            Assert.AreEqual(5, run.SpiritStones);
+            Assert.AreEqual("spirit_boost_pill", run.PurchasedMarketPills[0].Id);
+            Assert.AreEqual(spiritBefore + 2, run.CurrentBattle.Spirit);
+            Assert.AreEqual(0, run.Pills.Count);
+            Assert.IsTrue(run.CurrentBattle.Logs.Any(log => log.Message.Contains("使用 增元丹，本回合灵力 +2")));
         }
 
         [Test]
@@ -871,6 +889,7 @@ namespace GameLogic.Tests
                         new CultivationMarketItem("market_cloud_guard", CultivationSeedData.CloudGuard, 20),
                         new CultivationMarketItem("market_thrust", CultivationSeedData.Thrust, 25),
                         new CultivationMarketItem("market_small_restore_pill", CultivationSeedData.SmallRestorePillItem, 15),
+                        new CultivationMarketItem("market_spirit_boost_pill", CultivationSeedData.SpiritBoostPillItem, 35),
                     }),
                 new CultivationRunNode(
                     "after_market",

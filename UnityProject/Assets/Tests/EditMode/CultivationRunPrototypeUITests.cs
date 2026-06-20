@@ -141,6 +141,27 @@ namespace GameLogic.Tests
         }
 
         [Test]
+        public void PrototypeUiCanUseSpiritPillInNextBattle()
+        {
+            ForceCurrentBattleVictory();
+            _ui.ResolveBattle();
+            _ui.SkipReward();
+            _ui.ChooseRoute(1);
+            _ui.Rest();
+            _ui.ChooseRoute(0);
+            SetRunSpiritStones(40);
+            _ui.BuyMarketItem(3);
+            _ui.LeaveMarket();
+            var spiritBefore = GetCurrentBattleSpirit();
+
+            _ui.UsePillInBattle(0);
+
+            Assert.AreEqual(spiritBefore + 2, GetCurrentBattleSpirit());
+            Assert.AreEqual(0, _ui.Snapshot.PillCount);
+            StringAssert.Contains("使用 增元丹，本回合灵力 +2", GetCurrentBattleLogText());
+        }
+
+        [Test]
         public void PrototypeUiCanRemoveDeckCardInMarket()
         {
             ForceCurrentBattleVictory();
@@ -211,6 +232,14 @@ namespace GameLogic.Tests
                 .GetField("_run", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
             var run = (CultivationRunState)battleField.GetValue(_ui);
             run.CurrentBattle.Player.TakeDamage(amount);
+        }
+
+        private int GetCurrentBattleSpirit()
+        {
+            var battleField = typeof(CultivationRunPrototypeUI)
+                .GetField("_run", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            var run = (CultivationRunState)battleField.GetValue(_ui);
+            return run.CurrentBattle.Spirit;
         }
 
         private void SetRunSpiritStones(int value)

@@ -464,7 +464,7 @@ namespace GameLogic.Cultivation
                 var index = i;
                 var pill = _run.Pills[i];
                 var button = CreateButton($"Pill_{i}_{pill.Id}", _handRoot, $"丹药\n{pill.Name}\n{pill.Description}");
-                button.interactable = _run.CurrentBattle.Outcome == BattleOutcome.InProgress && pill.HealAmount > 0;
+                button.interactable = _run.CurrentBattle.Outcome == BattleOutcome.InProgress && pill.EffectValue > 0;
                 button.onClick.AddListener(() => UsePillInBattle(index));
                 SetLayout(button.gameObject, flexibleWidth: 1, preferredHeight: 130);
             }

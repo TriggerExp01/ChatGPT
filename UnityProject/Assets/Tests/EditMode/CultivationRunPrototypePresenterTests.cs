@@ -85,6 +85,7 @@ namespace GameLogic.Tests
             var updatedText = CultivationRunPrototypePresenter.BuildText(run);
 
             StringAssert.Contains("小还丹（丹药） / 15 灵石", text.NodeText);
+            StringAssert.Contains("增元丹（丹药） / 35 灵石", text.NodeText);
             Assert.AreEqual(1, snapshot.PillCount);
             Assert.AreEqual(3, snapshot.PillSlotLimit);
             Assert.AreEqual(1, snapshot.PurchasedMarketPillCount);
@@ -234,6 +235,7 @@ namespace GameLogic.Tests
                     {
                         new CultivationMarketItem("market_cloud_guard", CultivationSeedData.CloudGuard, 20),
                         new CultivationMarketItem("market_small_restore_pill", CultivationSeedData.SmallRestorePillItem, 15),
+                        new CultivationMarketItem("market_spirit_boost_pill", CultivationSeedData.SpiritBoostPillItem, 35),
                     }),
             };
         }
