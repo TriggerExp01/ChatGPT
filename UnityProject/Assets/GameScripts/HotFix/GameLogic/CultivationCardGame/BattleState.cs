@@ -93,6 +93,32 @@ namespace GameLogic.Cultivation
 
         public int ArtifactMissingHpDamageBonusPerStepPercent { get; private set; }
 
+        public int ArtifactFirstAttackSwordMarkStacks { get; private set; }
+
+        public bool HasTriggeredArtifactFirstAttackSwordMarkThisTurn { get; private set; }
+
+        public int ArtifactAttackCardCounter { get; private set; }
+
+        public int ArtifactEveryThirdAttackCardDamageBonusPercent { get; private set; }
+
+        public int ArtifactCurrentAttackCardDamageBonusPercent { get; private set; }
+
+        public int ArtifactTurnStartBurnStacks { get; private set; }
+
+        public int ArtifactBurnDamageBonusPercent { get; private set; }
+
+        public int ArtifactFirstBattlePillDoubleNoConsumeCharges { get; private set; }
+
+        public int ArtifactPoisonStackLimitBonus { get; private set; }
+
+        public int ArtifactFirstChanceFailureOverrideCharges { get; private set; }
+
+        public bool ArtifactChainDamageNoDecay { get; private set; }
+
+        public int ArtifactAttackCounterPierceDamageReductionPercent { get; private set; }
+
+        public bool HasTriggeredArtifactFirstDamageReductionThisTurn { get; private set; }
+
         public int SelfHpLostThisTurn { get; private set; }
 
         public bool PoisonDamageTriggeredThisTurn { get; private set; }
@@ -412,6 +438,116 @@ namespace GameLogic.Cultivation
             ArtifactMissingHpDamageBonusPerStepPercent += Math.Max(0, percentPerMissingHpStep);
         }
 
+        public void AddArtifactFirstAttackSwordMark(int stacks)
+        {
+            ArtifactFirstAttackSwordMarkStacks += Math.Max(0, stacks);
+        }
+
+        public bool TryTriggerArtifactFirstAttackSwordMark()
+        {
+            if (ArtifactFirstAttackSwordMarkStacks <= 0 || HasTriggeredArtifactFirstAttackSwordMarkThisTurn)
+            {
+                return false;
+            }
+
+            HasTriggeredArtifactFirstAttackSwordMarkThisTurn = true;
+            return true;
+        }
+
+        public void AddArtifactEveryThirdAttackCardDamageBonus(int percent)
+        {
+            ArtifactEveryThirdAttackCardDamageBonusPercent += Math.Max(0, percent);
+        }
+
+        public int RegisterAttackCardAndGetArtifactBonusPercent()
+        {
+            if (ArtifactEveryThirdAttackCardDamageBonusPercent <= 0)
+            {
+                return 0;
+            }
+
+            ArtifactAttackCardCounter++;
+            return ArtifactAttackCardCounter % 3 == 0 ? ArtifactEveryThirdAttackCardDamageBonusPercent : 0;
+        }
+
+        public void SetArtifactCurrentAttackCardDamageBonus(int percent)
+        {
+            ArtifactCurrentAttackCardDamageBonusPercent = Math.Max(0, percent);
+        }
+
+        public void ClearArtifactCurrentAttackCardDamageBonus()
+        {
+            ArtifactCurrentAttackCardDamageBonusPercent = 0;
+        }
+
+        public void AddArtifactTurnStartBurn(int stacks)
+        {
+            ArtifactTurnStartBurnStacks += Math.Max(0, stacks);
+        }
+
+        public void AddArtifactBurnDamageBonus(int percent)
+        {
+            ArtifactBurnDamageBonusPercent += Math.Max(0, percent);
+        }
+
+        public void AddArtifactFirstBattlePillDoubleNoConsumeCharges(int amount)
+        {
+            ArtifactFirstBattlePillDoubleNoConsumeCharges += Math.Max(0, amount);
+        }
+
+        public bool TryConsumeArtifactFirstBattlePillDoubleNoConsumeCharge()
+        {
+            if (ArtifactFirstBattlePillDoubleNoConsumeCharges <= 0)
+            {
+                return false;
+            }
+
+            ArtifactFirstBattlePillDoubleNoConsumeCharges--;
+            return true;
+        }
+
+        public void AddArtifactPoisonStackLimitBonus(int amount)
+        {
+            ArtifactPoisonStackLimitBonus += Math.Max(0, amount);
+        }
+
+        public void AddArtifactFirstChanceFailureOverrideCharges(int amount)
+        {
+            ArtifactFirstChanceFailureOverrideCharges += Math.Max(0, amount);
+        }
+
+        public bool TryConsumeArtifactFirstChanceFailureOverrideCharge()
+        {
+            if (ArtifactFirstChanceFailureOverrideCharges <= 0)
+            {
+                return false;
+            }
+
+            ArtifactFirstChanceFailureOverrideCharges--;
+            return true;
+        }
+
+        public void EnableArtifactChainDamageNoDecay()
+        {
+            ArtifactChainDamageNoDecay = true;
+        }
+
+        public void AddArtifactAttackCounterPierceAndDamageReduction(int percent)
+        {
+            ArtifactAttackCounterPierceDamageReductionPercent += Math.Max(0, percent);
+        }
+
+        public bool TryTriggerArtifactFirstDamageReduction()
+        {
+            if (ArtifactAttackCounterPierceDamageReductionPercent <= 0 || HasTriggeredArtifactFirstDamageReductionThisTurn)
+            {
+                return false;
+            }
+
+            HasTriggeredArtifactFirstDamageReductionThisTurn = true;
+            return true;
+        }
+
         public void AddSelfHpLostThisTurn(int amount)
         {
             SelfHpLostThisTurn += Math.Max(0, amount);
@@ -420,6 +556,12 @@ namespace GameLogic.Cultivation
         public void ResetSelfHpLostThisTurn()
         {
             SelfHpLostThisTurn = 0;
+        }
+
+        public void ResetArtifactTurnFlags()
+        {
+            HasTriggeredArtifactFirstAttackSwordMarkThisTurn = false;
+            HasTriggeredArtifactFirstDamageReductionThisTurn = false;
         }
 
         public bool TryConsumeDodge()

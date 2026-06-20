@@ -992,6 +992,107 @@ namespace GameLogic.Tests
         }
 
         [Test]
+        public void SwordHeartJadeAddsSwordMarkOnFirstAttackEachTurn()
+        {
+            var engine = new BattleEngine(1);
+            var state = CreateOrderedBattle(engine, CultivationSeedData.SwordQi, CultivationSeedData.SwordQi);
+            var enemy = state.Enemies[0];
+            state.AddArtifactFirstAttackSwordMark(1);
+
+            engine.PlayCard(state, state.Hand[0], enemy);
+            engine.PlayCard(state, state.Hand[0], enemy);
+
+            Assert.AreEqual(1, enemy.Body.SwordMarkStacks);
+            Assert.IsTrue(state.HasTriggeredArtifactFirstAttackSwordMarkThisTurn);
+        }
+
+        [Test]
+        public void TenThousandSwordsBoostsEveryThirdAttackCard()
+        {
+            var engine = new BattleEngine(1);
+            var strike = new CardDefinition("artifact_attack_bonus_strike", "artifact_attack_bonus_strike", 0, new CardEffect(CardEffectType.Damage, 10));
+            var state = CreateOrderedBattle(engine, strike, strike, strike);
+            var enemy = state.Enemies[0];
+            state.AddArtifactEveryThirdAttackCardDamageBonus(50);
+
+            engine.PlayCard(state, state.Hand[0], enemy);
+            engine.PlayCard(state, state.Hand[0], enemy);
+            engine.PlayCard(state, state.Hand[0], enemy);
+
+            Assert.AreEqual(11, enemy.Body.CurrentHp);
+            Assert.AreEqual(3, state.ArtifactAttackCardCounter);
+        }
+
+        [Test]
+        public void FireCloudArtifactsApplyTurnStartBurnAndBonusDamage()
+        {
+            var engine = new BattleEngine(1);
+            var state = CreateOrderedBattle(engine, CultivationSeedData.GuardQi, CultivationSeedData.GuardQi);
+            var enemy = state.Enemies[0];
+            state.AddArtifactTurnStartBurn(2);
+            state.AddArtifactBurnDamageBonus(50);
+
+            engine.EndPlayerTurn(state);
+
+            Assert.AreEqual(37, enemy.Body.CurrentHp);
+            Assert.AreEqual(1, enemy.Body.BurnTurns);
+            Assert.IsTrue(state.Logs.Any(log => log.Message.Contains("焚天炉")));
+        }
+
+        [Test]
+        public void TenThousandPoisonPearlRaisesPoisonStackLimit()
+        {
+            var engine = new BattleEngine(1);
+            var poisonCard = new CardDefinition("poison_limit_test", "poison_limit_test", 0, new CardEffect(CardEffectType.Poison, 120));
+            var state = CreateOrderedBattle(engine, poisonCard);
+            var enemy = state.Enemies[0];
+            state.AddArtifactPoisonStackLimitBonus(50);
+
+            engine.PlayCard(state, state.Hand[0], enemy);
+
+            Assert.AreEqual(120, enemy.Body.PoisonStacks);
+        }
+
+        [Test]
+        public void ThunderSpiritPearlTurnsFirstChanceFailureIntoSuccess()
+        {
+            var engine = new BattleEngine(2);
+            var chanceCard = new CardDefinition(
+                "chance_artifact_override_test",
+                "chance_artifact_override_test",
+                0,
+                new CardEffect(CardEffectType.ChanceDamage, 10, chancePercent: 50, fallbackValue: 5));
+            var state = CreateOrderedBattle(engine, chanceCard);
+            var enemy = state.Enemies[0];
+            state.AddArtifactFirstChanceFailureOverrideCharges(1);
+
+            engine.PlayCard(state, state.Hand[0], enemy);
+
+            Assert.AreEqual(32, enemy.Body.CurrentHp);
+            Assert.AreEqual(0, state.ArtifactFirstChanceFailureOverrideCharges);
+            Assert.IsTrue(state.Logs.Any(log => log.Message.Contains("雷灵珠触发")));
+        }
+
+        [Test]
+        public void LightningRodKeepsChainDamageAtPrimaryValue()
+        {
+            var engine = new BattleEngine(1);
+            var chainCard = new CardDefinition(
+                "chain_no_decay_test",
+                "chain_no_decay_test",
+                0,
+                new CardEffect(CardEffectType.ChanceChainDamage, 8, chancePercent: 100, secondaryValue: 4));
+            var state = CreateMultiEnemyBattle(engine, chainCard);
+            state.EnableArtifactChainDamageNoDecay();
+
+            engine.PlayCard(state, state.Hand[0], state.Enemies[0]);
+
+            Assert.AreEqual(34, state.Enemies[0].Body.CurrentHp);
+            Assert.AreEqual(34, state.Enemies[1].Body.CurrentHp);
+            Assert.AreEqual(34, state.Enemies[2].Body.CurrentHp);
+        }
+
+        [Test]
         public void SwordMarkExplodesWhenReachingThreeStacks()
         {
             var engine = new BattleEngine(1);
@@ -1198,6 +1299,47 @@ namespace GameLogic.Tests
             Assert.AreEqual(100, state.Player.CurrentHp);
             Assert.AreEqual(38, state.Enemies[0].Body.CurrentHp);
             Assert.IsTrue(state.Logs.Any(log => log.Message.Contains("attack-counter dealt")));
+        }
+
+        [Test]
+        public void XuanhuangCauldronStartShieldCanAbsorbOpeningAttack()
+        {
+            var engine = new BattleEngine(1);
+            var state = CreateOrderedBattle(engine, CultivationSeedData.GuardQi);
+            state.Player.AddShield(CultivationSeedData.XuanhuangCauldronArtifact.BattleStartShield);
+
+            engine.EndPlayerTurn(state);
+
+            Assert.AreEqual(99, state.Player.CurrentHp);
+        }
+
+        [Test]
+        public void ImmovableMingwangSealReducesFirstDamageAndPiercesCounterDefense()
+        {
+            var armoredEnemy = new EnemyDefinition(
+                "armored_attacker",
+                "armored_attacker",
+                40,
+                6,
+                new EnemyIntent(EnemyIntentType.Attack, 10));
+            var counterCard = new CardDefinition(
+                "mingwang_counter_test",
+                "mingwang_counter_test",
+                0,
+                new CardEffect(CardEffectType.AttackCounter, 6, CardTarget.Self));
+            var engine = new BattleEngine(1);
+            var state = engine.CreateBattle(new[] { counterCard }.Concat(CultivationSeedData.CreateSwordSectStarterDeck()), armoredEnemy);
+            state.Hand.Clear();
+            state.DrawPile.Remove(counterCard);
+            state.Hand.Add(counterCard);
+            state.AddArtifactAttackCounterPierceAndDamageReduction(50);
+
+            engine.PlayCard(state, state.Hand[0], state.Enemies[0]);
+            engine.EndPlayerTurn(state);
+
+            Assert.AreEqual(95, state.Player.CurrentHp);
+            Assert.AreEqual(34, state.Enemies[0].Body.CurrentHp);
+            Assert.IsTrue(state.Logs.Any(log => log.Message.Contains("不动明王印触发")));
         }
 
         [Test]

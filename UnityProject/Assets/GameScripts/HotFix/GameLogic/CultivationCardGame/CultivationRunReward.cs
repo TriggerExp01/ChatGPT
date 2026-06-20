@@ -119,7 +119,17 @@ namespace GameLogic.Cultivation
         BonusSpiritStonesOnVictory,
         HealAfterVictory,
         PreventFirstSelfHpLossEachBattle,
-        MissingHpDamageBonus
+        MissingHpDamageBonus,
+        FirstAttackSwordMarkEachTurn,
+        EveryThirdAttackCardDamageBonus,
+        TurnStartBurn,
+        BurnDamageBonus,
+        FirstBattlePillDoubleNoConsume,
+        PoisonStackLimitBonus,
+        FirstChanceFailureOverride,
+        ChainDamageNoDecay,
+        BattleStartShield,
+        AttackCounterPierceAndFirstDamageReduction
     }
 
     public sealed class ArtifactDefinition
@@ -160,6 +170,26 @@ namespace GameLogic.Cultivation
         public int PreventFirstSelfHpLossEachBattleCharges => EffectType == ArtifactEffectType.PreventFirstSelfHpLossEachBattle ? Math.Max(1, EffectValue) : 0;
 
         public int MissingHpDamageBonusPerStepPercent => EffectType == ArtifactEffectType.MissingHpDamageBonus ? EffectValue : 0;
+
+        public int FirstAttackSwordMarkStacksEachTurn => EffectType == ArtifactEffectType.FirstAttackSwordMarkEachTurn ? Math.Max(1, EffectValue) : 0;
+
+        public int EveryThirdAttackCardDamageBonusPercent => EffectType == ArtifactEffectType.EveryThirdAttackCardDamageBonus ? EffectValue : 0;
+
+        public int TurnStartBurnStacks => EffectType == ArtifactEffectType.TurnStartBurn ? Math.Max(1, EffectValue) : 0;
+
+        public int BurnDamageBonusPercent => EffectType == ArtifactEffectType.BurnDamageBonus ? EffectValue : 0;
+
+        public int FirstBattlePillDoubleNoConsumeCharges => EffectType == ArtifactEffectType.FirstBattlePillDoubleNoConsume ? Math.Max(1, EffectValue) : 0;
+
+        public int PoisonStackLimitBonus => EffectType == ArtifactEffectType.PoisonStackLimitBonus ? EffectValue : 0;
+
+        public int FirstChanceFailureOverrideCharges => EffectType == ArtifactEffectType.FirstChanceFailureOverride ? Math.Max(1, EffectValue) : 0;
+
+        public bool ChainDamageNoDecay => EffectType == ArtifactEffectType.ChainDamageNoDecay && EffectValue > 0;
+
+        public int BattleStartShield => EffectType == ArtifactEffectType.BattleStartShield ? EffectValue : 0;
+
+        public int AttackCounterPierceAndFirstDamageReductionPercent => EffectType == ArtifactEffectType.AttackCounterPierceAndFirstDamageReduction ? EffectValue : 0;
     }
 
     public sealed class CultivationMarketItem

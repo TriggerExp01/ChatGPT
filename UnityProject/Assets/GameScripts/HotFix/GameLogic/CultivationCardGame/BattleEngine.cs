@@ -74,6 +74,7 @@ namespace GameLogic.Cultivation
 
             state.TurnNumber++;
             state.ResetTurnCriticalState();
+            state.ResetArtifactTurnFlags();
             state.ResetPoisonDamageTriggered();
             state.ResetSelfHpLostThisTurn();
             state.ClearAttackCounter();
@@ -124,9 +125,16 @@ namespace GameLogic.Cultivation
 
             foreach (var enemy in state.Enemies)
             {
+                if (state.ArtifactTurnStartBurnStacks > 0 && !enemy.Body.IsDefeated)
+                {
+                    enemy.Body.AddBurn(state.ArtifactTurnStartBurnStacks, 2);
+                    state.Logs.Add(new BattleLogEntry($"火云令使 {enemy.Body.Name} 获得 {state.ArtifactTurnStartBurnStacks} 层灼烧。"));
+                }
+
                 var enemyBurnDamage = enemy.Body.ResolveBurnAtTurnStart();
                 if (enemyBurnDamage > 0)
                 {
+                    enemyBurnDamage = ApplyArtifactBurnDamageBonus(state, enemy, enemyBurnDamage);
                     state.Logs.Add(new BattleLogEntry($"{enemy.Body.Name} 受到灼烧 {enemyBurnDamage} 点伤害。"));
                 }
 
@@ -165,9 +173,32 @@ namespace GameLogic.Cultivation
             state.Spirit -= state.GetEffectiveSpiritCost(card);
             state.Hand.Remove(card);
 
-            foreach (var effect in card.Effects)
+            var attackArtifactBonus = 0;
+            if (IsAttackCard(card))
             {
-                ResolveCardEffect(state, card, effect, target);
+                attackArtifactBonus = state.RegisterAttackCardAndGetArtifactBonusPercent();
+                state.SetArtifactCurrentAttackCardDamageBonus(attackArtifactBonus);
+            }
+
+            try
+            {
+                foreach (var effect in card.Effects)
+                {
+                    ResolveCardEffect(state, card, effect, target);
+                }
+            }
+            finally
+            {
+                state.ClearArtifactCurrentAttackCardDamageBonus();
+            }
+
+            if (IsAttackCard(card))
+            {
+                ApplyArtifactFirstAttackSwordMark(state, card, target);
+                if (attackArtifactBonus > 0)
+                {
+                    state.Logs.Add(new BattleLogEntry($"{card.Name} 触发万剑归宗剑，攻击伤害 +{attackArtifactBonus}%。"));
+                }
             }
 
             if (card.Effects.Any(effect => effect.Type == CardEffectType.Exhaust))
@@ -265,7 +296,7 @@ namespace GameLogic.Cultivation
                 case CardEffectType.Poison:
                     foreach (var enemy in SelectTargets(state, effect, explicitTarget))
                     {
-                        enemy.Body.AddPoison(effect.Value);
+                        enemy.Body.AddPoison(effect.Value, state.ArtifactPoisonStackLimitBonus);
                         state.Logs.Add(new BattleLogEntry($"{card.Name} 对 {enemy.Body.Name} 施加 {effect.Value} 层中毒。"));
                     }
 
@@ -285,7 +316,7 @@ namespace GameLogic.Cultivation
                         state.Logs.Add(new BattleLogEntry($"{card.Name} 引爆 {poisonStacks} 层中毒，造成 {dealt} 点伤害。"));
                         if (effect.SecondaryValue > 0 && !enemy.Body.IsDefeated)
                         {
-                            enemy.Body.AddPoison(effect.SecondaryValue);
+                            enemy.Body.AddPoison(effect.SecondaryValue, state.ArtifactPoisonStackLimitBonus);
                             state.Logs.Add(new BattleLogEntry($"{card.Name} 留下 {effect.SecondaryValue} 层余毒。"));
                         }
                     }
@@ -447,7 +478,7 @@ namespace GameLogic.Cultivation
                 case CardEffectType.ChainOnChanceDamage:
                     foreach (var enemy in SelectTargets(state, effect, explicitTarget))
                     {
-                        var triggered = RollChance(effect.ChancePercent);
+                        var triggered = RollChance(state, effect.ChancePercent);
                         var damage = triggered ? effect.Value : effect.FallbackValue;
                         if (damage <= 0)
                         {
@@ -493,7 +524,7 @@ namespace GameLogic.Cultivation
                 case CardEffectType.ChanceStun:
                     foreach (var enemy in SelectTargets(state, effect, explicitTarget))
                     {
-                        if (RollChance(effect.ChancePercent))
+                        if (RollChance(state, effect.ChancePercent))
                         {
                             enemy.Body.AddStun(Math.Max(1, effect.Duration));
                             state.Logs.Add(new BattleLogEntry($"{card.Name} 眩晕判定成功，使 {enemy.Body.Name} 眩晕 {Math.Max(1, effect.Duration)} 回合。"));
@@ -511,7 +542,7 @@ namespace GameLogic.Cultivation
                         var dealt = enemy.Body.TakeDamage(effect.Value, state.Player.Sharpness);
                         state.Logs.Add(new BattleLogEntry($"{card.Name} 对 {enemy.Body.Name} 造成 {dealt} 点伤害。"));
 
-                        if (RollChance(effect.ChancePercent))
+                        if (RollChance(state, effect.ChancePercent))
                         {
                             enemy.Body.AddStun(Math.Max(1, effect.Duration));
                             state.Logs.Add(new BattleLogEntry($"{card.Name} 眩晕判定成功，使 {enemy.Body.Name} 眩晕 {Math.Max(1, effect.Duration)} 回合。"));
@@ -560,7 +591,7 @@ namespace GameLogic.Cultivation
             }
         }
 
-        private bool RollChance(int chancePercent)
+        private bool RollChance(BattleState state, int chancePercent)
         {
             if (chancePercent <= 0)
             {
@@ -572,7 +603,14 @@ namespace GameLogic.Cultivation
                 return true;
             }
 
-            return Random.Next(100) < chancePercent;
+            var triggered = Random.Next(100) < chancePercent;
+            if (!triggered && state.TryConsumeArtifactFirstChanceFailureOverrideCharge())
+            {
+                state.Logs.Add(new BattleLogEntry("雷灵珠触发，首次概率失败改为成功。"));
+                return true;
+            }
+
+            return triggered;
         }
 
         private int ApplySelfHpLoss(BattleState state, CardDefinition card, int amount, string reason)
@@ -683,7 +721,7 @@ namespace GameLogic.Cultivation
                     return;
                 }
 
-                var triggered = RollChance(effect.ChancePercent);
+                var triggered = RollChance(state, effect.ChancePercent);
                 var damage = stunOnHit || chainOnEachHit
                     ? effect.Value
                     : triggered ? effect.Value : effect.FallbackValue;
@@ -703,15 +741,16 @@ namespace GameLogic.Cultivation
                     state.MarkCriticalTriggered();
                 }
 
-                if (triggered && stunOnHit && RollChance(effect.FallbackValue))
+                if (triggered && stunOnHit && RollChance(state, effect.FallbackValue))
                 {
                     enemy.Body.AddStun(Math.Max(1, effect.Duration));
                     state.Logs.Add(new BattleLogEntry($"{card.Name}{hitText} 暴击附加眩晕，使 {enemy.Body.Name} 眩晕 {Math.Max(1, effect.Duration)} 回合。"));
                 }
 
-                if (chainOnEachHit && RollChance(effect.SecondaryValue))
+                if (chainOnEachHit && RollChance(state, effect.SecondaryValue))
                 {
-                    ChainToOneAdditionalEnemy(state, card, enemy, Math.Max(0, effect.FallbackValue));
+                    var chainDamage = state.ArtifactChainDamageNoDecay ? damage : Math.Max(0, effect.FallbackValue);
+                    ChainToOneAdditionalEnemy(state, card, enemy, chainDamage);
                 }
             }
         }
@@ -773,7 +812,7 @@ namespace GameLogic.Cultivation
             var current = firstTarget;
             var chainCount = 0;
             var maxChainCount = allowRepeatTarget ? Math.Max(1, effect.RepeatCount) : int.MaxValue;
-            while (chainCount < maxChainCount && RollChance(effect.ChancePercent))
+            while (chainCount < maxChainCount && RollChance(state, effect.ChancePercent))
             {
                 var candidates = state.Enemies
                     .Where(enemy => !enemy.Body.IsDefeated && (allowRepeatTarget || !chainedTargets.Contains(enemy)))
@@ -785,7 +824,7 @@ namespace GameLogic.Cultivation
                 }
 
                 var next = candidates[Random.Next(candidates.Count)];
-                var chainDamage = Math.Max(0, effect.SecondaryValue);
+                var chainDamage = state.ArtifactChainDamageNoDecay ? Math.Max(0, effect.Value) : Math.Max(0, effect.SecondaryValue);
                 if (chainDamage <= 0)
                 {
                     state.Logs.Add(new BattleLogEntry($"{card.Name} 雷击连锁未造成伤害。"));
@@ -794,7 +833,7 @@ namespace GameLogic.Cultivation
 
                 var (chainDealt, chainChargeText, chainBonusText) = DealCardDamageValue(state, next, chainDamage);
                 state.Logs.Add(new BattleLogEntry($"{card.Name}{chainChargeText}{chainBonusText} 从 {current.Body.Name} 连锁至 {next.Body.Name}，造成 {chainDealt} 点伤害。"));
-                if (stunOnChain && RollChance(effect.FallbackValue))
+                if (stunOnChain && RollChance(state, effect.FallbackValue))
                 {
                     next.Body.AddStun(Math.Max(1, effect.Duration));
                     state.Logs.Add(new BattleLogEntry($"{card.Name} 连锁雷击使 {next.Body.Name} 眩晕 {Math.Max(1, effect.Duration)} 回合。"));
@@ -905,6 +944,12 @@ namespace GameLogic.Cultivation
                 damage += damage * lowHpArtifactPercent / 100;
             }
 
+            var attackArtifactPercent = state.ArtifactCurrentAttackCardDamageBonusPercent;
+            if (attackArtifactPercent > 0)
+            {
+                damage += damage * attackArtifactPercent / 100;
+            }
+
             var multiplier = state.TryConsumeChargedDamageMultiplier();
             var dealt = enemy.Body.TakeDamage(damage * multiplier, state.Player.Sharpness);
             var chargeText = multiplier > 1 ? $" 蓄力 x{multiplier}" : string.Empty;
@@ -929,8 +974,89 @@ namespace GameLogic.Cultivation
                 bonusParts.Add($"天魔心低血 +{lowHpArtifactPercent}%");
             }
 
+            if (attackArtifactPercent > 0)
+            {
+                bonusParts.Add($"万剑归宗剑 +{attackArtifactPercent}%");
+            }
+
             var bonusText = bonusParts.Count > 0 ? $" [{string.Join(", ", bonusParts)}]" : string.Empty;
             return (dealt, chargeText, bonusText);
+        }
+
+        private static int ApplyArtifactBurnDamageBonus(BattleState state, EnemyState enemy, int baseDamage)
+        {
+            var percent = state.ArtifactBurnDamageBonusPercent;
+            if (percent <= 0 || baseDamage <= 0 || enemy == null || enemy.Body.IsDefeated)
+            {
+                return baseDamage;
+            }
+
+            var bonusDamage = baseDamage * percent / 100;
+            if (bonusDamage <= 0)
+            {
+                return baseDamage;
+            }
+
+            enemy.Body.TakeDirectDamage(bonusDamage);
+            state.Logs.Add(new BattleLogEntry($"焚天炉使 {enemy.Body.Name} 额外受到 {bonusDamage} 点灼烧伤害。"));
+            return baseDamage + bonusDamage;
+        }
+
+        private static void ApplyArtifactFirstAttackSwordMark(BattleState state, CardDefinition card, EnemyState explicitTarget)
+        {
+            if (!state.TryTriggerArtifactFirstAttackSwordMark())
+            {
+                return;
+            }
+
+            var enemy = explicitTarget != null && !explicitTarget.Body.IsDefeated
+                ? explicitTarget
+                : state.Enemies.FirstOrDefault(target => !target.Body.IsDefeated);
+            if (enemy == null)
+            {
+                return;
+            }
+
+            var explosionDamage = enemy.Body.AddSwordMark(state.ArtifactFirstAttackSwordMarkStacks);
+            state.Logs.Add(new BattleLogEntry($"{card.Name} 触发剑心玉，使 {enemy.Body.Name} 获得 {state.ArtifactFirstAttackSwordMarkStacks} 层剑气印记。"));
+            if (explosionDamage > 0)
+            {
+                var dealt = enemy.Body.TakeDamage(explosionDamage, state.Player.Sharpness);
+                state.Logs.Add(new BattleLogEntry($"{enemy.Body.Name} 的剑气印记引爆，造成 {dealt} 点伤害。"));
+            }
+        }
+
+        private static bool IsAttackCard(CardDefinition card)
+        {
+            return card != null && card.Effects.Any(effect => IsAttackEffect(effect.Type));
+        }
+
+        private static bool IsAttackEffect(CardEffectType type)
+        {
+            switch (type)
+            {
+                case CardEffectType.Damage:
+                case CardEffectType.PoisonBurst:
+                case CardEffectType.Leech:
+                case CardEffectType.SacrificeHandCardDamage:
+                case CardEffectType.LowHpDamage:
+                case CardEffectType.MissingHpDamage:
+                case CardEffectType.DamagePerSwordMark:
+                case CardEffectType.ChanceDamage:
+                case CardEffectType.ChanceChainDamage:
+                case CardEffectType.ChainOnChanceDamage:
+                case CardEffectType.ChainOnChanceStun:
+                case CardEffectType.ChanceChainDamageWithStun:
+                case CardEffectType.ChanceChainDamageRepeatTarget:
+                case CardEffectType.ChanceDamageWithStun:
+                case CardEffectType.ChanceDamageWithChain:
+                case CardEffectType.DamageAfterCriticalTriggered:
+                case CardEffectType.DamageAfterCriticalTriggeredWithStun:
+                case CardEffectType.DamageAfterCriticalTriggeredChainAll:
+                    return true;
+                default:
+                    return false;
+            }
         }
 
         private static IEnumerable<EnemyState> SelectTargets(BattleState state, CardEffect effect, EnemyState explicitTarget)
@@ -1024,7 +1150,14 @@ namespace GameLogic.Cultivation
                 return false;
             }
 
-            var dealt = state.Player.TakeDamage(damage + enemy.AttackBonus);
+            var incomingDamage = damage + enemy.AttackBonus;
+            if (state.TryTriggerArtifactFirstDamageReduction())
+            {
+                incomingDamage = Math.Max(0, incomingDamage * (100 - state.ArtifactAttackCounterPierceDamageReductionPercent) / 100);
+                state.Logs.Add(new BattleLogEntry($"不动明王印触发，本回合首次受击伤害降至 {incomingDamage}。"));
+            }
+
+            var dealt = state.Player.TakeDamage(incomingDamage);
             var deathWardHeal = state.TryTriggerDeathWard();
             if (deathWardHeal > 0)
             {
@@ -1051,13 +1184,16 @@ namespace GameLogic.Cultivation
                 return;
             }
 
-            if (!RollChance(state.AttackCounterChancePercent))
+            if (!RollChance(state, state.AttackCounterChancePercent))
             {
                 state.Logs.Add(new BattleLogEntry($"attack-counter missed {state.AttackCounterChancePercent}%."));
                 return;
             }
 
-            var counterDealt = enemy.Body.TakeDamage(state.AttackCounterDamage, state.Player.Sharpness);
+            var defenseIgnore = state.ArtifactAttackCounterPierceDamageReductionPercent > 0
+                ? int.MaxValue
+                : state.Player.Sharpness;
+            var counterDealt = enemy.Body.TakeDamage(state.AttackCounterDamage, defenseIgnore);
             state.Logs.Add(new BattleLogEntry($"attack-counter dealt {counterDealt} to {enemy.Body.Name}."));
         }
 
@@ -1068,7 +1204,7 @@ namespace GameLogic.Cultivation
                 return;
             }
 
-            enemy.Body.AddPoison(state.PoisonCounterStacks);
+            enemy.Body.AddPoison(state.PoisonCounterStacks, state.ArtifactPoisonStackLimitBonus);
             state.Logs.Add(new BattleLogEntry($"毒瘴反噬使 {enemy.Body.Name} 中毒 {state.PoisonCounterStacks} 层。"));
         }
 
@@ -3175,6 +3311,76 @@ namespace GameLogic.Cultivation
             ArtifactEffectType.MissingHpDamageBonus,
             3);
 
+        public static ArtifactDefinition SwordHeartJadeArtifact { get; } = new ArtifactDefinition(
+            "sword_heart_jade",
+            "剑心玉",
+            "剑宗专属法宝：每回合首次攻击附带 1 层剑气印记。",
+            ArtifactEffectType.FirstAttackSwordMarkEachTurn,
+            1);
+
+        public static ArtifactDefinition TenThousandSwordsArtifact { get; } = new ArtifactDefinition(
+            "ten_thousand_swords",
+            "万剑归宗剑",
+            "剑宗专属法宝：每打出 3 张攻击功法，第 3 张伤害 +50%。",
+            ArtifactEffectType.EveryThirdAttackCardDamageBonus,
+            50);
+
+        public static ArtifactDefinition FireCloudTokenArtifact { get; } = new ArtifactDefinition(
+            "fire_cloud_token",
+            "火云令",
+            "火云宗专属法宝：每回合开始对全体敌人施加 1 层灼烧 2 回合。",
+            ArtifactEffectType.TurnStartBurn,
+            1);
+
+        public static ArtifactDefinition BurningHeavenFurnaceArtifact { get; } = new ArtifactDefinition(
+            "burning_heaven_furnace",
+            "焚天炉",
+            "火云宗专属法宝：灼烧伤害 +50%。",
+            ArtifactEffectType.BurnDamageBonus,
+            50);
+
+        public static ArtifactDefinition MedicineKingCauldronArtifact { get; } = new ArtifactDefinition(
+            "medicine_king_cauldron",
+            "药王鼎",
+            "药王谷专属法宝：每场战斗首次使用丹药时，效果翻倍且不消耗。",
+            ArtifactEffectType.FirstBattlePillDoubleNoConsume,
+            1);
+
+        public static ArtifactDefinition TenThousandPoisonPearlArtifact { get; } = new ArtifactDefinition(
+            "ten_thousand_poison_pearl",
+            "万毒珠",
+            "药王谷专属法宝：中毒层数上限 +50。",
+            ArtifactEffectType.PoisonStackLimitBonus,
+            50);
+
+        public static ArtifactDefinition ThunderSpiritPearlArtifact { get; } = new ArtifactDefinition(
+            "thunder_spirit_pearl",
+            "雷灵珠",
+            "天雷阁专属法宝：每场战斗首次概率判定失败时，改为成功。",
+            ArtifactEffectType.FirstChanceFailureOverride,
+            1);
+
+        public static ArtifactDefinition LightningRodArtifact { get; } = new ArtifactDefinition(
+            "lightning_rod",
+            "引雷针",
+            "天雷阁专属法宝：连锁伤害不再衰减。",
+            ArtifactEffectType.ChainDamageNoDecay,
+            1);
+
+        public static ArtifactDefinition XuanhuangCauldronArtifact { get; } = new ArtifactDefinition(
+            "xuanhuang_cauldron",
+            "玄黄鼎",
+            "玄黄宗专属法宝：每场战斗开始时获得 5 层岩甲。",
+            ArtifactEffectType.BattleStartShield,
+            5);
+
+        public static ArtifactDefinition ImmovableMingwangSealArtifact { get; } = new ArtifactDefinition(
+            "immovable_mingwang_seal",
+            "不动明王印",
+            "玄黄宗专属法宝：反击伤害无视防御，每回合首次受到伤害 -50%。",
+            ArtifactEffectType.AttackCounterPierceAndFirstDamageReduction,
+            50);
+
         public static IReadOnlyList<CardDefinition> CreateSwordSectStarterDeck()
         {
             return new List<CardDefinition>
@@ -3548,10 +3754,34 @@ namespace GameLogic.Cultivation
         public static IReadOnlyList<ArtifactDefinition> CreateArtifactRewardPool(CultivationSect sect)
         {
             var artifacts = CreatePrototypeArtifactRewardPool().ToList();
-            if (sect == CultivationSect.Demonic)
+            switch (sect)
             {
-                artifacts.Add(BloodDemonOrbArtifact);
-                artifacts.Add(HeavenlyDemonHeartArtifact);
+                case CultivationSect.Sword:
+                    artifacts.Add(SwordHeartJadeArtifact);
+                    artifacts.Add(TenThousandSwordsArtifact);
+                    break;
+                case CultivationSect.FireCloud:
+                    artifacts.Add(FireCloudTokenArtifact);
+                    artifacts.Add(BurningHeavenFurnaceArtifact);
+                    break;
+                case CultivationSect.Thunder:
+                    artifacts.Add(ThunderSpiritPearlArtifact);
+                    artifacts.Add(LightningRodArtifact);
+                    break;
+                case CultivationSect.Earth:
+                    artifacts.Add(XuanhuangCauldronArtifact);
+                    artifacts.Add(ImmovableMingwangSealArtifact);
+                    break;
+                case CultivationSect.Medicine:
+                    artifacts.Add(MedicineKingCauldronArtifact);
+                    artifacts.Add(TenThousandPoisonPearlArtifact);
+                    break;
+                case CultivationSect.Demonic:
+                    artifacts.Add(BloodDemonOrbArtifact);
+                    artifacts.Add(HeavenlyDemonHeartArtifact);
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(sect), sect, "Unsupported cultivation sect.");
             }
 
             return artifacts;

@@ -262,15 +262,37 @@ namespace GameLogic.Tests
         [Test]
         public void DemonicSectArtifactPoolIncludesExclusiveArtifacts()
         {
-            var commonArtifacts = CultivationSeedData.CreateArtifactRewardPool(CultivationSect.Sword)
+            var swordArtifacts = CultivationSeedData.CreateArtifactRewardPool(CultivationSect.Sword)
+                .Select(artifact => artifact.Id)
+                .ToArray();
+            var fireArtifacts = CultivationSeedData.CreateArtifactRewardPool(CultivationSect.FireCloud)
+                .Select(artifact => artifact.Id)
+                .ToArray();
+            var thunderArtifacts = CultivationSeedData.CreateArtifactRewardPool(CultivationSect.Thunder)
+                .Select(artifact => artifact.Id)
+                .ToArray();
+            var earthArtifacts = CultivationSeedData.CreateArtifactRewardPool(CultivationSect.Earth)
+                .Select(artifact => artifact.Id)
+                .ToArray();
+            var medicineArtifacts = CultivationSeedData.CreateArtifactRewardPool(CultivationSect.Medicine)
                 .Select(artifact => artifact.Id)
                 .ToArray();
             var demonicArtifacts = CultivationSeedData.CreateArtifactRewardPool(CultivationSect.Demonic)
                 .Select(artifact => artifact.Id)
                 .ToArray();
 
-            CollectionAssert.DoesNotContain(commonArtifacts, CultivationSeedData.BloodDemonOrbArtifact.Id);
-            CollectionAssert.DoesNotContain(commonArtifacts, CultivationSeedData.HeavenlyDemonHeartArtifact.Id);
+            CollectionAssert.Contains(swordArtifacts, CultivationSeedData.SwordHeartJadeArtifact.Id);
+            CollectionAssert.Contains(swordArtifacts, CultivationSeedData.TenThousandSwordsArtifact.Id);
+            CollectionAssert.Contains(fireArtifacts, CultivationSeedData.FireCloudTokenArtifact.Id);
+            CollectionAssert.Contains(fireArtifacts, CultivationSeedData.BurningHeavenFurnaceArtifact.Id);
+            CollectionAssert.Contains(thunderArtifacts, CultivationSeedData.ThunderSpiritPearlArtifact.Id);
+            CollectionAssert.Contains(thunderArtifacts, CultivationSeedData.LightningRodArtifact.Id);
+            CollectionAssert.Contains(earthArtifacts, CultivationSeedData.XuanhuangCauldronArtifact.Id);
+            CollectionAssert.Contains(earthArtifacts, CultivationSeedData.ImmovableMingwangSealArtifact.Id);
+            CollectionAssert.Contains(medicineArtifacts, CultivationSeedData.MedicineKingCauldronArtifact.Id);
+            CollectionAssert.Contains(medicineArtifacts, CultivationSeedData.TenThousandPoisonPearlArtifact.Id);
+            CollectionAssert.DoesNotContain(swordArtifacts, CultivationSeedData.BloodDemonOrbArtifact.Id);
+            CollectionAssert.DoesNotContain(swordArtifacts, CultivationSeedData.HeavenlyDemonHeartArtifact.Id);
             CollectionAssert.Contains(demonicArtifacts, CultivationSeedData.BloodDemonOrbArtifact.Id);
             CollectionAssert.Contains(demonicArtifacts, CultivationSeedData.HeavenlyDemonHeartArtifact.Id);
         }
@@ -325,6 +347,29 @@ namespace GameLogic.Tests
             Assert.AreEqual(30, battle.Enemies[0].Body.CurrentHp);
             Assert.AreEqual(3, battle.ArtifactMissingHpDamageBonusPerStepPercent);
             Assert.IsTrue(battle.Logs.Any(log => log.Message.Contains("天魔心")));
+        }
+
+        [Test]
+        public void MedicineKingCauldronDoublesFirstBattlePillAndDoesNotConsumeIt()
+        {
+            var battleEngine = new BattleEngine(20260620);
+            var runEngine = new CultivationRunEngine(battleEngine);
+            var state = runEngine.StartRun(
+                new List<CardDefinition> { CultivationSeedData.SwordQi },
+                CreateSingleArtifactChestRoute(CultivationSeedData.MedicineKingCauldronArtifact),
+                playerCurrentHp: 50,
+                sect: CultivationSect.Medicine);
+
+            var artifact = runEngine.OpenChest(state);
+            state.Pills.Add(CultivationSeedData.SmallRestorePillItem);
+
+            runEngine.UsePillInBattle(state, 0);
+
+            Assert.AreSame(CultivationSeedData.MedicineKingCauldronArtifact, artifact);
+            Assert.AreEqual(70, state.CurrentBattle.Player.CurrentHp);
+            Assert.AreEqual(1, state.Pills.Count);
+            Assert.AreEqual(0, state.CurrentBattle.ArtifactFirstBattlePillDoubleNoConsumeCharges);
+            Assert.IsTrue(state.CurrentBattle.Logs.Any(log => log.Message.Contains("药王鼎触发")));
         }
 
         [Test]
@@ -426,7 +471,7 @@ namespace GameLogic.Tests
             Assert.AreEqual(1, run.Artifacts.Count);
             Assert.AreEqual(1, run.DroppedArtifacts.Count);
             CollectionAssert.Contains(
-                CultivationSeedData.CreatePrototypeArtifactRewardPool().Select(artifact => artifact.Id).ToArray(),
+                CultivationSeedData.CreateArtifactRewardPool(CultivationSect.Sword).Select(artifact => artifact.Id).ToArray(),
                 run.Artifacts[0].Id);
             Assert.IsTrue(run.CurrentBattle.Logs.Any(log => log.Message.Contains("精英战获得法宝：")));
         }

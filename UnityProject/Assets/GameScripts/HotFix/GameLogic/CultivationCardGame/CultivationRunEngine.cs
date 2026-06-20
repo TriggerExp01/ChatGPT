@@ -183,8 +183,17 @@ namespace GameLogic.Cultivation
                 throw new InvalidOperationException("Selected pill does not have a battle effect.");
             }
 
-            var logMessage = ResolvePillEffect(state.CurrentBattle, pill);
-            state.Pills.RemoveAt(pillIndex);
+            var doubleNoConsume = state.CurrentBattle.TryConsumeArtifactFirstBattlePillDoubleNoConsumeCharge();
+            var logMessage = ResolvePillEffect(state.CurrentBattle, pill, doubleNoConsume ? 2 : 1);
+            if (doubleNoConsume)
+            {
+                logMessage += " 药王鼎触发，效果翻倍且不消耗丹药。";
+            }
+            else
+            {
+                state.Pills.RemoveAt(pillIndex);
+            }
+
             state.CurrentBattle.Logs.Add(new BattleLogEntry(logMessage));
         }
 
@@ -479,27 +488,78 @@ namespace GameLogic.Cultivation
                         state.CurrentBattle.AddArtifactMissingHpDamageBonus(artifact.MissingHpDamageBonusPerStepPercent);
                         state.CurrentBattle.Logs.Add(new BattleLogEntry($"{artifact.Name} 生效：每损失 10% 最大 HP，卡牌伤害 +{artifact.MissingHpDamageBonusPerStepPercent}%。"));
                         break;
+                    case ArtifactEffectType.FirstAttackSwordMarkEachTurn:
+                        state.CurrentBattle.AddArtifactFirstAttackSwordMark(artifact.FirstAttackSwordMarkStacksEachTurn);
+                        state.CurrentBattle.Logs.Add(new BattleLogEntry($"{artifact.Name} 生效：每回合首次攻击附带剑气印记。"));
+                        break;
+                    case ArtifactEffectType.EveryThirdAttackCardDamageBonus:
+                        state.CurrentBattle.AddArtifactEveryThirdAttackCardDamageBonus(artifact.EveryThirdAttackCardDamageBonusPercent);
+                        state.CurrentBattle.Logs.Add(new BattleLogEntry($"{artifact.Name} 生效：每第 3 张攻击功法伤害 +{artifact.EveryThirdAttackCardDamageBonusPercent}%。"));
+                        break;
+                    case ArtifactEffectType.TurnStartBurn:
+                        state.CurrentBattle.AddArtifactTurnStartBurn(artifact.TurnStartBurnStacks);
+                        state.CurrentBattle.Logs.Add(new BattleLogEntry($"{artifact.Name} 生效：每回合开始施加 {artifact.TurnStartBurnStacks} 层灼烧。"));
+                        break;
+                    case ArtifactEffectType.BurnDamageBonus:
+                        state.CurrentBattle.AddArtifactBurnDamageBonus(artifact.BurnDamageBonusPercent);
+                        state.CurrentBattle.Logs.Add(new BattleLogEntry($"{artifact.Name} 生效：灼烧伤害 +{artifact.BurnDamageBonusPercent}%。"));
+                        break;
+                    case ArtifactEffectType.FirstBattlePillDoubleNoConsume:
+                        state.CurrentBattle.AddArtifactFirstBattlePillDoubleNoConsumeCharges(artifact.FirstBattlePillDoubleNoConsumeCharges);
+                        state.CurrentBattle.Logs.Add(new BattleLogEntry($"{artifact.Name} 生效：本场战斗首次丹药效果翻倍且不消耗。"));
+                        break;
+                    case ArtifactEffectType.PoisonStackLimitBonus:
+                        state.CurrentBattle.AddArtifactPoisonStackLimitBonus(artifact.PoisonStackLimitBonus);
+                        state.CurrentBattle.Logs.Add(new BattleLogEntry($"{artifact.Name} 生效：中毒层数上限 +{artifact.PoisonStackLimitBonus}。"));
+                        break;
+                    case ArtifactEffectType.FirstChanceFailureOverride:
+                        state.CurrentBattle.AddArtifactFirstChanceFailureOverrideCharges(artifact.FirstChanceFailureOverrideCharges);
+                        state.CurrentBattle.Logs.Add(new BattleLogEntry($"{artifact.Name} 生效：首次概率判定失败改为成功。"));
+                        break;
+                    case ArtifactEffectType.ChainDamageNoDecay:
+                        if (artifact.ChainDamageNoDecay)
+                        {
+                            state.CurrentBattle.EnableArtifactChainDamageNoDecay();
+                            state.CurrentBattle.Logs.Add(new BattleLogEntry($"{artifact.Name} 生效：连锁伤害不再衰减。"));
+                        }
+
+                        break;
+                    case ArtifactEffectType.BattleStartShield:
+                        state.CurrentBattle.Player.AddShield(artifact.BattleStartShield);
+                        state.CurrentBattle.Logs.Add(new BattleLogEntry($"{artifact.Name} 生效：战斗开始获得 {artifact.BattleStartShield} 点护盾。"));
+                        break;
+                    case ArtifactEffectType.AttackCounterPierceAndFirstDamageReduction:
+                        state.CurrentBattle.AddArtifactAttackCounterPierceAndDamageReduction(artifact.AttackCounterPierceAndFirstDamageReductionPercent);
+                        state.CurrentBattle.Logs.Add(new BattleLogEntry($"{artifact.Name} 生效：反击无视防御，首次受击伤害 -{artifact.AttackCounterPierceAndFirstDamageReductionPercent}%。"));
+                        break;
+                    default:
+                        break;
                 }
             }
         }
 
-        private static string ResolvePillEffect(BattleState battle, PillDefinition pill)
+        private static string ResolvePillEffect(BattleState battle, PillDefinition pill, int multiplier = 1)
         {
+            multiplier = Math.Max(1, multiplier);
             switch (pill.EffectType)
             {
                 case PillEffectType.Heal:
-                    battle.Player.Heal(pill.HealAmount);
-                    return $"使用 {pill.Name}，恢复 {pill.HealAmount} HP。";
+                    var healAmount = pill.HealAmount * multiplier;
+                    battle.Player.Heal(healAmount);
+                    return $"使用 {pill.Name}，恢复 {healAmount} HP。";
                 case PillEffectType.Spirit:
-                    battle.Spirit += pill.SpiritAmount;
-                    return $"使用 {pill.Name}，本回合灵力 +{pill.SpiritAmount}。";
+                    var spiritAmount = pill.SpiritAmount * multiplier;
+                    battle.Spirit += spiritAmount;
+                    return $"使用 {pill.Name}，本回合灵力 +{spiritAmount}。";
                 case PillEffectType.Cleanse:
                     battle.Player.ClearNegativeStatuses();
-                    battle.Player.Heal(pill.CleanseHealAmount);
-                    return $"使用 {pill.Name}，清除负面状态并恢复 {pill.CleanseHealAmount} HP。";
+                    var cleanseHealAmount = pill.CleanseHealAmount * multiplier;
+                    battle.Player.Heal(cleanseHealAmount);
+                    return $"使用 {pill.Name}，清除负面状态并恢复 {cleanseHealAmount} HP。";
                 case PillEffectType.CostReduction:
-                    battle.AddSpiritCostReduction(pill.CostReductionAmount);
-                    return $"使用 {pill.Name}，本场战斗功法灵力消耗 -{pill.CostReductionAmount}。";
+                    var costReductionAmount = pill.CostReductionAmount * multiplier;
+                    battle.AddSpiritCostReduction(costReductionAmount);
+                    return $"使用 {pill.Name}，本场战斗功法灵力消耗 -{costReductionAmount}。";
                 default:
                     throw new ArgumentOutOfRangeException(nameof(pill.EffectType), pill.EffectType, "Unsupported pill effect type.");
             }

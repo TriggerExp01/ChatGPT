@@ -133,9 +133,9 @@ namespace GameLogic.Cultivation
             BurnTurns = Math.Max(BurnTurns, turns);
         }
 
-        public void AddPoison(int stacks)
+        public void AddPoison(int stacks, int stackLimitBonus = 0)
         {
-            PoisonStacks = Math.Min(99, PoisonStacks + Math.Max(0, stacks));
+            PoisonStacks = Math.Min(99 + Math.Max(0, stackLimitBonus), PoisonStacks + Math.Max(0, stacks));
         }
 
         public int ConsumePoison()
