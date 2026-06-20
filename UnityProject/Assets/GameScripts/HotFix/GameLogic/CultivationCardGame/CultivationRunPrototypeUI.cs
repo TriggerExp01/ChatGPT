@@ -583,7 +583,7 @@ namespace GameLogic.Cultivation
 
             var battle = run.CurrentBattle;
             var outcome = battle == null ? string.Empty : $" / 战斗：{battle.Outcome}";
-            return $"节点 {run.CurrentNodeIndex + 1}/{run.Route.Count} · {run.CurrentNode.Name} · {run.Status}{outcome}";
+            return $"{CultivationRunPrototypePresenter.FormatRealmName(run.CurrentRealm)} · 节点 {run.CurrentNodeIndex + 1}/{run.Route.Count} · {run.CurrentNode.Name} · {run.Status}{outcome}";
         }
 
         private static Transform ResolveParent()

@@ -130,6 +130,33 @@ namespace GameLogic.Tests
         }
 
         [Test]
+        public void BranchingPrototypeLeaderVictoryBreaksThroughToFoundationRealm()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var run = engine.StartRun(CreateInstantWinDeck(), CultivationSeedData.CreateFirstPrototypeBranchingRoute());
+
+            WinCurrentBattle(engine, run);
+            engine.SkipReward(run);
+            engine.ChooseRoute(run, 1);
+            engine.Rest(run);
+            engine.ChooseRoute(run, 3);
+            WinCurrentBattle(engine, run);
+            engine.SkipReward(run);
+
+            Assert.AreEqual(CultivationRunStatus.InBattle, run.Status);
+            Assert.AreEqual(CultivationRealm.Foundation, run.CurrentRealm);
+            Assert.AreEqual(1, run.RealmBreakthroughCount);
+            Assert.AreEqual("node_foundation_sword_cultivator", run.CurrentNode.Id);
+            Assert.AreEqual(110, run.PlayerMaxHp);
+            Assert.AreEqual(110, run.PlayerCurrentHp);
+            Assert.AreEqual(4, run.SpiritMax);
+            Assert.AreEqual(6, run.HandLimit);
+            Assert.AreEqual(4, run.CurrentBattle.SpiritMax);
+            Assert.AreEqual(6, run.CurrentBattle.HandLimit);
+            Assert.AreEqual(5, run.CurrentBattle.Hand.Count);
+        }
+
+        [Test]
         public void NormalBattleVictoryDoesNotDropArtifact()
         {
             var engine = new CultivationRunEngine(new BattleEngine(1));

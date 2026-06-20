@@ -20,6 +20,11 @@ namespace GameLogic.Cultivation
 
         public BattleState CreateBattle(IEnumerable<CardDefinition> deck, EnemyDefinition enemy, int playerCurrentHp, int playerMaxHp = 100)
         {
+            return CreateBattle(deck, enemy, playerCurrentHp, playerMaxHp, CultivationRunState.DefaultSpiritMax, CultivationRunState.DefaultHandLimit);
+        }
+
+        public BattleState CreateBattle(IEnumerable<CardDefinition> deck, EnemyDefinition enemy, int playerCurrentHp, int playerMaxHp, int spiritMax, int handLimit)
+        {
             if (deck == null)
             {
                 throw new ArgumentNullException(nameof(deck));
@@ -40,8 +45,18 @@ namespace GameLogic.Cultivation
                 throw new ArgumentOutOfRangeException(nameof(playerCurrentHp), "Player current HP must be between 1 and max HP.");
             }
 
+            if (spiritMax <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(spiritMax), "Spirit max must be positive.");
+            }
+
+            if (handLimit <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(handLimit), "Hand limit must be positive.");
+            }
+
             var player = new CombatantState("修士", playerMaxHp, currentHp: playerCurrentHp);
-            var state = new BattleState(player, deck, new[] { new EnemyState(enemy) });
+            var state = new BattleState(player, deck, new[] { new EnemyState(enemy) }, spiritMax, handLimit);
             Shuffle(state.DrawPile);
             StartPlayerTurn(state);
             return state;
@@ -867,6 +882,15 @@ namespace GameLogic.Cultivation
             new EnemyIntent(EnemyIntentType.Sweep, 5, description: "横扫 5"),
             new EnemyIntent(EnemyIntentType.Defend, 10, description: "防御 10"));
 
+        public static EnemyDefinition FoundationSwordCultivator { get; } = new EnemyDefinition(
+            "foundation_sword_cultivator",
+            "筑基剑修",
+            82,
+            4,
+            new EnemyIntent(EnemyIntentType.Attack, 10, description: "御剑攻击 10"),
+            new EnemyIntent(EnemyIntentType.Defend, 12, description: "剑阵护体 12"),
+            new EnemyIntent(EnemyIntentType.Attack, 14, description: "飞剑连斩 14"));
+
         public static IReadOnlyList<CultivationRunReward> CreateSwordSectRewardPool()
         {
             return new List<CultivationRunReward>
@@ -1003,8 +1027,17 @@ namespace GameLogic.Cultivation
                     CultivationRunNodeType.Elite,
                     StoneDemonLeader,
                     rewards,
+                    nextNodeIndices: new[] { 7 },
                     spiritStoneReward: 35,
                     artifactRewardPool: artifactRewards),
+                new CultivationRunNode(
+                    "node_foundation_sword_cultivator",
+                    "筑基剑修",
+                    CultivationRunNodeType.Battle,
+                    FoundationSwordCultivator,
+                    rewards,
+                    spiritStoneReward: 25,
+                    realm: CultivationRealm.Foundation),
             };
         }
     }

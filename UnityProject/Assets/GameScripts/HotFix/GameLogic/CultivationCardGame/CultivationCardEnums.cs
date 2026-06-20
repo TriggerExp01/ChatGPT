@@ -60,4 +60,14 @@ namespace GameLogic.Cultivation
         Completed,
         Defeated,
     }
+
+    public enum CultivationRealm
+    {
+        QiRefining,
+        Foundation,
+        GoldenCore,
+        NascentSoul,
+        SoulTransformation,
+        Tribulation,
+    }
 }

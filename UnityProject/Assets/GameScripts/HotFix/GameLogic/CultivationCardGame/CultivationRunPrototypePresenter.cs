@@ -73,13 +73,14 @@ namespace GameLogic.Cultivation
         {
             var playerHp = state.CurrentBattle?.Player.CurrentHp ?? state.PlayerCurrentHp;
             var playerMaxHp = state.CurrentBattle?.Player.MaxHp ?? state.PlayerMaxHp;
-            return $"状态：{state.Status}\n节点：{state.CurrentNodeIndex + 1}/{state.Route.Count}\nHP：{playerHp}/{playerMaxHp}\n灵石：{state.SpiritStones}\n牌组：{state.Deck.Count} 张\n丹药：{state.Pills.Count}/{state.PillSlotLimit}\n法宝：{state.Artifacts.Count}\n精英法宝：{state.DroppedArtifacts.Count}\n宝箱法宝：{state.ChestArtifacts.Count}\n已拿奖励：{state.ClaimedRewards.Count}\n坊市删牌：{state.RemovedMarketCards.Count}\n坊市售牌：{state.SoldMarketCards.Count}";
+            return $"状态：{state.Status}\n境界：{FormatRealmName(state.CurrentRealm)}\n节点：{state.CurrentNodeIndex + 1}/{state.Route.Count}\nHP：{playerHp}/{playerMaxHp}\n灵力上限：{state.SpiritMax}\n手牌上限：{state.HandLimit}\n灵石：{state.SpiritStones}\n牌组：{state.Deck.Count} 张\n丹药：{state.Pills.Count}/{state.PillSlotLimit}\n法宝：{state.Artifacts.Count}\n精英法宝：{state.DroppedArtifacts.Count}\n宝箱法宝：{state.ChestArtifacts.Count}\n已拿奖励：{state.ClaimedRewards.Count}\n已突破：{state.RealmBreakthroughCount}\n坊市删牌：{state.RemovedMarketCards.Count}\n坊市售牌：{state.SoldMarketCards.Count}";
         }
 
         private static string BuildNodeText(CultivationRunState state)
         {
             var builder = new StringBuilder();
             builder.Append("当前节点：").Append(state.CurrentNode.Name).AppendLine();
+            builder.Append("境界层：").Append(FormatRealmName(state.CurrentNode.Realm)).AppendLine();
             builder.Append("类型：").Append(state.CurrentNode.Type).AppendLine();
             if (state.CurrentNode.Enemy != null)
             {
@@ -158,6 +159,27 @@ namespace GameLogic.Cultivation
             }
 
             return $"{item.Artifact.Name}（法宝）";
+        }
+
+        public static string FormatRealmName(CultivationRealm realm)
+        {
+            switch (realm)
+            {
+                case CultivationRealm.QiRefining:
+                    return "炼气";
+                case CultivationRealm.Foundation:
+                    return "筑基";
+                case CultivationRealm.GoldenCore:
+                    return "金丹";
+                case CultivationRealm.NascentSoul:
+                    return "元婴";
+                case CultivationRealm.SoulTransformation:
+                    return "化神";
+                case CultivationRealm.Tribulation:
+                    return "渡劫";
+                default:
+                    return realm.ToString();
+            }
         }
 
         private static string BuildBattleText(CultivationRunState state)
@@ -259,6 +281,14 @@ namespace GameLogic.Cultivation
 
         public int SpiritStones { get; private set; }
 
+        public CultivationRealm CurrentRealm { get; private set; }
+
+        public int RealmBreakthroughCount { get; private set; }
+
+        public int SpiritMax { get; private set; }
+
+        public int HandLimit { get; private set; }
+
         public int DeckCount { get; private set; }
 
         public int PillCount { get; private set; }
@@ -314,6 +344,10 @@ namespace GameLogic.Cultivation
                 PlayerHp = state.CurrentBattle?.Player.CurrentHp ?? state.PlayerCurrentHp,
                 PlayerMaxHp = state.CurrentBattle?.Player.MaxHp ?? state.PlayerMaxHp,
                 SpiritStones = state.SpiritStones,
+                CurrentRealm = state.CurrentRealm,
+                RealmBreakthroughCount = state.RealmBreakthroughCount,
+                SpiritMax = state.SpiritMax,
+                HandLimit = state.HandLimit,
                 DeckCount = state.Deck.Count,
                 PillCount = state.Pills.Count,
                 PillSlotLimit = state.PillSlotLimit,

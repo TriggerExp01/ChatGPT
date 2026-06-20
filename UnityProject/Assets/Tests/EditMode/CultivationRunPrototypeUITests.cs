@@ -430,6 +430,31 @@ namespace GameLogic.Tests
             StringAssert.Contains("精英战获得法宝：", GetCurrentBattleLogText());
         }
 
+        [Test]
+        public void PrototypeUiLeaderVictoryBreaksThroughToFoundationRealm()
+        {
+            ForceCurrentBattleVictory();
+            _ui.ResolveBattle();
+            _ui.SkipReward();
+            _ui.ChooseRoute(1);
+            _ui.Rest();
+            _ui.ChooseRoute(3);
+
+            ForceCurrentBattleVictory();
+            _ui.ResolveBattle();
+            _ui.SkipReward();
+
+            Assert.AreEqual(CultivationRunStatus.InBattle, _ui.Snapshot.Status);
+            Assert.AreEqual(CultivationRealm.Foundation, _ui.Snapshot.CurrentRealm);
+            Assert.AreEqual(1, _ui.Snapshot.RealmBreakthroughCount);
+            Assert.AreEqual("筑基剑修", _ui.Snapshot.CurrentNodeName);
+            Assert.AreEqual(110, _ui.Snapshot.PlayerMaxHp);
+            Assert.AreEqual(110, _ui.Snapshot.PlayerHp);
+            Assert.AreEqual(4, _ui.Snapshot.SpiritMax);
+            Assert.AreEqual(6, _ui.Snapshot.HandLimit);
+            Assert.AreEqual(6, _ui.Snapshot.HandCount);
+        }
+
         private string GetCurrentBattleLogText()
         {
             var run = GetRun();

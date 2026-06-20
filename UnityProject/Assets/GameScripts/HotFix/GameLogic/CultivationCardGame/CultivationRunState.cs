@@ -6,6 +6,8 @@ namespace GameLogic.Cultivation
     public sealed class CultivationRunState
     {
         public const int DefaultPillSlotLimit = 3;
+        public const int DefaultSpiritMax = 3;
+        public const int DefaultHandLimit = 5;
 
         public CultivationRunState(IEnumerable<CardDefinition> deck, IEnumerable<CultivationRunNode> route, int playerMaxHp = 100, int? playerCurrentHp = null, int initialSpiritStones = 0)
         {
@@ -53,6 +55,9 @@ namespace GameLogic.Cultivation
             PlayerCurrentHp = playerCurrentHp ?? playerMaxHp;
             SpiritStones = Math.Max(0, initialSpiritStones);
             PillSlotLimit = DefaultPillSlotLimit;
+            CurrentRealm = Route[0].Realm;
+            SpiritMax = DefaultSpiritMax;
+            HandLimit = DefaultHandLimit;
         }
 
         public List<CardDefinition> Deck { get; }
@@ -97,6 +102,14 @@ namespace GameLogic.Cultivation
 
         public int PillSlotLimit { get; }
 
+        public CultivationRealm CurrentRealm { get; private set; }
+
+        public int RealmBreakthroughCount { get; private set; }
+
+        public int SpiritMax { get; private set; }
+
+        public int HandLimit { get; private set; }
+
         public List<PillDefinition> Pills { get; }
 
         public List<PillDefinition> PurchasedMarketPills { get; }
@@ -114,6 +127,23 @@ namespace GameLogic.Cultivation
             var increase = Math.Max(0, amount);
             PlayerMaxHp += increase;
             PlayerCurrentHp = Math.Min(PlayerMaxHp, PlayerCurrentHp + increase);
+        }
+
+        public bool TryBreakthroughTo(CultivationRealm realm)
+        {
+            if (realm <= CurrentRealm)
+            {
+                return false;
+            }
+
+            var realmDelta = (int)realm - (int)CurrentRealm;
+            CurrentRealm = realm;
+            RealmBreakthroughCount += realmDelta;
+            SpiritMax += realmDelta;
+            HandLimit += realmDelta;
+            IncreasePlayerMaxHp(10 * realmDelta);
+            PlayerCurrentHp = PlayerMaxHp;
+            return true;
         }
     }
 }

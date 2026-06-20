@@ -370,6 +370,8 @@ namespace GameLogic.Cultivation
 
         private void EnterCurrentNode(CultivationRunState state)
         {
+            state.TryBreakthroughTo(state.CurrentNode.Realm);
+
             switch (state.CurrentNode.Type)
             {
                 case CultivationRunNodeType.Battle:
@@ -425,7 +427,7 @@ namespace GameLogic.Cultivation
             state.CurrentRewards.Clear();
             state.RestUpgradeChoices.Clear();
             state.CurrentRouteChoices.Clear();
-            state.CurrentBattle = _battleEngine.CreateBattle(state.Deck, state.CurrentNode.Enemy, state.PlayerCurrentHp, state.PlayerMaxHp);
+            state.CurrentBattle = _battleEngine.CreateBattle(state.Deck, state.CurrentNode.Enemy, state.PlayerCurrentHp, state.PlayerMaxHp, state.SpiritMax, state.HandLimit);
             state.Status = CultivationRunStatus.InBattle;
         }
 
