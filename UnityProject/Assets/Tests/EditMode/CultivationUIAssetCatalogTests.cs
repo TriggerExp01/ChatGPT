@@ -12,6 +12,8 @@ namespace GameLogic.Tests
         public void RequiredUiPlaceholderAssetsExistAndImportAsSprites()
         {
             Assert.IsTrue(File.Exists(CultivationUIAssetCatalog.Manifest), CultivationUIAssetCatalog.Manifest);
+            var manifest = File.ReadAllText(CultivationUIAssetCatalog.Manifest);
+            StringAssert.Contains("Icons/ui_icon_counter.png", manifest);
 
             foreach (var path in CultivationUIAssetCatalog.RequiredSpritePaths)
             {

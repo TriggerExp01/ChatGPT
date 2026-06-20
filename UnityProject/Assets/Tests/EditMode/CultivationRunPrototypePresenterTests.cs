@@ -435,6 +435,7 @@ namespace GameLogic.Tests
                 new CardEffect(CardEffectType.DamageAfterCriticalTriggeredChainAll, 27, fallbackValue: 10),
                 new CardEffect(CardEffectType.Dodge, 1, CardTarget.Self),
                 new CardEffect(CardEffectType.DodgeCounter, 8, CardTarget.Self),
+                new CardEffect(CardEffectType.AttackCounter, 4, CardTarget.Self, chancePercent: 30),
                 new CardEffect(CardEffectType.ChanceStun, 0, duration: 1, chancePercent: 40),
                 new CardEffect(CardEffectType.ChainOnChanceStun, 10, duration: 1, chancePercent: 40, secondaryValue: 5),
                 new CardEffect(CardEffectType.ChanceChainDamage, 8, chancePercent: 50, secondaryValue: 4),
@@ -460,6 +461,20 @@ namespace GameLogic.Tests
             StringAssert.Contains("造成 12 伤害，50% 概率连锁 4 伤害；连锁有 20% 概率眩晕", summary);
             StringAssert.Contains("造成 8 伤害，75% 概率连锁 4 伤害；可重复目标，最多 4 次", summary);
             StringAssert.Contains("下次攻击伤害 ×2", summary);
+        }
+
+        [Test]
+        public void FormatCardSummaryDescribesAttackCounter()
+        {
+            var card = new CardDefinition(
+                "attack_counter_summary_test",
+                "受击反伤摘要测试",
+                1,
+                new CardEffect(CardEffectType.AttackCounter, 4, CardTarget.Self, chancePercent: 30));
+
+            var summary = CultivationRunPrototypePresenter.FormatCardSummary(card);
+
+            StringAssert.Contains("30% 概率受击反伤 4 伤害", summary);
         }
 
         private static void PlayFirstCard(CultivationRunState run)

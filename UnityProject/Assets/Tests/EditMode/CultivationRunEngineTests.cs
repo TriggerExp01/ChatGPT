@@ -59,6 +59,8 @@ namespace GameLogic.Tests
             CollectionAssert.DoesNotContain(deckIds, CultivationSeedData.ThunderousBarrage.Id);
             CollectionAssert.DoesNotContain(deckIds, CultivationSeedData.ThunderHammer.Id);
             CollectionAssert.DoesNotContain(deckIds, CultivationSeedData.ThunderDodgeStrike.Id);
+            CollectionAssert.DoesNotContain(deckIds, CultivationSeedData.ThunderShield.Id);
+            CollectionAssert.DoesNotContain(deckIds, CultivationSeedData.ThunderStrikeRebound.Id);
             CollectionAssert.DoesNotContain(deckIds, CultivationSeedData.SwordQi.Id);
             Assert.IsTrue(run.CurrentNode.RewardPool.Any(reward => reward.Card.Id == CultivationSeedData.HeavenlyThunderSpell.Id));
             Assert.IsTrue(run.CurrentNode.RewardPool.Any(reward => reward.Card.Id == CultivationSeedData.LightningChain.Id));
@@ -67,6 +69,8 @@ namespace GameLogic.Tests
             Assert.IsTrue(run.CurrentNode.RewardPool.Any(reward => reward.Card.Id == CultivationSeedData.ThunderousBarrage.Id));
             Assert.IsTrue(run.CurrentNode.RewardPool.Any(reward => reward.Card.Id == CultivationSeedData.ThunderHammer.Id));
             Assert.IsTrue(run.CurrentNode.RewardPool.Any(reward => reward.Card.Id == CultivationSeedData.ThunderDodgeStrike.Id));
+            Assert.IsTrue(run.CurrentNode.RewardPool.Any(reward => reward.Card.Id == CultivationSeedData.ThunderShield.Id));
+            Assert.IsTrue(run.CurrentNode.RewardPool.Any(reward => reward.Card.Id == CultivationSeedData.ThunderStrikeRebound.Id));
         }
 
         [Test]

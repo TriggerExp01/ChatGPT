@@ -73,6 +73,10 @@ namespace GameLogic.Cultivation
                     return $"获得 {effect.Value} 次闪避";
                 case CardEffectType.DodgeCounter:
                     return $"闪避成功时反击 {effect.Value} 伤害";
+                case CardEffectType.AttackCounter:
+                    return effect.ChancePercent >= 100
+                        ? $"受击反伤 {effect.Value} 伤害"
+                        : $"{effect.ChancePercent}% 概率受击反伤 {effect.Value} 伤害";
                 case CardEffectType.Draw:
                     return $"抽 {effect.Value} 张牌";
                 case CardEffectType.Heal:

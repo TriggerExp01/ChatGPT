@@ -26,6 +26,7 @@ namespace GameLogic.Cultivation
         public const string SpiritGemIcon = Root + "/Icons/ui_icon_spirit_gem.png";
         public const string ShieldIcon = Root + "/Icons/ui_icon_shield.png";
         public const string ThunderIcon = Root + "/Icons/ui_icon_thunder.png";
+        public const string CounterIcon = Root + "/Icons/ui_icon_counter.png";
         public const string IntentAttack = Root + "/Intents/ui_intent_attack.png";
         public const string IntentDefend = Root + "/Intents/ui_intent_defend.png";
         public const string IntentStun = Root + "/Intents/ui_intent_stun.png";
@@ -52,6 +53,7 @@ namespace GameLogic.Cultivation
             SpiritGemIcon,
             ShieldIcon,
             ThunderIcon,
+            CounterIcon,
             IntentAttack,
             IntentDefend,
             IntentStun,

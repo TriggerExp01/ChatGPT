@@ -811,6 +811,122 @@ namespace GameLogic.Tests
         }
 
         [Test]
+        public void AttackCounterDamagesAttackerAfterEnemyAttack()
+        {
+            var engine = new BattleEngine(1);
+            var counterCard = new CardDefinition(
+                "attack_counter_hit_test",
+                "受击反伤测试",
+                0,
+                new CardEffect(CardEffectType.AttackCounter, 4, CardTarget.Self));
+            var state = CreateOrderedBattle(engine, counterCard);
+
+            engine.PlayCard(state, state.Hand[0], state.Enemies[0]);
+            engine.EndPlayerTurn(state);
+
+            Assert.AreEqual(94, state.Player.CurrentHp);
+            Assert.AreEqual(38, state.Enemies[0].Body.CurrentHp);
+            Assert.IsTrue(state.Logs.Any(log => log.Message.Contains("attack-counter dealt")));
+        }
+
+        [Test]
+        public void AttackCounterCanMissByChance()
+        {
+            var engine = new BattleEngine(1);
+            var counterCard = new CardDefinition(
+                "attack_counter_miss_test",
+                "受击反伤未触发测试",
+                0,
+                new CardEffect(CardEffectType.AttackCounter, 4, CardTarget.Self, chancePercent: 0));
+            var state = CreateOrderedBattle(engine, counterCard);
+
+            engine.PlayCard(state, state.Hand[0], state.Enemies[0]);
+            engine.EndPlayerTurn(state);
+
+            Assert.AreEqual(94, state.Player.CurrentHp);
+            Assert.AreEqual(40, state.Enemies[0].Body.CurrentHp);
+            Assert.IsTrue(state.Logs.Any(log => log.Message.Contains("attack-counter missed")));
+        }
+
+        [Test]
+        public void AttackCounterTriggersWhenShieldAbsorbsAttackDamage()
+        {
+            var engine = new BattleEngine(1);
+            var counterCard = new CardDefinition(
+                "attack_counter_shield_test",
+                "护盾受击反伤测试",
+                0,
+                new CardEffect(CardEffectType.Shield, 8, CardTarget.Self),
+                new CardEffect(CardEffectType.AttackCounter, 4, CardTarget.Self));
+            var state = CreateOrderedBattle(engine, counterCard);
+
+            engine.PlayCard(state, state.Hand[0], state.Enemies[0]);
+            engine.EndPlayerTurn(state);
+
+            Assert.AreEqual(100, state.Player.CurrentHp);
+            Assert.AreEqual(38, state.Enemies[0].Body.CurrentHp);
+            Assert.IsTrue(state.Logs.Any(log => log.Message.Contains("attack-counter dealt")));
+        }
+
+        [Test]
+        public void AttackCounterDoesNotTriggerOnNonAttackIntent()
+        {
+            var enemy = new EnemyDefinition(
+                "defender",
+                "防御者",
+                30,
+                0,
+                new EnemyIntent(EnemyIntentType.Defend, 5, description: "防御 5"));
+            var engine = new BattleEngine(1);
+            var counterCard = new CardDefinition(
+                "attack_counter_non_attack_test",
+                "非攻击反伤测试",
+                0,
+                new CardEffect(CardEffectType.AttackCounter, 4, CardTarget.Self));
+            var state = engine.CreateBattle(new[] { counterCard }.Concat(CultivationSeedData.CreateSwordSectStarterDeck()), enemy);
+            state.Hand.Clear();
+            state.DrawPile.Remove(counterCard);
+            state.Hand.Add(counterCard);
+
+            engine.PlayCard(state, state.Hand[0], state.Enemies[0]);
+            engine.EndPlayerTurn(state);
+
+            Assert.AreEqual(100, state.Player.CurrentHp);
+            Assert.AreEqual(30, state.Enemies[0].Body.CurrentHp);
+            Assert.AreEqual(5, state.Enemies[0].Body.Shield);
+            Assert.IsFalse(state.Logs.Any(log => log.Message.Contains("attack-counter dealt")));
+        }
+
+        [Test]
+        public void AttackCounterExpiresAtNextPlayerTurn()
+        {
+            var engine = new BattleEngine(1);
+            var counterCard = new CardDefinition(
+                "attack_counter_expire_test",
+                "受击反伤过期测试",
+                0,
+                new CardEffect(CardEffectType.AttackCounter, 4, CardTarget.Self));
+            var state = CreateOrderedBattle(engine, counterCard);
+
+            engine.PlayCard(state, state.Hand[0], state.Enemies[0]);
+            engine.EndPlayerTurn(state);
+
+            Assert.AreEqual(0, state.AttackCounterDamage);
+            Assert.AreEqual(0, state.AttackCounterChancePercent);
+        }
+
+        [Test]
+        public void ThunderDefensiveCardsExposeAttackCounterUpgradeTrees()
+        {
+            Assert.AreEqual("thunder_shield", CultivationSeedData.ThunderShield.Id);
+            Assert.AreEqual("thunder_strike_rebound", CultivationSeedData.ThunderStrikeRebound.Id);
+            Assert.IsTrue(CultivationSeedData.ThunderShield.Effects.Any(effect => effect.Type == CardEffectType.AttackCounter && effect.ChancePercent == 30));
+            Assert.IsTrue(CultivationSeedData.ThunderStrikeRebound.Effects.Any(effect => effect.Type == CardEffectType.AttackCounter && effect.ChancePercent == 100));
+            Assert.GreaterOrEqual(CultivationSeedData.ThunderShield.UpgradeOptions.Sum(option => option.UpgradedCard.UpgradeOptions.Count), 4);
+            Assert.GreaterOrEqual(CultivationSeedData.ThunderStrikeRebound.UpgradeOptions.Sum(option => option.UpgradedCard.UpgradeOptions.Count), 4);
+        }
+
+        [Test]
         public void ExhaustCardMovesToExhaustPileInsteadOfDiscardPile()
         {
             var engine = new BattleEngine(1);

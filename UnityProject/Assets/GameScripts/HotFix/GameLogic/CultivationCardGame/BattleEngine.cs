@@ -74,6 +74,7 @@ namespace GameLogic.Cultivation
 
             state.TurnNumber++;
             state.ResetTurnCriticalState();
+            state.ClearAttackCounter();
             state.Player.ClearShield();
             state.Player.ResolveSharpnessAtTurnStart();
             state.Spirit = state.SpiritMax;
@@ -207,6 +208,10 @@ namespace GameLogic.Cultivation
                 case CardEffectType.DodgeCounter:
                     state.AddDodgeCounterDamage(effect.Value);
                     state.Logs.Add(new BattleLogEntry($"{card.Name} 闪避成功时反击 {effect.Value} 伤害。"));
+                    break;
+                case CardEffectType.AttackCounter:
+                    state.AddAttackCounter(effect.Value, effect.ChancePercent);
+                    state.Logs.Add(new BattleLogEntry($"{card.Name} counter-on-hit {effect.ChancePercent}% for {effect.Value}."));
                     break;
                 case CardEffectType.Draw:
                     DrawCards(state, effect.Value);
@@ -678,7 +683,7 @@ namespace GameLogic.Cultivation
             }
         }
 
-        private static bool DealEnemyDamage(BattleState state, EnemyState enemy, int damage)
+        private bool DealEnemyDamage(BattleState state, EnemyState enemy, int damage)
         {
             if (state.TryConsumeDodge())
             {
@@ -693,8 +698,26 @@ namespace GameLogic.Cultivation
             }
 
             var dealt = state.Player.TakeDamage(damage + enemy.AttackBonus);
+            ResolveAttackCounter(state, enemy);
             state.Logs.Add(new BattleLogEntry($"{enemy.Body.Name} 对玩家造成 {dealt} 点伤害。"));
             return true;
+        }
+
+        private void ResolveAttackCounter(BattleState state, EnemyState enemy)
+        {
+            if (state.AttackCounterDamage <= 0 || enemy.Body.IsDefeated)
+            {
+                return;
+            }
+
+            if (!RollChance(state.AttackCounterChancePercent))
+            {
+                state.Logs.Add(new BattleLogEntry($"attack-counter missed {state.AttackCounterChancePercent}%."));
+                return;
+            }
+
+            var counterDealt = enemy.Body.TakeDamage(state.AttackCounterDamage, state.Player.Sharpness);
+            state.Logs.Add(new BattleLogEntry($"attack-counter dealt {counterDealt} to {enemy.Body.Name}."));
         }
 
         private void DrawToHandLimit(BattleState state)
@@ -1662,6 +1685,118 @@ namespace GameLogic.Cultivation
             new CardEffect(CardEffectType.Damage, 6),
             new CardEffect(CardEffectType.Dodge, 1, CardTarget.Self));
 
+        public static CardDefinition ThunderShield { get; } = new CardDefinition(
+            "thunder_shield",
+            "雷盾",
+            1,
+            new[]
+            {
+                new CardUpgradeOption(
+                    "thunder_shield_guard_1",
+                    "雷盾·强",
+                    "获得 8 护盾，30% 概率对攻击者造成 3 伤害。",
+                    new CardDefinition(
+                        "thunder_shield_guard_1",
+                        "雷盾·强",
+                        1,
+                        new[]
+                        {
+                            new CardUpgradeOption(
+                                "thunder_shield_guard_2_heavy",
+                                "雷盾·极",
+                                "获得 12 护盾，30% 概率对攻击者造成 3 伤害。",
+                                new CardDefinition("thunder_shield_guard_2_heavy", "雷盾·极", 1, new CardEffect(CardEffectType.Shield, 12, CardTarget.Self), new CardEffect(CardEffectType.AttackCounter, 3, CardTarget.Self, chancePercent: 30))),
+                            new CardUpgradeOption(
+                                "thunder_shield_guard_2_chance",
+                                "雷盾·爆",
+                                "获得 8 护盾，60% 概率对攻击者造成 3 伤害。",
+                                new CardDefinition("thunder_shield_guard_2_chance", "雷盾·爆", 1, new CardEffect(CardEffectType.Shield, 8, CardTarget.Self), new CardEffect(CardEffectType.AttackCounter, 3, CardTarget.Self, chancePercent: 60))),
+                        },
+                        new CardEffect(CardEffectType.Shield, 8, CardTarget.Self),
+                        new CardEffect(CardEffectType.AttackCounter, 3, CardTarget.Self, chancePercent: 30))),
+                new CardUpgradeOption(
+                    "thunder_shield_counter_1",
+                    "雷盾·反",
+                    "获得 5 护盾，30% 概率对攻击者造成 7 伤害。",
+                    new CardDefinition(
+                        "thunder_shield_counter_1",
+                        "雷盾·反",
+                        1,
+                        new[]
+                        {
+                            new CardUpgradeOption(
+                                "thunder_shield_counter_2_cost",
+                                "雷盾·速",
+                                "灵力消耗降为 0，获得 5 护盾，30% 概率对攻击者造成 7 伤害。",
+                                new CardDefinition("thunder_shield_counter_2_cost", "雷盾·速", 0, new CardEffect(CardEffectType.Shield, 5, CardTarget.Self), new CardEffect(CardEffectType.AttackCounter, 7, CardTarget.Self, chancePercent: 30))),
+                            new CardUpgradeOption(
+                                "thunder_shield_counter_2_heavy",
+                                "雷盾·震",
+                                "获得 5 护盾，60% 概率对攻击者造成 7 伤害。",
+                                new CardDefinition("thunder_shield_counter_2_heavy", "雷盾·震", 1, new CardEffect(CardEffectType.Shield, 5, CardTarget.Self), new CardEffect(CardEffectType.AttackCounter, 7, CardTarget.Self, chancePercent: 60))),
+                        },
+                        new CardEffect(CardEffectType.Shield, 5, CardTarget.Self),
+                        new CardEffect(CardEffectType.AttackCounter, 7, CardTarget.Self, chancePercent: 30))),
+            },
+            new CardEffect(CardEffectType.Shield, 5, CardTarget.Self),
+            new CardEffect(CardEffectType.AttackCounter, 3, CardTarget.Self, chancePercent: 30));
+
+        public static CardDefinition ThunderStrikeRebound { get; } = new CardDefinition(
+            "thunder_strike_rebound",
+            "雷击反弹",
+            1,
+            new[]
+            {
+                new CardUpgradeOption(
+                    "thunder_strike_rebound_damage_1",
+                    "雷击反弹·强",
+                    "获得 2 护盾，本回合受到攻击时必定对攻击者造成 7 伤害。",
+                    new CardDefinition(
+                        "thunder_strike_rebound_damage_1",
+                        "雷击反弹·强",
+                        1,
+                        new[]
+                        {
+                            new CardUpgradeOption(
+                                "thunder_strike_rebound_damage_2_heavy",
+                                "雷击反弹·极",
+                                "获得 2 护盾，本回合受到攻击时必定对攻击者造成 10 伤害。",
+                                new CardDefinition("thunder_strike_rebound_damage_2_heavy", "雷击反弹·极", 1, new CardEffect(CardEffectType.Shield, 2, CardTarget.Self), new CardEffect(CardEffectType.AttackCounter, 10, CardTarget.Self))),
+                            new CardUpgradeOption(
+                                "thunder_strike_rebound_damage_2_cost",
+                                "雷击反弹·速",
+                                "灵力消耗降为 0，获得 2 护盾，本回合受到攻击时必定对攻击者造成 7 伤害。",
+                                new CardDefinition("thunder_strike_rebound_damage_2_cost", "雷击反弹·速", 0, new CardEffect(CardEffectType.Shield, 2, CardTarget.Self), new CardEffect(CardEffectType.AttackCounter, 7, CardTarget.Self))),
+                        },
+                        new CardEffect(CardEffectType.Shield, 2, CardTarget.Self),
+                        new CardEffect(CardEffectType.AttackCounter, 7, CardTarget.Self))),
+                new CardUpgradeOption(
+                    "thunder_strike_rebound_guard_1",
+                    "雷击反弹·护",
+                    "获得 7 护盾，本回合受到攻击时必定对攻击者造成 4 伤害。",
+                    new CardDefinition(
+                        "thunder_strike_rebound_guard_1",
+                        "雷击反弹·护",
+                        1,
+                        new[]
+                        {
+                            new CardUpgradeOption(
+                                "thunder_strike_rebound_guard_2_heavy",
+                                "雷击反弹·坚",
+                                "获得 10 护盾，本回合受到攻击时必定对攻击者造成 4 伤害。",
+                                new CardDefinition("thunder_strike_rebound_guard_2_heavy", "雷击反弹·坚", 1, new CardEffect(CardEffectType.Shield, 10, CardTarget.Self), new CardEffect(CardEffectType.AttackCounter, 4, CardTarget.Self))),
+                            new CardUpgradeOption(
+                                "thunder_strike_rebound_guard_2_shock",
+                                "雷击反弹·震",
+                                "获得 7 护盾，本回合受到攻击时必定对攻击者造成 7 伤害。",
+                                new CardDefinition("thunder_strike_rebound_guard_2_shock", "雷击反弹·震", 1, new CardEffect(CardEffectType.Shield, 7, CardTarget.Self), new CardEffect(CardEffectType.AttackCounter, 7, CardTarget.Self))),
+                        },
+                        new CardEffect(CardEffectType.Shield, 7, CardTarget.Self),
+                        new CardEffect(CardEffectType.AttackCounter, 4, CardTarget.Self))),
+            },
+            new CardEffect(CardEffectType.Shield, 2, CardTarget.Self),
+            new CardEffect(CardEffectType.AttackCounter, 4, CardTarget.Self));
+
         public static PillDefinition SmallRestorePillItem { get; } = new PillDefinition(
             "small_restore_pill",
             "小还丹",
@@ -1916,6 +2051,8 @@ namespace GameLogic.Cultivation
                 new CultivationRunReward("reward_thunderous_barrage", ThunderousBarrage),
                 new CultivationRunReward("reward_thunder_hammer", ThunderHammer),
                 new CultivationRunReward("reward_thunder_dodge_strike", ThunderDodgeStrike),
+                new CultivationRunReward("reward_thunder_shield", ThunderShield),
+                new CultivationRunReward("reward_thunder_strike_rebound", ThunderStrikeRebound),
                 new CultivationRunReward("reward_guard_qi", GuardQi),
                 new CultivationRunReward("reward_light_body", LightBody),
                 new CultivationRunReward("reward_healing_pill", HealingPill),

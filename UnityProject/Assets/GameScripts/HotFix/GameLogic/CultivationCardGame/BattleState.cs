@@ -53,6 +53,10 @@ namespace GameLogic.Cultivation
 
         public int DodgeCounterDamage { get; private set; }
 
+        public int AttackCounterDamage { get; private set; }
+
+        public int AttackCounterChancePercent { get; private set; }
+
         public int TurnNumber { get; set; }
 
         public BattleOutcome Outcome { get; set; } = BattleOutcome.InProgress;
@@ -113,6 +117,19 @@ namespace GameLogic.Cultivation
         public void AddDodgeCounterDamage(int amount)
         {
             DodgeCounterDamage += Math.Max(0, amount);
+        }
+
+        public void AddAttackCounter(int damage, int chancePercent)
+        {
+            AttackCounterDamage += Math.Max(0, damage);
+            var clampedChance = Math.Min(100, Math.Max(0, chancePercent));
+            AttackCounterChancePercent = Math.Max(AttackCounterChancePercent, clampedChance);
+        }
+
+        public void ClearAttackCounter()
+        {
+            AttackCounterDamage = 0;
+            AttackCounterChancePercent = 0;
         }
 
         public bool TryConsumeDodge()
