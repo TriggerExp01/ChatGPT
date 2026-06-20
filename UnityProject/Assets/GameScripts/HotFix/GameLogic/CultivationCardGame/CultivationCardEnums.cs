@@ -46,6 +46,7 @@ namespace GameLogic.Cultivation
         InBattle,
         Reward,
         Rest,
+        RouteChoice,
         Completed,
         Defeated,
     }

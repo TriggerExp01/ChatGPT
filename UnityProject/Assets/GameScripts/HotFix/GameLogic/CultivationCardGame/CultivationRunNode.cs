@@ -11,7 +11,8 @@ namespace GameLogic.Cultivation
             CultivationRunNodeType type,
             EnemyDefinition enemy,
             IEnumerable<CultivationRunReward> rewardPool,
-            int restHealAmount = 0)
+            int restHealAmount = 0,
+            IEnumerable<int> nextNodeIndices = null)
         {
             if (string.IsNullOrWhiteSpace(id))
             {
@@ -34,6 +35,17 @@ namespace GameLogic.Cultivation
             Enemy = enemy;
             RewardPool = new List<CultivationRunReward>(rewardPool ?? Array.Empty<CultivationRunReward>()).AsReadOnly();
             RestHealAmount = Math.Max(0, restHealAmount);
+
+            var nextIndices = new List<int>(nextNodeIndices ?? Array.Empty<int>());
+            for (var i = 0; i < nextIndices.Count; i++)
+            {
+                if (nextIndices[i] < 0)
+                {
+                    throw new ArgumentOutOfRangeException(nameof(nextNodeIndices), "Next node indices cannot contain negative values.");
+                }
+            }
+
+            NextNodeIndices = nextIndices.AsReadOnly();
         }
 
         public string Id { get; }
@@ -47,5 +59,7 @@ namespace GameLogic.Cultivation
         public IReadOnlyList<CultivationRunReward> RewardPool { get; }
 
         public int RestHealAmount { get; }
+
+        public IReadOnlyList<int> NextNodeIndices { get; }
     }
 }

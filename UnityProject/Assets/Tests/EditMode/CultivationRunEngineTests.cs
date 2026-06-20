@@ -177,6 +177,53 @@ namespace GameLogic.Tests
         }
 
         [Test]
+        public void BranchingRouteWaitsForRouteChoiceAfterReward()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var run = engine.StartRun(CreateInstantWinDeck(), CreateBranchingRoute());
+
+            WinCurrentBattle(engine, run);
+            engine.SkipReward(run);
+
+            Assert.AreEqual(CultivationRunStatus.RouteChoice, run.Status);
+            Assert.IsNull(run.CurrentBattle);
+            Assert.AreEqual(2, run.CurrentRouteChoices.Count);
+            Assert.AreEqual("branch_rest", run.CurrentRouteChoices[0].TargetNode.Id);
+            Assert.AreEqual("branch_elite", run.CurrentRouteChoices[1].TargetNode.Id);
+        }
+
+        [Test]
+        public void ChoosingRouteStartsSelectedNode()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var run = engine.StartRun(CreateInstantWinDeck(), CreateBranchingRoute(), playerCurrentHp: 70);
+
+            WinCurrentBattle(engine, run);
+            engine.SkipReward(run);
+
+            engine.ChooseRoute(run, 1);
+
+            Assert.AreEqual(CultivationRunStatus.InBattle, run.Status);
+            Assert.AreEqual(2, run.CurrentNodeIndex);
+            Assert.AreEqual("branch_elite_enemy", run.CurrentNode.Enemy.Id);
+            Assert.NotNull(run.CurrentBattle);
+            Assert.AreEqual(70, run.CurrentBattle.Player.CurrentHp);
+            Assert.AreEqual(0, run.CurrentRouteChoices.Count);
+        }
+
+        [Test]
+        public void ChoosingRouteRejectsInvalidIndex()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var run = engine.StartRun(CreateInstantWinDeck(), CreateBranchingRoute());
+
+            WinCurrentBattle(engine, run);
+            engine.SkipReward(run);
+
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => engine.ChooseRoute(run, 2));
+        }
+
+        [Test]
         public void SkippingFinalRewardCompletesRun()
         {
             var engine = new CultivationRunEngine(new BattleEngine(1));
@@ -289,6 +336,34 @@ namespace GameLogic.Tests
                     "after_rest",
                     CultivationRunNodeType.Elite,
                     new EnemyDefinition("after_rest_enemy", "after_rest_enemy", 1, 0, new EnemyIntent(EnemyIntentType.Attack, 1)),
+                    rewards),
+            };
+        }
+
+        private static IReadOnlyList<CultivationRunNode> CreateBranchingRoute()
+        {
+            var rewards = CultivationSeedData.CreateSwordSectRewardPool();
+            return new List<CultivationRunNode>
+            {
+                new CultivationRunNode(
+                    "branch_start",
+                    "branch_start",
+                    CultivationRunNodeType.Battle,
+                    new EnemyDefinition("branch_start_enemy", "branch_start_enemy", 1, 0, new EnemyIntent(EnemyIntentType.Attack, 1)),
+                    rewards,
+                    nextNodeIndices: new[] { 1, 2 }),
+                new CultivationRunNode(
+                    "branch_rest",
+                    "branch_rest",
+                    CultivationRunNodeType.Rest,
+                    null,
+                    null,
+                    restHealAmount: 20),
+                new CultivationRunNode(
+                    "branch_elite",
+                    "branch_elite",
+                    CultivationRunNodeType.Elite,
+                    new EnemyDefinition("branch_elite_enemy", "branch_elite_enemy", 1, 0, new EnemyIntent(EnemyIntentType.Attack, 1)),
                     rewards),
             };
         }

@@ -83,6 +83,20 @@ namespace GameLogic.Cultivation
             AdvanceAfterReward(state);
         }
 
+        public void ChooseRoute(CultivationRunState state, int choiceIndex)
+        {
+            EnsureRouteChoiceState(state);
+
+            if (choiceIndex < 0 || choiceIndex >= state.CurrentRouteChoices.Count)
+            {
+                throw new ArgumentOutOfRangeException(nameof(choiceIndex), "Route choice index is outside the current route choices.");
+            }
+
+            var choice = state.CurrentRouteChoices[choiceIndex];
+            state.CurrentNodeIndex = choice.TargetNodeIndex;
+            EnterCurrentNode(state);
+        }
+
         public void Rest(CultivationRunState state)
         {
             EnsureState(state);
@@ -120,6 +134,7 @@ namespace GameLogic.Cultivation
                 case CultivationRunNodeType.Rest:
                     state.CurrentBattle = null;
                     state.CurrentRewards.Clear();
+                    state.CurrentRouteChoices.Clear();
                     RefreshRestUpgradeChoices(state);
                     state.Status = CultivationRunStatus.Rest;
                     break;
@@ -132,6 +147,7 @@ namespace GameLogic.Cultivation
         {
             state.CurrentRewards.Clear();
             state.RestUpgradeChoices.Clear();
+            state.CurrentRouteChoices.Clear();
             state.CurrentBattle = _battleEngine.CreateBattle(state.Deck, state.CurrentNode.Enemy, state.PlayerCurrentHp, state.PlayerMaxHp);
             state.Status = CultivationRunStatus.InBattle;
         }
@@ -150,15 +166,24 @@ namespace GameLogic.Cultivation
         {
             state.CurrentRewards.Clear();
             state.RestUpgradeChoices.Clear();
+            state.CurrentRouteChoices.Clear();
             state.CurrentBattle = null;
 
-            if (state.CurrentNodeIndex >= state.Route.Count - 1)
+            var nextNodeIndices = ResolveNextNodeIndices(state);
+            if (nextNodeIndices.Count == 0)
             {
                 state.Status = CultivationRunStatus.Completed;
                 return;
             }
 
-            state.CurrentNodeIndex++;
+            if (nextNodeIndices.Count > 1)
+            {
+                EnterRouteChoice(state, nextNodeIndices);
+                return;
+            }
+
+            EnsureRouteTarget(state, nextNodeIndices[0]);
+            state.CurrentNodeIndex = nextNodeIndices[0];
             EnterCurrentNode(state);
         }
 
@@ -169,6 +194,51 @@ namespace GameLogic.Cultivation
             if (state.Status != CultivationRunStatus.Reward)
             {
                 throw new InvalidOperationException("Run is not in reward state.");
+            }
+        }
+
+        private static void EnsureRouteChoiceState(CultivationRunState state)
+        {
+            EnsureState(state);
+
+            if (state.Status != CultivationRunStatus.RouteChoice)
+            {
+                throw new InvalidOperationException("Run is not waiting for a route choice.");
+            }
+        }
+
+        private static IReadOnlyList<int> ResolveNextNodeIndices(CultivationRunState state)
+        {
+            if (state.CurrentNode.NextNodeIndices.Count > 0)
+            {
+                return state.CurrentNode.NextNodeIndices;
+            }
+
+            if (state.CurrentNodeIndex >= state.Route.Count - 1)
+            {
+                return Array.Empty<int>();
+            }
+
+            return new[] { state.CurrentNodeIndex + 1 };
+        }
+
+        private static void EnterRouteChoice(CultivationRunState state, IReadOnlyList<int> nextNodeIndices)
+        {
+            for (var i = 0; i < nextNodeIndices.Count; i++)
+            {
+                var targetIndex = nextNodeIndices[i];
+                EnsureRouteTarget(state, targetIndex);
+                state.CurrentRouteChoices.Add(new CultivationRunRouteChoice(targetIndex, state.Route[targetIndex]));
+            }
+
+            state.Status = CultivationRunStatus.RouteChoice;
+        }
+
+        private static void EnsureRouteTarget(CultivationRunState state, int targetNodeIndex)
+        {
+            if (targetNodeIndex <= state.CurrentNodeIndex || targetNodeIndex >= state.Route.Count)
+            {
+                throw new InvalidOperationException("Route targets must point to later nodes inside the current route.");
             }
         }
 
