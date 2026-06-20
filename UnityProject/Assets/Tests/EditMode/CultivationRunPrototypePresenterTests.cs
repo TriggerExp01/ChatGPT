@@ -1,5 +1,6 @@
 using GameLogic.Cultivation;
 using NUnit.Framework;
+using System.Collections.Generic;
 
 namespace GameLogic.Tests
 {
@@ -53,6 +54,22 @@ namespace GameLogic.Tests
         }
 
         [Test]
+        public void BuildTextIncludesMarketItems()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var run = engine.StartRun(CreateInstantWinDeck(), CreateMarketRoute(), initialSpiritStones: 30);
+
+            var text = CultivationRunPrototypePresenter.BuildText(run);
+            var snapshot = CultivationRunPrototypePresenter.CreateSnapshot(run);
+
+            Assert.AreEqual(CultivationRunStatus.Market, snapshot.Status);
+            Assert.AreEqual(1, snapshot.MarketItemCount);
+            StringAssert.Contains("坊市商品", text.NodeText);
+            StringAssert.Contains("流云护身 / 20 灵石", text.NodeText);
+            StringAssert.Contains("等待操作：Market", text.BattleText);
+        }
+
+        [Test]
         public void FormatCardSummaryDescribesCostAndEffects()
         {
             var summary = CultivationRunPrototypePresenter.FormatCardSummary(CultivationSeedData.BreakArmor);
@@ -101,6 +118,23 @@ namespace GameLogic.Tests
                 instantWin,
                 instantWin,
                 instantWin,
+            };
+        }
+
+        private static IReadOnlyList<CultivationRunNode> CreateMarketRoute()
+        {
+            return new List<CultivationRunNode>
+            {
+                new CultivationRunNode(
+                    "market",
+                    "market",
+                    CultivationRunNodeType.Market,
+                    null,
+                    null,
+                    marketItems: new[]
+                    {
+                        new CultivationMarketItem("market_cloud_guard", CultivationSeedData.CloudGuard, 20),
+                    }),
             };
         }
     }

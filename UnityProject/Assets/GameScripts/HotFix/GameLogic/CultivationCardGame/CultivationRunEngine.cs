@@ -133,6 +133,33 @@ namespace GameLogic.Cultivation
             Rest(state);
         }
 
+        public void BuyMarketItem(CultivationRunState state, int itemIndex)
+        {
+            EnsureMarketState(state);
+
+            if (itemIndex < 0 || itemIndex >= state.CurrentMarketItems.Count)
+            {
+                throw new ArgumentOutOfRangeException(nameof(itemIndex), "Market item index is outside the current market items.");
+            }
+
+            var item = state.CurrentMarketItems[itemIndex];
+            if (state.SpiritStones < item.Price)
+            {
+                throw new InvalidOperationException("Not enough spirit stones to buy the selected market item.");
+            }
+
+            state.SpiritStones -= item.Price;
+            state.Deck.Add(item.Card);
+            state.PurchasedMarketItems.Add(item);
+            state.CurrentMarketItems.RemoveAt(itemIndex);
+        }
+
+        public void LeaveMarket(CultivationRunState state)
+        {
+            EnsureMarketState(state);
+            AdvanceToNextNode(state);
+        }
+
         private void EnterCurrentNode(CultivationRunState state)
         {
             switch (state.CurrentNode.Type)
@@ -145,8 +172,18 @@ namespace GameLogic.Cultivation
                     state.CurrentBattle = null;
                     state.CurrentRewards.Clear();
                     state.CurrentRouteChoices.Clear();
+                    state.CurrentMarketItems.Clear();
                     RefreshRestUpgradeChoices(state);
                     state.Status = CultivationRunStatus.Rest;
+                    break;
+                case CultivationRunNodeType.Market:
+                    state.CurrentBattle = null;
+                    state.CurrentRewards.Clear();
+                    state.RestUpgradeChoices.Clear();
+                    state.CurrentRouteChoices.Clear();
+                    state.CurrentMarketItems.Clear();
+                    state.CurrentMarketItems.AddRange(state.CurrentNode.MarketItems);
+                    state.Status = CultivationRunStatus.Market;
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(state.CurrentNode.Type), state.CurrentNode.Type, "Unsupported run node type.");
@@ -207,6 +244,7 @@ namespace GameLogic.Cultivation
             state.CurrentRewards.Clear();
             state.RestUpgradeChoices.Clear();
             state.CurrentRouteChoices.Clear();
+            state.CurrentMarketItems.Clear();
             state.CurrentBattle = null;
 
             var nextNodeIndices = ResolveNextNodeIndices(state);
@@ -244,6 +282,16 @@ namespace GameLogic.Cultivation
             if (state.Status != CultivationRunStatus.RouteChoice)
             {
                 throw new InvalidOperationException("Run is not waiting for a route choice.");
+            }
+        }
+
+        private static void EnsureMarketState(CultivationRunState state)
+        {
+            EnsureState(state);
+
+            if (state.Status != CultivationRunStatus.Market)
+            {
+                throw new InvalidOperationException("Run is not in market state.");
             }
         }
 

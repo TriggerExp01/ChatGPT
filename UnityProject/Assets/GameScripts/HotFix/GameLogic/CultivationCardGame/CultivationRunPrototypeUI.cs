@@ -160,6 +160,28 @@ namespace GameLogic.Cultivation
             Refresh();
         }
 
+        public void BuyMarketItem(int itemIndex)
+        {
+            if (_run == null || _run.Status != CultivationRunStatus.Market)
+            {
+                return;
+            }
+
+            _runEngine.BuyMarketItem(_run, itemIndex);
+            Refresh();
+        }
+
+        public void LeaveMarket()
+        {
+            if (_run == null || _run.Status != CultivationRunStatus.Market)
+            {
+                return;
+            }
+
+            _runEngine.LeaveMarket(_run);
+            Refresh();
+        }
+
         private void Initialize()
         {
             if (_handRoot == null)
@@ -333,6 +355,21 @@ namespace GameLogic.Cultivation
                         SetLayout(button.gameObject, flexibleWidth: 1, preferredHeight: 96);
                     }
 
+                    break;
+                case CultivationRunStatus.Market:
+                    for (var i = 0; i < _run.CurrentMarketItems.Count; i++)
+                    {
+                        var index = i;
+                        var item = _run.CurrentMarketItems[i];
+                        var button = CreateButton($"Market_{i}_{item.Id}", _choiceRoot, $"购买\n{item.Card.Name}\n{item.Price} 灵石\n{CultivationRunPrototypePresenter.FormatCardSummary(item.Card)}");
+                        button.interactable = _run.SpiritStones >= item.Price;
+                        button.onClick.AddListener(() => BuyMarketItem(index));
+                        SetLayout(button.gameObject, flexibleWidth: 1, preferredHeight: 96);
+                    }
+
+                    var leave = CreateButton("LeaveMarketButton", _choiceRoot, "离开坊市");
+                    leave.onClick.AddListener(LeaveMarket);
+                    SetLayout(leave.gameObject, flexibleWidth: 1, preferredHeight: 96);
                     break;
             }
         }

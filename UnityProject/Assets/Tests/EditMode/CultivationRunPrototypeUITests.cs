@@ -61,10 +61,49 @@ namespace GameLogic.Tests
             _ui.ChooseRoute(1);
 
             _ui.RestAndUpgrade(0, 0);
+            Assert.AreEqual(CultivationRunStatus.RouteChoice, _ui.Snapshot.Status);
+
+            _ui.ChooseRoute(1);
 
             Assert.AreEqual(CultivationRunStatus.InBattle, _ui.Snapshot.Status);
             Assert.AreEqual("石魔首领", _ui.Snapshot.CurrentNodeName);
             Assert.AreEqual(5, _ui.Snapshot.HandCount);
+        }
+
+        [Test]
+        public void PrototypeUiCanEnterMarketAndBuyCard()
+        {
+            ForceCurrentBattleVictory();
+            _ui.ResolveBattle();
+            _ui.SkipReward();
+            _ui.ChooseRoute(1);
+
+            Assert.AreEqual(CultivationRunStatus.Rest, _ui.Snapshot.Status);
+
+            _ui.Rest();
+            Assert.AreEqual(CultivationRunStatus.RouteChoice, _ui.Snapshot.Status);
+
+            _ui.ChooseRoute(0);
+            Assert.AreEqual(CultivationRunStatus.Market, _ui.Snapshot.Status);
+            Assert.AreEqual("山脚坊市", _ui.Snapshot.CurrentNodeName);
+            Assert.Greater(_ui.Snapshot.MarketItemCount, 0);
+            SetRunSpiritStones(30);
+
+            var stonesBefore = _ui.Snapshot.SpiritStones;
+            var deckBefore = _ui.Snapshot.DeckCount;
+            _ui.BuyMarketItem(0);
+
+            Assert.Less(_ui.Snapshot.SpiritStones, stonesBefore);
+            Assert.AreEqual(deckBefore + 1, _ui.Snapshot.DeckCount);
+            Assert.AreEqual(1, _ui.Snapshot.PurchasedMarketItemCount);
+        }
+
+        private void SetRunSpiritStones(int value)
+        {
+            var battleField = typeof(CultivationRunPrototypeUI)
+                .GetField("_run", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            var run = (CultivationRunState)battleField.GetValue(_ui);
+            run.SpiritStones = value;
         }
 
         private void ForceCurrentBattleVictory()

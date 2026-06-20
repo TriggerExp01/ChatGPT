@@ -362,6 +362,50 @@ namespace GameLogic.Tests
         }
 
         [Test]
+        public void MarketNodeLoadsItemsAndBuyingAddsCardToDeck()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var run = engine.StartRun(CreateInstantWinDeck(), CreateMarketRoute(), initialSpiritStones: 25);
+
+            Assert.AreEqual(CultivationRunStatus.Market, run.Status);
+            Assert.AreEqual(2, run.CurrentMarketItems.Count);
+
+            var deckCount = run.Deck.Count;
+            engine.BuyMarketItem(run, 0);
+
+            Assert.AreEqual(5, run.SpiritStones);
+            Assert.AreEqual(deckCount + 1, run.Deck.Count);
+            Assert.AreEqual("cloud_guard", run.Deck.Last().Id);
+            Assert.AreEqual(1, run.PurchasedMarketItems.Count);
+            Assert.AreEqual(1, run.CurrentMarketItems.Count);
+        }
+
+        [Test]
+        public void MarketRejectsPurchaseWithoutEnoughSpiritStones()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var run = engine.StartRun(CreateInstantWinDeck(), CreateMarketRoute(), initialSpiritStones: 10);
+
+            Assert.Throws<System.InvalidOperationException>(() => engine.BuyMarketItem(run, 0));
+            Assert.AreEqual(10, run.SpiritStones);
+            Assert.AreEqual(5, run.Deck.Count);
+            Assert.AreEqual(0, run.PurchasedMarketItems.Count);
+        }
+
+        [Test]
+        public void LeavingMarketAdvancesToNextNode()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var run = engine.StartRun(CreateInstantWinDeck(), CreateMarketRoute(), initialSpiritStones: 25);
+
+            engine.LeaveMarket(run);
+
+            Assert.AreEqual(CultivationRunStatus.InBattle, run.Status);
+            Assert.AreEqual("after_market_enemy", run.CurrentNode.Enemy.Id);
+            Assert.AreEqual(0, run.CurrentMarketItems.Count);
+        }
+
+        [Test]
         public void SwordSectRewardPoolIncludesSwordMarkEntryAndPayoffCards()
         {
             var rewards = CultivationSeedData.CreateSwordSectRewardPool();
@@ -552,7 +596,32 @@ namespace GameLogic.Tests
                     "branch_elite",
                     CultivationRunNodeType.Elite,
                     new EnemyDefinition("branch_elite_enemy", "branch_elite_enemy", 1, 0, new EnemyIntent(EnemyIntentType.Attack, 1)),
-                    rewards),
+                rewards),
+            };
+        }
+
+        private static IReadOnlyList<CultivationRunNode> CreateMarketRoute()
+        {
+            return new List<CultivationRunNode>
+            {
+                new CultivationRunNode(
+                    "market",
+                    "market",
+                    CultivationRunNodeType.Market,
+                    null,
+                    null,
+                    nextNodeIndices: new[] { 1 },
+                    marketItems: new[]
+                    {
+                        new CultivationMarketItem("market_cloud_guard", CultivationSeedData.CloudGuard, 20),
+                        new CultivationMarketItem("market_thrust", CultivationSeedData.Thrust, 25),
+                    }),
+                new CultivationRunNode(
+                    "after_market",
+                    "after_market",
+                    CultivationRunNodeType.Battle,
+                    new EnemyDefinition("after_market_enemy", "after_market_enemy", 1, 0, new EnemyIntent(EnemyIntentType.Attack, 1)),
+                    CultivationSeedData.CreateSwordSectRewardPool()),
             };
         }
     }

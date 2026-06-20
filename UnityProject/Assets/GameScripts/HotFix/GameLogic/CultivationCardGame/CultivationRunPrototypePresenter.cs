@@ -95,6 +95,17 @@ namespace GameLogic.Cultivation
                 }
             }
 
+            if (state.Status == CultivationRunStatus.Market)
+            {
+                builder.AppendLine();
+                builder.AppendLine("坊市商品：");
+                for (var i = 0; i < state.CurrentMarketItems.Count; i++)
+                {
+                    var item = state.CurrentMarketItems[i];
+                    builder.Append(i + 1).Append(". ").Append(item.Card.Name).Append(" / ").Append(item.Price).Append(" 灵石").AppendLine();
+                }
+            }
+
             return builder.ToString();
         }
 
@@ -207,6 +218,10 @@ namespace GameLogic.Cultivation
 
         public int RouteChoiceCount { get; private set; }
 
+        public int MarketItemCount { get; private set; }
+
+        public int PurchasedMarketItemCount { get; private set; }
+
         public BattleOutcome BattleOutcome { get; private set; }
 
         public static RunPrototypeSnapshot From(CultivationRunState state)
@@ -229,6 +244,8 @@ namespace GameLogic.Cultivation
                 RewardCount = state.CurrentRewards.Count,
                 RestUpgradeChoiceCount = state.RestUpgradeChoices.Count,
                 RouteChoiceCount = state.CurrentRouteChoices.Count,
+                MarketItemCount = state.CurrentMarketItems.Count,
+                PurchasedMarketItemCount = state.PurchasedMarketItems.Count,
                 BattleOutcome = state.CurrentBattle?.Outcome ?? BattleOutcome.InProgress,
             };
         }

@@ -827,6 +827,16 @@ namespace GameLogic.Cultivation
             };
         }
 
+        public static IReadOnlyList<CultivationMarketItem> CreatePrototypeMarketItems()
+        {
+            return new List<CultivationMarketItem>
+            {
+                new CultivationMarketItem("market_cloud_guard", CloudGuard, 20),
+                new CultivationMarketItem("market_thrust", Thrust, 25),
+                new CultivationMarketItem("market_small_restore_pill", SmallRestorePill, 30),
+            };
+        }
+
         public static IReadOnlyList<CultivationRunNode> CreateFirstPrototypeRoute()
         {
             var rewards = CreateSwordSectRewardPool();
@@ -842,6 +852,7 @@ namespace GameLogic.Cultivation
         public static IReadOnlyList<CultivationRunNode> CreateFirstPrototypeBranchingRoute()
         {
             var rewards = CreateSwordSectRewardPool();
+            var marketItems = CreatePrototypeMarketItems();
             return new List<CultivationRunNode>
             {
                 new CultivationRunNode(
@@ -858,7 +869,7 @@ namespace GameLogic.Cultivation
                     CultivationRunNodeType.Battle,
                     FireBat,
                     rewards,
-                    nextNodeIndices: new[] { 3 },
+                    nextNodeIndices: new[] { 4 },
                     spiritStoneReward: 15),
                 new CultivationRunNode(
                     "node_meditation",
@@ -867,7 +878,15 @@ namespace GameLogic.Cultivation
                     null,
                     null,
                     restHealAmount: 30,
-                    nextNodeIndices: new[] { 3 }),
+                    nextNodeIndices: new[] { 3, 4 }),
+                new CultivationRunNode(
+                    "node_market",
+                    "山脚坊市",
+                    CultivationRunNodeType.Market,
+                    null,
+                    null,
+                    nextNodeIndices: new[] { 4 },
+                    marketItems: marketItems),
                 new CultivationRunNode(
                     "node_stone_demon_leader",
                     "石魔首领",

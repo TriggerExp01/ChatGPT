@@ -43,6 +43,7 @@ namespace GameLogic.Cultivation
         Battle,
         Elite,
         Rest,
+        Market,
     }
 
     public enum CultivationRunStatus
@@ -50,6 +51,7 @@ namespace GameLogic.Cultivation
         InBattle,
         Reward,
         Rest,
+        Market,
         RouteChoice,
         Completed,
         Defeated,
