@@ -115,6 +115,8 @@ namespace GameLogic.Cultivation
 
         public RunPrototypeSnapshot Snapshot => CultivationRunPrototypePresenter.CreateSnapshot(_run);
 
+        public CultivationRunState DebugRunState => _run;
+
         public static CultivationRunPrototypeUI Open(Transform parent = null)
         {
             var uiParent = parent != null ? parent : ResolveParent();
@@ -157,6 +159,14 @@ namespace GameLogic.Cultivation
             _run = _runEngine.StartRun(route: CultivationSeedData.CreateFirstPrototypeBranchingRoute(sect), sect: sect);
             _run.CurrentBattle.Logs.Add(new BattleLogEntry("Phase 7 Run 原型界面已连接战斗、奖励、闭关升级和路线选择。"));
             Refresh();
+        }
+
+        public CultivationRunAutoPlayReport RunFixedSeedAutoPlay(int maxSteps = CultivationRunAutoPlayer.DefaultMaxSteps)
+        {
+            ResetRun(CultivationSect.Sword);
+            var report = new CultivationRunAutoPlayer().Run(this, maxSteps);
+            Refresh();
+            return report;
         }
 
         public void PlayCardAt(int handIndex)
