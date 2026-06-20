@@ -69,6 +69,10 @@ namespace GameLogic.Cultivation
                         : $"造成 {effect.Value} 伤害";
                 case CardEffectType.Shield:
                     return $"获得 {effect.Value} 护盾";
+                case CardEffectType.Dodge:
+                    return $"获得 {effect.Value} 次闪避";
+                case CardEffectType.DodgeCounter:
+                    return $"闪避成功时反击 {effect.Value} 伤害";
                 case CardEffectType.Draw:
                     return $"抽 {effect.Value} 张牌";
                 case CardEffectType.Heal:
@@ -495,7 +499,7 @@ namespace GameLogic.Cultivation
 
             var battle = state.CurrentBattle;
             var enemy = battle.Enemies.FirstOrDefault();
-            return $"玩家\nHP {battle.Player.CurrentHp}/{battle.Player.MaxHp}  护盾 {battle.Player.Shield}\n灵力 {battle.Spirit}/{battle.SpiritMax}  回合 {battle.TurnNumber}\n锋锐 {battle.Player.Sharpness}/{battle.Player.SharpnessTurns}  破防 {battle.Player.BreakDefenseStacks}  灼烧 {battle.Player.BurnStacks}/{battle.Player.BurnTurns}  冰冻 {battle.Player.FreezeStacks}/{battle.Player.FreezeTurns}  眩晕 {battle.Player.StunTurns}\n灵力消耗 -{battle.SpiritCostReduction}  额外抽牌 +{battle.ExtraDrawPerTurn}  蓄力 x{battle.ChargedDamageMultiplier}/{battle.ChargedDamageUses}\n\n敌人：{enemy?.Body.Name ?? string.Empty}\nHP {enemy?.Body.CurrentHp ?? 0}/{enemy?.Body.MaxHp ?? 0}  护盾 {enemy?.Body.Shield ?? 0}\n攻击强化 +{enemy?.AttackBonus ?? 0}  破防 {enemy?.Body.BreakDefenseStacks ?? 0}  灼烧 {enemy?.Body.BurnStacks ?? 0}/{enemy?.Body.BurnTurns ?? 0}  冰冻 {enemy?.Body.FreezeStacks ?? 0}/{enemy?.Body.FreezeTurns ?? 0}  眩晕 {enemy?.Body.StunTurns ?? 0}  剑气印记 {enemy?.Body.SwordMarkStacks ?? 0}\n意图：{enemy?.CurrentIntent.Description ?? string.Empty}\n\n战斗结果：{battle.Outcome}";
+            return $"玩家\nHP {battle.Player.CurrentHp}/{battle.Player.MaxHp}  护盾 {battle.Player.Shield}\n灵力 {battle.Spirit}/{battle.SpiritMax}  回合 {battle.TurnNumber}\n锋锐 {battle.Player.Sharpness}/{battle.Player.SharpnessTurns}  破防 {battle.Player.BreakDefenseStacks}  灼烧 {battle.Player.BurnStacks}/{battle.Player.BurnTurns}  冰冻 {battle.Player.FreezeStacks}/{battle.Player.FreezeTurns}  眩晕 {battle.Player.StunTurns}\n灵力消耗 -{battle.SpiritCostReduction}  额外抽牌 +{battle.ExtraDrawPerTurn}  蓄力 x{battle.ChargedDamageMultiplier}/{battle.ChargedDamageUses}  闪避 {battle.DodgeCharges}  反击 {battle.DodgeCounterDamage}\n\n敌人：{enemy?.Body.Name ?? string.Empty}\nHP {enemy?.Body.CurrentHp ?? 0}/{enemy?.Body.MaxHp ?? 0}  护盾 {enemy?.Body.Shield ?? 0}\n攻击强化 +{enemy?.AttackBonus ?? 0}  破防 {enemy?.Body.BreakDefenseStacks ?? 0}  灼烧 {enemy?.Body.BurnStacks ?? 0}/{enemy?.Body.BurnTurns ?? 0}  冰冻 {enemy?.Body.FreezeStacks ?? 0}/{enemy?.Body.FreezeTurns ?? 0}  眩晕 {enemy?.Body.StunTurns ?? 0}  剑气印记 {enemy?.Body.SwordMarkStacks ?? 0}\n意图：{enemy?.CurrentIntent.Description ?? string.Empty}\n\n战斗结果：{battle.Outcome}";
         }
 
         private static string BuildDeckText(CultivationRunState state)

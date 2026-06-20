@@ -49,6 +49,10 @@ namespace GameLogic.Cultivation
 
         public bool HasTriggeredCriticalThisTurn { get; private set; }
 
+        public int DodgeCharges { get; private set; }
+
+        public int DodgeCounterDamage { get; private set; }
+
         public int TurnNumber { get; set; }
 
         public BattleOutcome Outcome { get; set; } = BattleOutcome.InProgress;
@@ -99,6 +103,27 @@ namespace GameLogic.Cultivation
         public void ResetTurnCriticalState()
         {
             HasTriggeredCriticalThisTurn = false;
+        }
+
+        public void AddDodgeCharges(int amount)
+        {
+            DodgeCharges += Math.Max(0, amount);
+        }
+
+        public void AddDodgeCounterDamage(int amount)
+        {
+            DodgeCounterDamage += Math.Max(0, amount);
+        }
+
+        public bool TryConsumeDodge()
+        {
+            if (DodgeCharges <= 0)
+            {
+                return false;
+            }
+
+            DodgeCharges--;
+            return true;
         }
 
         public int GetEffectiveSpiritCost(CardDefinition card)

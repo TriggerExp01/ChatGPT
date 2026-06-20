@@ -58,6 +58,7 @@ namespace GameLogic.Tests
             CollectionAssert.DoesNotContain(deckIds, CultivationSeedData.FiveThunderOrthodoxy.Id);
             CollectionAssert.DoesNotContain(deckIds, CultivationSeedData.ThunderousBarrage.Id);
             CollectionAssert.DoesNotContain(deckIds, CultivationSeedData.ThunderHammer.Id);
+            CollectionAssert.DoesNotContain(deckIds, CultivationSeedData.ThunderDodgeStrike.Id);
             CollectionAssert.DoesNotContain(deckIds, CultivationSeedData.SwordQi.Id);
             Assert.IsTrue(run.CurrentNode.RewardPool.Any(reward => reward.Card.Id == CultivationSeedData.HeavenlyThunderSpell.Id));
             Assert.IsTrue(run.CurrentNode.RewardPool.Any(reward => reward.Card.Id == CultivationSeedData.LightningChain.Id));
@@ -65,6 +66,7 @@ namespace GameLogic.Tests
             Assert.IsTrue(run.CurrentNode.RewardPool.Any(reward => reward.Card.Id == CultivationSeedData.FiveThunderOrthodoxy.Id));
             Assert.IsTrue(run.CurrentNode.RewardPool.Any(reward => reward.Card.Id == CultivationSeedData.ThunderousBarrage.Id));
             Assert.IsTrue(run.CurrentNode.RewardPool.Any(reward => reward.Card.Id == CultivationSeedData.ThunderHammer.Id));
+            Assert.IsTrue(run.CurrentNode.RewardPool.Any(reward => reward.Card.Id == CultivationSeedData.ThunderDodgeStrike.Id));
         }
 
         [Test]
@@ -646,6 +648,28 @@ namespace GameLogic.Tests
             Assert.AreEqual(27, hammerStable.Effects[0].Value);
             Assert.AreEqual(2, hammerStable.UpgradeOptions[0].UpgradedCard.SpiritCost);
             Assert.AreEqual(CardEffectType.DamageAfterCriticalTriggeredChainAll, hammerStable.UpgradeOptions[1].UpgradedCard.Effects[0].Type);
+        }
+
+        [Test]
+        public void ThunderDodgeStrikeFirstLayerUpgradesKeepSecondLayerChoices()
+        {
+            var dodgeDamage = CultivationSeedData.ThunderDodgeStrike.UpgradeOptions[0].UpgradedCard;
+            var dodgeCounter = CultivationSeedData.ThunderDodgeStrike.UpgradeOptions[1].UpgradedCard;
+
+            Assert.IsTrue(dodgeDamage.CanUpgrade);
+            Assert.AreEqual("thunder_dodge_strike_damage_2_multi", dodgeDamage.UpgradeOptions[0].UpgradedCard.Id);
+            Assert.AreEqual("thunder_dodge_strike_damage_2_dodge", dodgeDamage.UpgradeOptions[1].UpgradedCard.Id);
+            Assert.AreEqual(10, dodgeDamage.Effects[0].Value);
+            Assert.AreEqual(CardEffectType.Dodge, dodgeDamage.Effects[1].Type);
+            Assert.AreEqual(2, dodgeDamage.UpgradeOptions[0].UpgradedCard.Effects[0].RepeatCount);
+            Assert.AreEqual(2, dodgeDamage.UpgradeOptions[1].UpgradedCard.Effects[1].Value);
+
+            Assert.IsTrue(dodgeCounter.CanUpgrade);
+            Assert.AreEqual("thunder_dodge_strike_counter_2_damage", dodgeCounter.UpgradeOptions[0].UpgradedCard.Id);
+            Assert.AreEqual("thunder_dodge_strike_counter_2_cost", dodgeCounter.UpgradeOptions[1].UpgradedCard.Id);
+            Assert.AreEqual(CardEffectType.DodgeCounter, dodgeCounter.Effects[2].Type);
+            Assert.AreEqual(8, dodgeCounter.UpgradeOptions[0].UpgradedCard.Effects[2].Value);
+            Assert.AreEqual(0, dodgeCounter.UpgradeOptions[1].UpgradedCard.SpiritCost);
         }
 
         [Test]

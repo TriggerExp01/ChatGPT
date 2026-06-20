@@ -734,6 +734,83 @@ namespace GameLogic.Tests
         }
 
         [Test]
+        public void DodgePreventsNextEnemyAttack()
+        {
+            var engine = new BattleEngine(1);
+            var dodgeCard = new CardDefinition(
+                "dodge_test",
+                "闪避测试",
+                0,
+                new CardEffect(CardEffectType.Dodge, 1, CardTarget.Self));
+            var state = CreateOrderedBattle(engine, dodgeCard);
+
+            engine.PlayCard(state, state.Hand[0], state.Enemies[0]);
+            engine.EndPlayerTurn(state);
+
+            Assert.AreEqual(100, state.Player.CurrentHp);
+            Assert.AreEqual(0, state.DodgeCharges);
+            Assert.IsTrue(state.Logs.Any(log => log.Message.Contains("闪避了")));
+        }
+
+        [Test]
+        public void DodgePreventsAttackRiderStatus()
+        {
+            var enemy = new EnemyDefinition(
+                "burn_attacker",
+                "灼烧攻击者",
+                30,
+                0,
+                new EnemyIntent(EnemyIntentType.AttackAndBurn, 6, 2, "攻击 6 + 灼烧 2"));
+            var engine = new BattleEngine(1);
+            var dodgeCard = new CardDefinition(
+                "dodge_rider_test",
+                "闪避附带状态测试",
+                0,
+                new CardEffect(CardEffectType.Dodge, 1, CardTarget.Self));
+            var state = engine.CreateBattle(new[] { dodgeCard }.Concat(CultivationSeedData.CreateSwordSectStarterDeck()), enemy);
+            state.Hand.Clear();
+            state.DrawPile.Remove(dodgeCard);
+            state.Hand.Add(dodgeCard);
+
+            engine.PlayCard(state, state.Hand[0], state.Enemies[0]);
+            engine.EndPlayerTurn(state);
+
+            Assert.AreEqual(100, state.Player.CurrentHp);
+            Assert.AreEqual(0, state.Player.BurnStacks);
+            Assert.IsFalse(state.Logs.Any(log => log.Message.Contains("施加灼烧")));
+        }
+
+        [Test]
+        public void DodgeCounterDamagesAttackerWhenDodgeSucceeds()
+        {
+            var enemy = new EnemyDefinition(
+                "counter_attacker",
+                "反击目标",
+                30,
+                0,
+                new EnemyIntent(EnemyIntentType.Attack, 6, description: "攻击 6"));
+            var engine = new BattleEngine(1);
+            var dodgeCounterCard = new CardDefinition(
+                "dodge_counter_test",
+                "闪避反击测试",
+                0,
+                new CardEffect(CardEffectType.Dodge, 1, CardTarget.Self),
+                new CardEffect(CardEffectType.DodgeCounter, 8, CardTarget.Self));
+            var state = engine.CreateBattle(new[] { dodgeCounterCard }.Concat(CultivationSeedData.CreateSwordSectStarterDeck()), enemy);
+            state.Hand.Clear();
+            state.DrawPile.Remove(dodgeCounterCard);
+            state.Hand.Add(dodgeCounterCard);
+
+            engine.PlayCard(state, state.Hand[0], state.Enemies[0]);
+            engine.EndPlayerTurn(state);
+
+            Assert.AreEqual(100, state.Player.CurrentHp);
+            Assert.AreEqual(22, state.Enemies[0].Body.CurrentHp);
+            Assert.AreEqual(8, state.DodgeCounterDamage);
+            Assert.IsTrue(state.Logs.Any(log => log.Message.Contains("闪避反击")));
+        }
+
+        [Test]
         public void ExhaustCardMovesToExhaustPileInsteadOfDiscardPile()
         {
             var engine = new BattleEngine(1);

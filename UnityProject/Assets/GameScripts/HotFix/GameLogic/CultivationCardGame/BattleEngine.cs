@@ -200,6 +200,14 @@ namespace GameLogic.Cultivation
                 case CardEffectType.Shield:
                     state.Player.AddShield(effect.Value);
                     break;
+                case CardEffectType.Dodge:
+                    state.AddDodgeCharges(effect.Value);
+                    state.Logs.Add(new BattleLogEntry($"{card.Name} 获得 {effect.Value} 次闪避。"));
+                    break;
+                case CardEffectType.DodgeCounter:
+                    state.AddDodgeCounterDamage(effect.Value);
+                    state.Logs.Add(new BattleLogEntry($"{card.Name} 闪避成功时反击 {effect.Value} 伤害。"));
+                    break;
                 case CardEffectType.Draw:
                     DrawCards(state, effect.Value);
                     break;
@@ -623,19 +631,28 @@ namespace GameLogic.Cultivation
                     state.Logs.Add(new BattleLogEntry($"{enemy.Body.Name} 获得 {intent.Value} 点护盾。"));
                     break;
                 case EnemyIntentType.AttackAndBurn:
-                    DealEnemyDamage(state, enemy, intent.Value);
-                    state.Player.AddBurn(intent.SecondaryValue, 2);
-                    state.Logs.Add(new BattleLogEntry($"{enemy.Body.Name} 施加灼烧 {intent.SecondaryValue} 层。"));
+                    if (DealEnemyDamage(state, enemy, intent.Value))
+                    {
+                        state.Player.AddBurn(intent.SecondaryValue, 2);
+                        state.Logs.Add(new BattleLogEntry($"{enemy.Body.Name} 施加灼烧 {intent.SecondaryValue} 层。"));
+                    }
+
                     break;
                 case EnemyIntentType.AttackAndFreeze:
-                    DealEnemyDamage(state, enemy, intent.Value);
-                    state.Player.AddFreeze(intent.SecondaryValue, 2);
-                    state.Logs.Add(new BattleLogEntry($"{enemy.Body.Name} 施加冰冻 {intent.SecondaryValue} 层。"));
+                    if (DealEnemyDamage(state, enemy, intent.Value))
+                    {
+                        state.Player.AddFreeze(intent.SecondaryValue, 2);
+                        state.Logs.Add(new BattleLogEntry($"{enemy.Body.Name} 施加冰冻 {intent.SecondaryValue} 层。"));
+                    }
+
                     break;
                 case EnemyIntentType.AttackAndStun:
-                    DealEnemyDamage(state, enemy, intent.Value);
-                    state.Player.AddStun(Math.Max(1, intent.SecondaryValue));
-                    state.Logs.Add(new BattleLogEntry($"{enemy.Body.Name} 施加眩晕 {Math.Max(1, intent.SecondaryValue)} 回合。"));
+                    if (DealEnemyDamage(state, enemy, intent.Value))
+                    {
+                        state.Player.AddStun(Math.Max(1, intent.SecondaryValue));
+                        state.Logs.Add(new BattleLogEntry($"{enemy.Body.Name} 施加眩晕 {Math.Max(1, intent.SecondaryValue)} 回合。"));
+                    }
+
                     break;
                 case EnemyIntentType.Buff:
                     state.Logs.Add(new BattleLogEntry($"{enemy.Body.Name} 正在蓄力。"));
@@ -661,10 +678,23 @@ namespace GameLogic.Cultivation
             }
         }
 
-        private static void DealEnemyDamage(BattleState state, EnemyState enemy, int damage)
+        private static bool DealEnemyDamage(BattleState state, EnemyState enemy, int damage)
         {
+            if (state.TryConsumeDodge())
+            {
+                state.Logs.Add(new BattleLogEntry($"玩家闪避了 {enemy.Body.Name} 的攻击，剩余闪避 {state.DodgeCharges} 次。"));
+                if (state.DodgeCounterDamage > 0)
+                {
+                    var counterDealt = enemy.Body.TakeDamage(state.DodgeCounterDamage, state.Player.Sharpness);
+                    state.Logs.Add(new BattleLogEntry($"闪避反击对 {enemy.Body.Name} 造成 {counterDealt} 点伤害。"));
+                }
+
+                return false;
+            }
+
             var dealt = state.Player.TakeDamage(damage + enemy.AttackBonus);
             state.Logs.Add(new BattleLogEntry($"{enemy.Body.Name} 对玩家造成 {dealt} 点伤害。"));
+            return true;
         }
 
         private void DrawToHandLimit(BattleState state)
@@ -1575,6 +1605,63 @@ namespace GameLogic.Cultivation
             },
             new CardEffect(CardEffectType.DamageAfterCriticalTriggered, 22, fallbackValue: 10));
 
+        public static CardDefinition ThunderDodgeStrike { get; } = new CardDefinition(
+            "thunder_dodge_strike",
+            "雷遁·瞬击",
+            1,
+            new[]
+            {
+                new CardUpgradeOption(
+                    "thunder_dodge_strike_damage_1",
+                    "雷遁·连击",
+                    "造成 10 伤害，获得 1 次闪避。",
+                    new CardDefinition(
+                        "thunder_dodge_strike_damage_1",
+                        "雷遁·连击",
+                        1,
+                        new[]
+                        {
+                            new CardUpgradeOption(
+                                "thunder_dodge_strike_damage_2_multi",
+                                "雷遁·乱击",
+                                "造成 6 伤害 x2，获得 1 次闪避。",
+                                new CardDefinition("thunder_dodge_strike_damage_2_multi", "雷遁·乱击", 1, new CardEffect(CardEffectType.Damage, 6, repeatCount: 2), new CardEffect(CardEffectType.Dodge, 1, CardTarget.Self))),
+                            new CardUpgradeOption(
+                                "thunder_dodge_strike_damage_2_dodge",
+                                "雷遁·护击",
+                                "造成 10 伤害，获得 2 次闪避。",
+                                new CardDefinition("thunder_dodge_strike_damage_2_dodge", "雷遁·护击", 1, new CardEffect(CardEffectType.Damage, 10), new CardEffect(CardEffectType.Dodge, 2, CardTarget.Self))),
+                        },
+                        new CardEffect(CardEffectType.Damage, 10),
+                        new CardEffect(CardEffectType.Dodge, 1, CardTarget.Self))),
+                new CardUpgradeOption(
+                    "thunder_dodge_strike_counter_1",
+                    "雷遁·闪击",
+                    "造成 6 伤害，获得 1 次闪避；闪避成功时额外造成 5 伤害。",
+                    new CardDefinition(
+                        "thunder_dodge_strike_counter_1",
+                        "雷遁·闪击",
+                        1,
+                        new[]
+                        {
+                            new CardUpgradeOption(
+                                "thunder_dodge_strike_counter_2_damage",
+                                "雷遁·反击",
+                                "造成 6 伤害，获得 1 次闪避；闪避成功时对攻击者造成 8 伤害。",
+                                new CardDefinition("thunder_dodge_strike_counter_2_damage", "雷遁·反击", 1, new CardEffect(CardEffectType.Damage, 6), new CardEffect(CardEffectType.Dodge, 1, CardTarget.Self), new CardEffect(CardEffectType.DodgeCounter, 8, CardTarget.Self))),
+                            new CardUpgradeOption(
+                                "thunder_dodge_strike_counter_2_cost",
+                                "雷遁·灵击",
+                                "灵力消耗降为 0，造成 6 伤害，获得 1 次闪避。",
+                                new CardDefinition("thunder_dodge_strike_counter_2_cost", "雷遁·灵击", 0, new CardEffect(CardEffectType.Damage, 6), new CardEffect(CardEffectType.Dodge, 1, CardTarget.Self))),
+                        },
+                        new CardEffect(CardEffectType.Damage, 6),
+                        new CardEffect(CardEffectType.Dodge, 1, CardTarget.Self),
+                        new CardEffect(CardEffectType.DodgeCounter, 5, CardTarget.Self))),
+            },
+            new CardEffect(CardEffectType.Damage, 6),
+            new CardEffect(CardEffectType.Dodge, 1, CardTarget.Self));
+
         public static PillDefinition SmallRestorePillItem { get; } = new PillDefinition(
             "small_restore_pill",
             "小还丹",
@@ -1828,6 +1915,7 @@ namespace GameLogic.Cultivation
                 new CultivationRunReward("reward_five_thunder_orthodoxy", FiveThunderOrthodoxy),
                 new CultivationRunReward("reward_thunderous_barrage", ThunderousBarrage),
                 new CultivationRunReward("reward_thunder_hammer", ThunderHammer),
+                new CultivationRunReward("reward_thunder_dodge_strike", ThunderDodgeStrike),
                 new CultivationRunReward("reward_guard_qi", GuardQi),
                 new CultivationRunReward("reward_light_body", LightBody),
                 new CultivationRunReward("reward_healing_pill", HealingPill),

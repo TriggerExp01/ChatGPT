@@ -190,7 +190,7 @@ namespace GameLogic.Cultivation
             }
 
             var snapshot = Snapshot;
-            _playerText.text = $"玩家\nHP {snapshot.PlayerHp}/{snapshot.PlayerMaxHp}\n护盾 {snapshot.PlayerShield}\n灵力 {snapshot.Spirit}/{snapshot.SpiritMax}\n回合 {snapshot.TurnNumber}";
+            _playerText.text = $"玩家\nHP {snapshot.PlayerHp}/{snapshot.PlayerMaxHp}\n护盾 {snapshot.PlayerShield}\n灵力 {snapshot.Spirit}/{snapshot.SpiritMax}\n回合 {snapshot.TurnNumber}\n闪避 {snapshot.DodgeCharges} / 反击 {snapshot.DodgeCounterDamage}";
             _pileText.text = $"牌堆 {snapshot.DrawPileCount}    弃牌 {snapshot.DiscardPileCount}\n手牌 {snapshot.HandCount}\n状态：{snapshot.Outcome}";
             _enemyText.text = $"敌人：{snapshot.EnemyName}\nHP {snapshot.EnemyHp}/{snapshot.EnemyMaxHp}\n护盾 {snapshot.EnemyShield}\n破防 {snapshot.EnemyBreakDefenseStacks}\n灼烧 {snapshot.EnemyBurnStacks} / {snapshot.EnemyBurnTurns} 回合\n意图：{snapshot.EnemyIntent}";
             _resultText.text = snapshot.Outcome == BattleOutcome.InProgress ? string.Empty : snapshot.Outcome == BattleOutcome.Victory ? "胜利" : "失败";
@@ -248,6 +248,10 @@ namespace GameLogic.Cultivation
                     return $"造成 {effect.Value} 伤害";
                 case CardEffectType.Shield:
                     return $"获得 {effect.Value} 护盾";
+                case CardEffectType.Dodge:
+                    return $"获得 {effect.Value} 次闪避";
+                case CardEffectType.DodgeCounter:
+                    return $"闪避成功时反击 {effect.Value} 伤害";
                 case CardEffectType.Draw:
                     return $"抽 {effect.Value} 张牌";
                 case CardEffectType.Heal:
@@ -456,6 +460,10 @@ namespace GameLogic.Cultivation
 
         public int PlayerShield { get; private set; }
 
+        public int DodgeCharges { get; private set; }
+
+        public int DodgeCounterDamage { get; private set; }
+
         public int Spirit { get; private set; }
 
         public int SpiritMax { get; private set; }
@@ -498,6 +506,8 @@ namespace GameLogic.Cultivation
                 PlayerHp = state.Player.CurrentHp,
                 PlayerMaxHp = state.Player.MaxHp,
                 PlayerShield = state.Player.Shield,
+                DodgeCharges = state.DodgeCharges,
+                DodgeCounterDamage = state.DodgeCounterDamage,
                 Spirit = state.Spirit,
                 SpiritMax = state.SpiritMax,
                 DrawPileCount = state.DrawPile.Count,

@@ -433,6 +433,8 @@ namespace GameLogic.Tests
                 new CardEffect(CardEffectType.DamageAfterCriticalTriggered, 22, fallbackValue: 10),
                 new CardEffect(CardEffectType.DamageAfterCriticalTriggeredWithStun, 22, duration: 1, fallbackValue: 18),
                 new CardEffect(CardEffectType.DamageAfterCriticalTriggeredChainAll, 27, fallbackValue: 10),
+                new CardEffect(CardEffectType.Dodge, 1, CardTarget.Self),
+                new CardEffect(CardEffectType.DodgeCounter, 8, CardTarget.Self),
                 new CardEffect(CardEffectType.ChanceStun, 0, duration: 1, chancePercent: 40),
                 new CardEffect(CardEffectType.ChainOnChanceStun, 10, duration: 1, chancePercent: 40, secondaryValue: 5),
                 new CardEffect(CardEffectType.ChanceChainDamage, 8, chancePercent: 50, secondaryValue: 4),
@@ -450,6 +452,8 @@ namespace GameLogic.Tests
             StringAssert.Contains("造成 22 伤害；本回合已暴击时额外造成 10 伤害", summary);
             StringAssert.Contains("造成 22 伤害；本回合已暴击时额外造成 18 伤害并眩晕 1 回合", summary);
             StringAssert.Contains("造成 27 伤害；本回合已暴击时奖励连锁全体，各造成 10 伤害", summary);
+            StringAssert.Contains("获得 1 次闪避", summary);
+            StringAssert.Contains("闪避成功时反击 8 伤害", summary);
             StringAssert.Contains("40% 概率眩晕 1 回合", summary);
             StringAssert.Contains("造成 10 伤害，40% 概率眩晕 1 回合；成功连锁 5 伤害", summary);
             StringAssert.Contains("造成 8 伤害，50% 概率连锁 4 伤害", summary);

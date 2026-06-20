@@ -33,6 +33,8 @@ namespace GameLogic.Cultivation
         DamageAfterCriticalTriggered,
         DamageAfterCriticalTriggeredWithStun,
         DamageAfterCriticalTriggeredChainAll,
+        Dodge,
+        DodgeCounter,
     }
 
     public enum EnemyIntentType
