@@ -71,7 +71,7 @@ namespace GameLogic.Cultivation
 
         private static string BuildRunText(CultivationRunState state)
         {
-            return $"状态：{state.Status}\n节点：{state.CurrentNodeIndex + 1}/{state.Route.Count}\nHP：{state.PlayerCurrentHp}/{state.PlayerMaxHp}\n牌组：{state.Deck.Count} 张\n已拿奖励：{state.ClaimedRewards.Count}";
+            return $"状态：{state.Status}\n节点：{state.CurrentNodeIndex + 1}/{state.Route.Count}\nHP：{state.PlayerCurrentHp}/{state.PlayerMaxHp}\n灵石：{state.SpiritStones}\n牌组：{state.Deck.Count} 张\n已拿奖励：{state.ClaimedRewards.Count}";
         }
 
         private static string BuildNodeText(CultivationRunState state)
@@ -195,6 +195,8 @@ namespace GameLogic.Cultivation
 
         public int PlayerMaxHp { get; private set; }
 
+        public int SpiritStones { get; private set; }
+
         public int DeckCount { get; private set; }
 
         public int HandCount { get; private set; }
@@ -221,6 +223,7 @@ namespace GameLogic.Cultivation
                 CurrentNodeName = state.CurrentNode.Name,
                 PlayerHp = state.PlayerCurrentHp,
                 PlayerMaxHp = state.PlayerMaxHp,
+                SpiritStones = state.SpiritStones,
                 DeckCount = state.Deck.Count,
                 HandCount = state.CurrentBattle?.Hand.Count ?? 0,
                 RewardCount = state.CurrentRewards.Count,

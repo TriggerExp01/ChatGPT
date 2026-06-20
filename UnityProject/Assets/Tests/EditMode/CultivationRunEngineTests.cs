@@ -22,18 +22,20 @@ namespace GameLogic.Tests
             Assert.AreEqual(5, run.CurrentBattle.Hand.Count);
             Assert.AreEqual(100, run.PlayerCurrentHp);
             Assert.AreEqual(100, run.PlayerMaxHp);
+            Assert.AreEqual(0, run.SpiritStones);
         }
 
         [Test]
         public void VictoryMovesRunToRewardState()
         {
             var engine = new CultivationRunEngine(new BattleEngine(1));
-            var run = engine.StartRun(CreateInstantWinDeck(), CreateTestRoute());
+            var run = engine.StartRun(CreateInstantWinDeck(), CreateTestRoute(), initialSpiritStones: 5);
 
             PlayFirstCard(run);
             engine.ResolveBattleResult(run);
 
             Assert.AreEqual(CultivationRunStatus.Reward, run.Status);
+            Assert.AreEqual(5, run.SpiritStones);
             Assert.AreEqual(3, run.CurrentRewards.Count);
             Assert.AreEqual(3, run.CurrentRewards.Select(reward => reward.Id).Distinct().Count());
             Assert.IsTrue(run.CurrentRewards.All(reward => run.CurrentNode.RewardPool.Contains(reward)));
@@ -72,6 +74,37 @@ namespace GameLogic.Tests
             Assert.AreEqual(1, run.ClaimedRewards.Count);
             Assert.NotNull(run.CurrentBattle);
             Assert.AreEqual("test_enemy_2", run.CurrentNode.Enemy.Id);
+        }
+
+        [Test]
+        public void SeedPrototypeBattleVictoryGrantsSpiritStones()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var run = engine.StartRun(CreateInstantWinDeck(), CultivationSeedData.CreateFirstPrototypeRoute(), initialSpiritStones: 10);
+
+            WinCurrentBattle(engine, run);
+
+            Assert.AreEqual(CultivationRunStatus.Reward, run.Status);
+            Assert.AreEqual(25, run.SpiritStones);
+            Assert.IsTrue(run.CurrentBattle.Logs.Any(log => log.Message.Contains("获得 15 灵石")));
+        }
+
+        [Test]
+        public void SeedPrototypeEliteVictoryGrantsHigherSpiritStones()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var run = engine.StartRun(CreateInstantWinDeck(), CultivationSeedData.CreateFirstPrototypeRoute());
+
+            WinCurrentBattle(engine, run);
+            engine.SkipReward(run);
+            WinCurrentBattle(engine, run);
+            engine.SkipReward(run);
+            engine.Rest(run);
+            WinCurrentBattle(engine, run);
+
+            Assert.AreEqual(CultivationRunStatus.Reward, run.Status);
+            Assert.AreEqual(65, run.SpiritStones);
+            Assert.IsTrue(run.CurrentBattle.Logs.Any(log => log.Message.Contains("获得 35 灵石")));
         }
 
         [Test]
@@ -376,6 +409,7 @@ namespace GameLogic.Tests
 
             Assert.AreEqual(CultivationRunStatus.Defeated, run.Status);
             Assert.AreEqual(0, run.PlayerCurrentHp);
+            Assert.AreEqual(0, run.SpiritStones);
             Assert.IsNull(run.CurrentBattle);
             Assert.AreEqual(0, run.CurrentRewards.Count);
         }

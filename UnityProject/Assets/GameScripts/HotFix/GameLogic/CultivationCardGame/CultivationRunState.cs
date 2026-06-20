@@ -5,7 +5,7 @@ namespace GameLogic.Cultivation
 {
     public sealed class CultivationRunState
     {
-        public CultivationRunState(IEnumerable<CardDefinition> deck, IEnumerable<CultivationRunNode> route, int playerMaxHp = 100, int? playerCurrentHp = null)
+        public CultivationRunState(IEnumerable<CardDefinition> deck, IEnumerable<CultivationRunNode> route, int playerMaxHp = 100, int? playerCurrentHp = null, int initialSpiritStones = 0)
         {
             Deck = new List<CardDefinition>(deck ?? throw new ArgumentNullException(nameof(deck)));
             Route = new List<CultivationRunNode>(route ?? throw new ArgumentNullException(nameof(route))).AsReadOnly();
@@ -36,6 +36,7 @@ namespace GameLogic.Cultivation
 
             PlayerMaxHp = playerMaxHp;
             PlayerCurrentHp = playerCurrentHp ?? playerMaxHp;
+            SpiritStones = Math.Max(0, initialSpiritStones);
         }
 
         public List<CardDefinition> Deck { get; }
@@ -47,6 +48,8 @@ namespace GameLogic.Cultivation
         public int PlayerMaxHp { get; }
 
         public int PlayerCurrentHp { get; set; }
+
+        public int SpiritStones { get; set; }
 
         public CultivationRunStatus Status { get; set; }
 

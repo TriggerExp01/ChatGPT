@@ -832,10 +832,10 @@ namespace GameLogic.Cultivation
             var rewards = CreateSwordSectRewardPool();
             return new List<CultivationRunNode>
             {
-                new CultivationRunNode("node_stone_demon", "山门石魔", CultivationRunNodeType.Battle, StoneDemon, rewards),
-                new CultivationRunNode("node_fire_bat", "火蝠洞", CultivationRunNodeType.Battle, FireBat, rewards),
+                new CultivationRunNode("node_stone_demon", "山门石魔", CultivationRunNodeType.Battle, StoneDemon, rewards, spiritStoneReward: 15),
+                new CultivationRunNode("node_fire_bat", "火蝠洞", CultivationRunNodeType.Battle, FireBat, rewards, spiritStoneReward: 15),
                 new CultivationRunNode("node_meditation", "闭关调息", CultivationRunNodeType.Rest, null, null, restHealAmount: 30),
-                new CultivationRunNode("node_stone_demon_leader", "石魔首领", CultivationRunNodeType.Elite, StoneDemonLeader, rewards),
+                new CultivationRunNode("node_stone_demon_leader", "石魔首领", CultivationRunNodeType.Elite, StoneDemonLeader, rewards, spiritStoneReward: 35),
             };
         }
 
@@ -850,14 +850,16 @@ namespace GameLogic.Cultivation
                     CultivationRunNodeType.Battle,
                     StoneDemon,
                     rewards,
-                    nextNodeIndices: new[] { 1, 2 }),
+                    nextNodeIndices: new[] { 1, 2 },
+                    spiritStoneReward: 15),
                 new CultivationRunNode(
                     "node_fire_bat",
                     "火蝠洞",
                     CultivationRunNodeType.Battle,
                     FireBat,
                     rewards,
-                    nextNodeIndices: new[] { 3 }),
+                    nextNodeIndices: new[] { 3 },
+                    spiritStoneReward: 15),
                 new CultivationRunNode(
                     "node_meditation",
                     "闭关调息",
@@ -871,7 +873,8 @@ namespace GameLogic.Cultivation
                     "石魔首领",
                     CultivationRunNodeType.Elite,
                     StoneDemonLeader,
-                    rewards),
+                    rewards,
+                    spiritStoneReward: 35),
             };
         }
     }

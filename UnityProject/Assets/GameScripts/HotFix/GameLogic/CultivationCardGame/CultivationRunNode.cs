@@ -12,7 +12,8 @@ namespace GameLogic.Cultivation
             EnemyDefinition enemy,
             IEnumerable<CultivationRunReward> rewardPool,
             int restHealAmount = 0,
-            IEnumerable<int> nextNodeIndices = null)
+            IEnumerable<int> nextNodeIndices = null,
+            int spiritStoneReward = 0)
         {
             if (string.IsNullOrWhiteSpace(id))
             {
@@ -35,6 +36,7 @@ namespace GameLogic.Cultivation
             Enemy = enemy;
             RewardPool = new List<CultivationRunReward>(rewardPool ?? Array.Empty<CultivationRunReward>()).AsReadOnly();
             RestHealAmount = Math.Max(0, restHealAmount);
+            SpiritStoneReward = Math.Max(0, spiritStoneReward);
 
             var nextIndices = new List<int>(nextNodeIndices ?? Array.Empty<int>());
             for (var i = 0; i < nextIndices.Count; i++)
@@ -59,6 +61,8 @@ namespace GameLogic.Cultivation
         public IReadOnlyList<CultivationRunReward> RewardPool { get; }
 
         public int RestHealAmount { get; }
+
+        public int SpiritStoneReward { get; }
 
         public IReadOnlyList<int> NextNodeIndices { get; }
     }

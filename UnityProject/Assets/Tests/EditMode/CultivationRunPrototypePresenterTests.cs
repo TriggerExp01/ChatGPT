@@ -28,7 +28,7 @@ namespace GameLogic.Tests
         public void CreateSnapshotKeepsRunStateSummary()
         {
             var engine = new CultivationRunEngine(new BattleEngine(1));
-            var run = engine.StartRun(CultivationSeedData.CreateSwordSectStarterDeck(), CultivationSeedData.CreateFirstPrototypeBranchingRoute(), playerCurrentHp: 76);
+            var run = engine.StartRun(CultivationSeedData.CreateSwordSectStarterDeck(), CultivationSeedData.CreateFirstPrototypeBranchingRoute(), playerCurrentHp: 76, initialSpiritStones: 12);
 
             var snapshot = CultivationRunPrototypePresenter.CreateSnapshot(run);
 
@@ -36,8 +36,20 @@ namespace GameLogic.Tests
             Assert.AreEqual("山门石魔", snapshot.CurrentNodeName);
             Assert.AreEqual(76, snapshot.PlayerHp);
             Assert.AreEqual(100, snapshot.PlayerMaxHp);
+            Assert.AreEqual(12, snapshot.SpiritStones);
             Assert.AreEqual(12, snapshot.DeckCount);
             Assert.AreEqual(5, snapshot.HandCount);
+        }
+
+        [Test]
+        public void BuildTextIncludesSpiritStones()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var run = engine.StartRun(CreateInstantWinDeck(), CultivationSeedData.CreateFirstPrototypeBranchingRoute(), initialSpiritStones: 18);
+
+            var text = CultivationRunPrototypePresenter.BuildText(run);
+
+            StringAssert.Contains("灵石：18", text.RunText);
         }
 
         [Test]

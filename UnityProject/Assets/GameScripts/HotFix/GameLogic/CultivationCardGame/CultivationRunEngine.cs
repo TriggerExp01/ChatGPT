@@ -17,13 +17,14 @@ namespace GameLogic.Cultivation
             _rewardRandom = new Random(rewardSeed);
         }
 
-        public CultivationRunState StartRun(IEnumerable<CardDefinition> deck = null, IEnumerable<CultivationRunNode> route = null, int playerMaxHp = 100, int? playerCurrentHp = null)
+        public CultivationRunState StartRun(IEnumerable<CardDefinition> deck = null, IEnumerable<CultivationRunNode> route = null, int playerMaxHp = 100, int? playerCurrentHp = null, int initialSpiritStones = 0)
         {
             var state = new CultivationRunState(
                 deck ?? CultivationSeedData.CreateSwordSectStarterDeck(),
                 route ?? CultivationSeedData.CreateFirstPrototypeRoute(),
                 playerMaxHp,
-                playerCurrentHp);
+                playerCurrentHp,
+                initialSpiritStones);
 
             EnterCurrentNode(state);
             return state;
@@ -47,6 +48,12 @@ namespace GameLogic.Cultivation
             {
                 case BattleOutcome.Victory:
                     state.PlayerCurrentHp = state.CurrentBattle.Player.CurrentHp;
+                    state.SpiritStones += state.CurrentNode.SpiritStoneReward;
+                    if (state.CurrentNode.SpiritStoneReward > 0)
+                    {
+                        state.CurrentBattle.Logs.Add(new BattleLogEntry($"获得 {state.CurrentNode.SpiritStoneReward} 灵石。"));
+                    }
+
                     RemoveExhaustedCardsFromDeck(state);
                     state.Status = CultivationRunStatus.Reward;
                     state.CurrentRewards.Clear();
