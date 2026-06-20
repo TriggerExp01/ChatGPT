@@ -66,10 +66,29 @@ namespace GameLogic.Tests
             Assert.AreEqual(1, snapshot.MarketItemCount);
             StringAssert.Contains("坊市商品", text.NodeText);
             StringAssert.Contains("流云护身 / 20 灵石", text.NodeText);
+            StringAssert.Contains("丹药：0/3", text.RunText);
             StringAssert.Contains("移除卡牌：35 灵石", text.NodeText);
             StringAssert.Contains("升级卡牌：50 灵石", text.NodeText);
             StringAssert.Contains("出售卡牌：半价回收", text.NodeText);
             StringAssert.Contains("等待操作：Market", text.BattleText);
+        }
+
+        [Test]
+        public void BuildTextIncludesMarketPillsAndPillSlots()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var run = engine.StartRun(CreateInstantWinDeck(), CreateMarketRouteWithPill(), initialSpiritStones: 20);
+
+            var text = CultivationRunPrototypePresenter.BuildText(run);
+            engine.BuyMarketItem(run, 1);
+            var snapshot = CultivationRunPrototypePresenter.CreateSnapshot(run);
+            var updatedText = CultivationRunPrototypePresenter.BuildText(run);
+
+            StringAssert.Contains("小还丹（丹药） / 15 灵石", text.NodeText);
+            Assert.AreEqual(1, snapshot.PillCount);
+            Assert.AreEqual(3, snapshot.PillSlotLimit);
+            Assert.AreEqual(1, snapshot.PurchasedMarketPillCount);
+            StringAssert.Contains("丹药：1/3", updatedText.RunText);
         }
 
         [Test]
@@ -181,6 +200,24 @@ namespace GameLogic.Tests
                     marketItems: new[]
                     {
                         new CultivationMarketItem("market_cloud_guard", CultivationSeedData.CloudGuard, 20),
+                    }),
+            };
+        }
+
+        private static IReadOnlyList<CultivationRunNode> CreateMarketRouteWithPill()
+        {
+            return new List<CultivationRunNode>
+            {
+                new CultivationRunNode(
+                    "market",
+                    "market",
+                    CultivationRunNodeType.Market,
+                    null,
+                    null,
+                    marketItems: new[]
+                    {
+                        new CultivationMarketItem("market_cloud_guard", CultivationSeedData.CloudGuard, 20),
+                        new CultivationMarketItem("market_small_restore_pill", CultivationSeedData.SmallRestorePillItem, 15),
                     }),
             };
         }

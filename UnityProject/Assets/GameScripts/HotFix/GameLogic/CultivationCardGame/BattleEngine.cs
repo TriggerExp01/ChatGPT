@@ -771,6 +771,11 @@ namespace GameLogic.Cultivation
             },
             new CardEffect(CardEffectType.Heal, 10, CardTarget.Self));
 
+        public static PillDefinition SmallRestorePillItem { get; } = new PillDefinition(
+            "small_restore_pill",
+            "小还丹",
+            "战斗内消耗品：恢复 10 HP。");
+
         public static IReadOnlyList<CardDefinition> CreateSwordSectStarterDeck()
         {
             return new List<CardDefinition>
@@ -833,7 +838,7 @@ namespace GameLogic.Cultivation
             {
                 new CultivationMarketItem("market_cloud_guard", CloudGuard, 20),
                 new CultivationMarketItem("market_thrust", Thrust, 25),
-                new CultivationMarketItem("market_small_restore_pill", SmallRestorePill, 30),
+                new CultivationMarketItem("market_small_restore_pill", SmallRestorePillItem, 15),
             };
         }
 

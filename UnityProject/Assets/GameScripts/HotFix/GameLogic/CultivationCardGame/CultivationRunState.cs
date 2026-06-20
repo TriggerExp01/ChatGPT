@@ -5,6 +5,8 @@ namespace GameLogic.Cultivation
 {
     public sealed class CultivationRunState
     {
+        public const int DefaultPillSlotLimit = 3;
+
         public CultivationRunState(IEnumerable<CardDefinition> deck, IEnumerable<CultivationRunNode> route, int playerMaxHp = 100, int? playerCurrentHp = null, int initialSpiritStones = 0)
         {
             Deck = new List<CardDefinition>(deck ?? throw new ArgumentNullException(nameof(deck)));
@@ -15,6 +17,8 @@ namespace GameLogic.Cultivation
             CurrentRouteChoices = new List<CultivationRunRouteChoice>();
             CurrentMarketItems = new List<CultivationMarketItem>();
             PurchasedMarketItems = new List<CultivationMarketItem>();
+            Pills = new List<PillDefinition>();
+            PurchasedMarketPills = new List<PillDefinition>();
             RemovedMarketCards = new List<CardDefinition>();
             MarketUpgradedCards = new List<CardDefinition>();
             SoldMarketCards = new List<CardDefinition>();
@@ -42,6 +46,7 @@ namespace GameLogic.Cultivation
             PlayerMaxHp = playerMaxHp;
             PlayerCurrentHp = playerCurrentHp ?? playerMaxHp;
             SpiritStones = Math.Max(0, initialSpiritStones);
+            PillSlotLimit = DefaultPillSlotLimit;
         }
 
         public List<CardDefinition> Deck { get; }
@@ -71,6 +76,12 @@ namespace GameLogic.Cultivation
         public List<CultivationMarketItem> CurrentMarketItems { get; }
 
         public List<CultivationMarketItem> PurchasedMarketItems { get; }
+
+        public int PillSlotLimit { get; }
+
+        public List<PillDefinition> Pills { get; }
+
+        public List<PillDefinition> PurchasedMarketPills { get; }
 
         public List<CardDefinition> RemovedMarketCards { get; }
 

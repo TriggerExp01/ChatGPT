@@ -71,7 +71,7 @@ namespace GameLogic.Cultivation
 
         private static string BuildRunText(CultivationRunState state)
         {
-            return $"状态：{state.Status}\n节点：{state.CurrentNodeIndex + 1}/{state.Route.Count}\nHP：{state.PlayerCurrentHp}/{state.PlayerMaxHp}\n灵石：{state.SpiritStones}\n牌组：{state.Deck.Count} 张\n已拿奖励：{state.ClaimedRewards.Count}\n坊市删牌：{state.RemovedMarketCards.Count}\n坊市售牌：{state.SoldMarketCards.Count}";
+            return $"状态：{state.Status}\n节点：{state.CurrentNodeIndex + 1}/{state.Route.Count}\nHP：{state.PlayerCurrentHp}/{state.PlayerMaxHp}\n灵石：{state.SpiritStones}\n牌组：{state.Deck.Count} 张\n丹药：{state.Pills.Count}/{state.PillSlotLimit}\n已拿奖励：{state.ClaimedRewards.Count}\n坊市删牌：{state.RemovedMarketCards.Count}\n坊市售牌：{state.SoldMarketCards.Count}";
         }
 
         private static string BuildNodeText(CultivationRunState state)
@@ -102,7 +102,7 @@ namespace GameLogic.Cultivation
                 for (var i = 0; i < state.CurrentMarketItems.Count; i++)
                 {
                     var item = state.CurrentMarketItems[i];
-                    builder.Append(i + 1).Append(". ").Append(item.Card.Name).Append(" / ").Append(item.Price).Append(" 灵石").AppendLine();
+                    builder.Append(i + 1).Append(". ").Append(FormatMarketItemName(item)).Append(" / ").Append(item.Price).Append(" 灵石").AppendLine();
                 }
 
                 builder.Append("移除卡牌：").Append(CultivationRunEngine.MarketCardRemovalCost).Append(" 灵石 / 已移除 ").Append(state.RemovedMarketCards.Count).Append(" 张").AppendLine();
@@ -111,6 +111,21 @@ namespace GameLogic.Cultivation
             }
 
             return builder.ToString();
+        }
+
+        public static string FormatMarketItemName(CultivationMarketItem item)
+        {
+            if (item == null)
+            {
+                return string.Empty;
+            }
+
+            if (item.IsCard)
+            {
+                return item.Card.Name;
+            }
+
+            return $"{item.Pill.Name}（丹药）";
         }
 
         private static string BuildBattleText(CultivationRunState state)
@@ -214,6 +229,12 @@ namespace GameLogic.Cultivation
 
         public int DeckCount { get; private set; }
 
+        public int PillCount { get; private set; }
+
+        public int PillSlotLimit { get; private set; }
+
+        public int PurchasedMarketPillCount { get; private set; }
+
         public int HandCount { get; private set; }
 
         public int RewardCount { get; private set; }
@@ -250,6 +271,9 @@ namespace GameLogic.Cultivation
                 PlayerMaxHp = state.PlayerMaxHp,
                 SpiritStones = state.SpiritStones,
                 DeckCount = state.Deck.Count,
+                PillCount = state.Pills.Count,
+                PillSlotLimit = state.PillSlotLimit,
+                PurchasedMarketPillCount = state.PurchasedMarketPills.Count,
                 HandCount = state.CurrentBattle?.Hand.Count ?? 0,
                 RewardCount = state.CurrentRewards.Count,
                 RestUpgradeChoiceCount = state.RestUpgradeChoices.Count,

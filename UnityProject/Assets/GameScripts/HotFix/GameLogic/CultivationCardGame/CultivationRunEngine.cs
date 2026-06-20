@@ -150,10 +150,23 @@ namespace GameLogic.Cultivation
                 throw new InvalidOperationException("Not enough spirit stones to buy the selected market item.");
             }
 
+            if (item.IsPill && state.Pills.Count >= state.PillSlotLimit)
+            {
+                throw new InvalidOperationException("Pill slots are full.");
+            }
+
             state.SpiritStones -= item.Price;
-            state.Deck.Add(item.Card);
             state.PurchasedMarketItems.Add(item);
             state.CurrentMarketItems.RemoveAt(itemIndex);
+
+            if (item.IsCard)
+            {
+                state.Deck.Add(item.Card);
+                return;
+            }
+
+            state.Pills.Add(item.Pill);
+            state.PurchasedMarketPills.Add(item.Pill);
         }
 
         public void RemoveDeckCardAtMarket(CultivationRunState state, int deckIndex)
@@ -182,15 +195,20 @@ namespace GameLogic.Cultivation
             }
 
             var card = state.Deck[deckIndex];
-            var matchingMarketItem = state.CurrentMarketItems.FirstOrDefault(item => item.Card.Id == card.Id);
+            var matchingMarketItem = state.CurrentMarketItems.FirstOrDefault(item => item.IsCard && item.Card.Id == card.Id);
             if (matchingMarketItem != null)
             {
                 return matchingMarketItem.Price / 2;
             }
 
-            if (state.CurrentMarketItems.Count > 0)
+            var lowestCardMarketPrice = state.CurrentMarketItems
+                .Where(item => item.IsCard)
+                .Select(item => item.Price)
+                .DefaultIfEmpty(20)
+                .Min();
+            if (lowestCardMarketPrice > 0)
             {
-                return Math.Max(1, state.CurrentMarketItems.Min(item => item.Price) / 2);
+                return Math.Max(1, lowestCardMarketPrice / 2);
             }
 
             return 10;

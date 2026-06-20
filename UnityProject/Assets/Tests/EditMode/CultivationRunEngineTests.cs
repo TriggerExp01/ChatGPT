@@ -368,7 +368,7 @@ namespace GameLogic.Tests
             var run = engine.StartRun(CreateInstantWinDeck(), CreateMarketRoute(), initialSpiritStones: 25);
 
             Assert.AreEqual(CultivationRunStatus.Market, run.Status);
-            Assert.AreEqual(2, run.CurrentMarketItems.Count);
+            Assert.AreEqual(3, run.CurrentMarketItems.Count);
 
             var deckCount = run.Deck.Count;
             engine.BuyMarketItem(run, 0);
@@ -377,7 +377,41 @@ namespace GameLogic.Tests
             Assert.AreEqual(deckCount + 1, run.Deck.Count);
             Assert.AreEqual("cloud_guard", run.Deck.Last().Id);
             Assert.AreEqual(1, run.PurchasedMarketItems.Count);
-            Assert.AreEqual(1, run.CurrentMarketItems.Count);
+            Assert.AreEqual(2, run.CurrentMarketItems.Count);
+        }
+
+        [Test]
+        public void MarketBuyingPillAddsToPillSlotsWithoutChangingDeck()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var run = engine.StartRun(CreateInstantWinDeck(), CreateMarketRoute(), initialSpiritStones: 20);
+            var deckCount = run.Deck.Count;
+
+            engine.BuyMarketItem(run, 2);
+
+            Assert.AreEqual(5, run.SpiritStones);
+            Assert.AreEqual(deckCount, run.Deck.Count);
+            Assert.AreEqual(1, run.Pills.Count);
+            Assert.AreEqual(1, run.PurchasedMarketPills.Count);
+            Assert.AreEqual("small_restore_pill", run.Pills[0].Id);
+            Assert.AreEqual(2, run.CurrentMarketItems.Count);
+        }
+
+        [Test]
+        public void MarketBuyingPillRejectsWhenPillSlotsAreFull()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var run = engine.StartRun(CreateInstantWinDeck(), CreateMarketRoute(), initialSpiritStones: 20);
+            run.Pills.Add(CultivationSeedData.SmallRestorePillItem);
+            run.Pills.Add(CultivationSeedData.SmallRestorePillItem);
+            run.Pills.Add(CultivationSeedData.SmallRestorePillItem);
+
+            Assert.Throws<System.InvalidOperationException>(() => engine.BuyMarketItem(run, 2));
+            Assert.AreEqual(20, run.SpiritStones);
+            Assert.AreEqual(5, run.Deck.Count);
+            Assert.AreEqual(3, run.Pills.Count);
+            Assert.AreEqual(3, run.CurrentMarketItems.Count);
+            Assert.AreEqual(0, run.PurchasedMarketPills.Count);
         }
 
         [Test]
@@ -797,6 +831,7 @@ namespace GameLogic.Tests
                     {
                         new CultivationMarketItem("market_cloud_guard", CultivationSeedData.CloudGuard, 20),
                         new CultivationMarketItem("market_thrust", CultivationSeedData.Thrust, 25),
+                        new CultivationMarketItem("market_small_restore_pill", CultivationSeedData.SmallRestorePillItem, 15),
                     }),
                 new CultivationRunNode(
                     "after_market",

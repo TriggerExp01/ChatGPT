@@ -99,6 +99,26 @@ namespace GameLogic.Tests
         }
 
         [Test]
+        public void PrototypeUiCanBuyPillWithoutChangingDeck()
+        {
+            ForceCurrentBattleVictory();
+            _ui.ResolveBattle();
+            _ui.SkipReward();
+            _ui.ChooseRoute(1);
+            _ui.Rest();
+            _ui.ChooseRoute(0);
+            SetRunSpiritStones(20);
+
+            var deckBefore = _ui.Snapshot.DeckCount;
+            _ui.BuyMarketItem(2);
+
+            Assert.AreEqual(deckBefore, _ui.Snapshot.DeckCount);
+            Assert.AreEqual(1, _ui.Snapshot.PillCount);
+            Assert.AreEqual(3, _ui.Snapshot.PillSlotLimit);
+            Assert.AreEqual(1, _ui.Snapshot.PurchasedMarketPillCount);
+        }
+
+        [Test]
         public void PrototypeUiCanRemoveDeckCardInMarket()
         {
             ForceCurrentBattleVictory();
