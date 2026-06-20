@@ -71,6 +71,13 @@ namespace GameLogic.Cultivation
             state.Player.ResolveSharpnessAtTurnStart();
             state.Spirit = state.SpiritMax;
 
+            var freezePenalty = state.Player.ResolveFreezeAtTurnStart();
+            if (freezePenalty > 0)
+            {
+                state.Spirit = Math.Max(0, state.Spirit - freezePenalty);
+                state.Logs.Add(new BattleLogEntry($"冰冻使本回合灵力 -{freezePenalty}。"));
+            }
+
             var burnDamage = state.Player.ResolveBurnAtTurnStart();
             if (burnDamage > 0)
             {
@@ -273,6 +280,11 @@ namespace GameLogic.Cultivation
                     DealEnemyDamage(state, enemy, intent.Value);
                     state.Player.AddBurn(intent.SecondaryValue, 2);
                     state.Logs.Add(new BattleLogEntry($"{enemy.Body.Name} 施加灼烧 {intent.SecondaryValue} 层。"));
+                    break;
+                case EnemyIntentType.AttackAndFreeze:
+                    DealEnemyDamage(state, enemy, intent.Value);
+                    state.Player.AddFreeze(intent.SecondaryValue, 2);
+                    state.Logs.Add(new BattleLogEntry($"{enemy.Body.Name} 施加冰冻 {intent.SecondaryValue} 层。"));
                     break;
                 case EnemyIntentType.Buff:
                     state.Logs.Add(new BattleLogEntry($"{enemy.Body.Name} 正在蓄力。"));
@@ -891,6 +903,34 @@ namespace GameLogic.Cultivation
             new EnemyIntent(EnemyIntentType.Defend, 12, description: "剑阵护体 12"),
             new EnemyIntent(EnemyIntentType.Attack, 14, description: "飞剑连斩 14"));
 
+        public static EnemyDefinition FrostSerpentDemon { get; } = new EnemyDefinition(
+            "frost_serpent_demon",
+            "冰霜蛇妖",
+            55,
+            2,
+            new EnemyIntent(EnemyIntentType.AttackAndFreeze, 5, 1, "寒冰吐息 5 + 冰冻 1"),
+            new EnemyIntent(EnemyIntentType.Attack, 8, description: "尾击 8"),
+            new EnemyIntent(EnemyIntentType.AttackAndFreeze, 5, 1, "寒冰吐息 5 + 冰冻 1"));
+
+        public static EnemyDefinition WindSpiritBird { get; } = new EnemyDefinition(
+            "wind_spirit_bird",
+            "风灵鸟",
+            58,
+            1,
+            new EnemyIntent(EnemyIntentType.Attack, 6, description: "俯冲 6"),
+            new EnemyIntent(EnemyIntentType.Defend, 8, description: "疾风护身 8"),
+            new EnemyIntent(EnemyIntentType.Sweep, 4, description: "旋风 4x3"));
+
+        public static EnemyDefinition DualHeadIceFireSerpent { get; } = new EnemyDefinition(
+            "dual_head_ice_fire_serpent",
+            "双头冰火蟒",
+            100,
+            3,
+            new EnemyIntent(EnemyIntentType.AttackAndFreeze, 4, 1, "冰息 4 + 冰冻 1"),
+            new EnemyIntent(EnemyIntentType.AttackAndBurn, 4, 1, "火息 4 + 灼烧 1"),
+            new EnemyIntent(EnemyIntentType.Attack, 10, description: "冰火扑咬 10"),
+            new EnemyIntent(EnemyIntentType.Defend, 12, description: "鳞甲护体 12"));
+
         public static IReadOnlyList<CultivationRunReward> CreateSwordSectRewardPool()
         {
             return new List<CultivationRunReward>
@@ -1036,7 +1076,44 @@ namespace GameLogic.Cultivation
                     CultivationRunNodeType.Battle,
                     FoundationSwordCultivator,
                     rewards,
+                    nextNodeIndices: new[] { 8, 9 },
                     spiritStoneReward: 25,
+                    realm: CultivationRealm.Foundation),
+                new CultivationRunNode(
+                    "node_frost_serpent_demon",
+                    "冰霜蛇妖",
+                    CultivationRunNodeType.Battle,
+                    FrostSerpentDemon,
+                    rewards,
+                    nextNodeIndices: new[] { 10 },
+                    spiritStoneReward: 20,
+                    realm: CultivationRealm.Foundation),
+                new CultivationRunNode(
+                    "node_foundation_meditation",
+                    "筑基闭关",
+                    CultivationRunNodeType.Rest,
+                    null,
+                    null,
+                    restHealAmount: 35,
+                    nextNodeIndices: new[] { 10 },
+                    realm: CultivationRealm.Foundation),
+                new CultivationRunNode(
+                    "node_wind_spirit_bird",
+                    "风灵鸟",
+                    CultivationRunNodeType.Battle,
+                    WindSpiritBird,
+                    rewards,
+                    nextNodeIndices: new[] { 11 },
+                    spiritStoneReward: 20,
+                    realm: CultivationRealm.Foundation),
+                new CultivationRunNode(
+                    "node_dual_head_ice_fire_serpent",
+                    "双头冰火蟒",
+                    CultivationRunNodeType.Elite,
+                    DualHeadIceFireSerpent,
+                    rewards,
+                    spiritStoneReward: 35,
+                    artifactRewardPool: artifactRewards,
                     realm: CultivationRealm.Foundation),
             };
         }

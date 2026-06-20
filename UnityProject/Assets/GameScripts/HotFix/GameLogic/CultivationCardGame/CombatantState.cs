@@ -45,6 +45,10 @@ namespace GameLogic.Cultivation
 
         public int BurnTurns { get; private set; }
 
+        public int FreezeStacks { get; private set; }
+
+        public int FreezeTurns { get; private set; }
+
         public int SwordMarkStacks { get; private set; }
 
         public int Sharpness { get; private set; }
@@ -96,11 +100,19 @@ namespace GameLogic.Cultivation
             BurnTurns = Math.Max(BurnTurns, turns);
         }
 
+        public void AddFreeze(int stacks, int turns)
+        {
+            FreezeStacks += Math.Max(0, stacks);
+            FreezeTurns = Math.Max(FreezeTurns, turns);
+        }
+
         public void ClearNegativeStatuses()
         {
             BreakDefenseStacks = 0;
             BurnStacks = 0;
             BurnTurns = 0;
+            FreezeStacks = 0;
+            FreezeTurns = 0;
         }
 
         public int AddSwordMark(int stacks)
@@ -147,6 +159,23 @@ namespace GameLogic.Cultivation
             }
 
             return damage;
+        }
+
+        public int ResolveFreezeAtTurnStart()
+        {
+            if (FreezeStacks <= 0 || FreezeTurns <= 0)
+            {
+                return 0;
+            }
+
+            var spiritPenalty = FreezeStacks;
+            FreezeTurns--;
+            if (FreezeTurns == 0)
+            {
+                FreezeStacks = 0;
+            }
+
+            return spiritPenalty;
         }
     }
 }

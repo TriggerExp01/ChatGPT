@@ -54,6 +54,19 @@ namespace GameLogic.Tests
         }
 
         [Test]
+        public void BuildTextIncludesFreezeStatusForFoundationBattles()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var run = engine.StartRun(CreateDefensiveDeck(), CreateFreezeRoute());
+
+            run.CurrentBattle.Player.AddFreeze(1, 2);
+            var text = CultivationRunPrototypePresenter.BuildText(run);
+
+            StringAssert.Contains("冰冻 1/2", text.BattleText);
+            StringAssert.Contains("寒冰吐息 5 + 冰冻 1", text.BattleText);
+        }
+
+        [Test]
         public void BuildTextIncludesMarketItems()
         {
             var engine = new CultivationRunEngine(new BattleEngine(1));
@@ -371,6 +384,34 @@ namespace GameLogic.Tests
                     CultivationRunNodeType.Battle,
                     new EnemyDefinition("enemy", "enemy", 1, 0, new EnemyIntent(EnemyIntentType.Attack, 1)),
                     CultivationSeedData.CreateSwordSectRewardPool()),
+            };
+        }
+
+        private static IReadOnlyList<CultivationRunNode> CreateFreezeRoute()
+        {
+            return new List<CultivationRunNode>
+            {
+                new CultivationRunNode(
+                    "freeze",
+                    "freeze",
+                    CultivationRunNodeType.Battle,
+                    CultivationSeedData.FrostSerpentDemon,
+                    CultivationSeedData.CreateSwordSectRewardPool(),
+                    realm: CultivationRealm.Foundation),
+            };
+        }
+
+        private static IReadOnlyList<CardDefinition> CreateDefensiveDeck()
+        {
+            var guard = new CardDefinition("guard", "guard", 0, new CardEffect(CardEffectType.Shield, 20, CardTarget.Self));
+            return new[]
+            {
+                guard,
+                guard,
+                guard,
+                guard,
+                guard,
+                guard,
             };
         }
     }

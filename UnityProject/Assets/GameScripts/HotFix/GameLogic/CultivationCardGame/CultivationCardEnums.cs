@@ -26,6 +26,7 @@ namespace GameLogic.Cultivation
         Attack,
         Defend,
         AttackAndBurn,
+        AttackAndFreeze,
         Buff,
         Summon,
         Sweep,

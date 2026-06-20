@@ -455,6 +455,42 @@ namespace GameLogic.Tests
             Assert.AreEqual(6, _ui.Snapshot.HandCount);
         }
 
+        [Test]
+        public void PrototypeUiCanContinueThroughFoundationShortRoute()
+        {
+            ReachFoundationSwordCultivator();
+
+            ForceCurrentBattleVictory();
+            _ui.ResolveBattle();
+            _ui.SkipReward();
+
+            Assert.AreEqual(CultivationRunStatus.RouteChoice, _ui.Snapshot.Status);
+            Assert.AreEqual(2, _ui.Snapshot.RouteChoiceCount);
+
+            _ui.ChooseRoute(0);
+            Assert.AreEqual(CultivationRunStatus.InBattle, _ui.Snapshot.Status);
+            Assert.AreEqual("冰霜蛇妖", _ui.Snapshot.CurrentNodeName);
+            Assert.AreEqual(CultivationRealm.Foundation, _ui.Snapshot.CurrentRealm);
+
+            ForceCurrentBattleVictory();
+            _ui.ResolveBattle();
+            _ui.SkipReward();
+            Assert.AreEqual("风灵鸟", _ui.Snapshot.CurrentNodeName);
+
+            ForceCurrentBattleVictory();
+            _ui.ResolveBattle();
+            _ui.SkipReward();
+            Assert.AreEqual("双头冰火蟒", _ui.Snapshot.CurrentNodeName);
+
+            ForceCurrentBattleVictory();
+            _ui.ResolveBattle();
+            _ui.SkipReward();
+
+            Assert.AreEqual(CultivationRunStatus.Completed, _ui.Snapshot.Status);
+            Assert.AreEqual(CultivationRealm.Foundation, _ui.Snapshot.CurrentRealm);
+            Assert.AreEqual(2, _ui.Snapshot.DroppedArtifactCount);
+        }
+
         private string GetCurrentBattleLogText()
         {
             var run = GetRun();
@@ -511,6 +547,19 @@ namespace GameLogic.Tests
         private void ForceCurrentBattleVictory()
         {
             GetRun().CurrentBattle.Outcome = BattleOutcome.Victory;
+        }
+
+        private void ReachFoundationSwordCultivator()
+        {
+            ForceCurrentBattleVictory();
+            _ui.ResolveBattle();
+            _ui.SkipReward();
+            _ui.ChooseRoute(1);
+            _ui.Rest();
+            _ui.ChooseRoute(3);
+            ForceCurrentBattleVictory();
+            _ui.ResolveBattle();
+            _ui.SkipReward();
         }
 
         private CultivationRunState GetRun()

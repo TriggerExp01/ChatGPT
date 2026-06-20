@@ -157,6 +157,73 @@ namespace GameLogic.Tests
         }
 
         [Test]
+        public void FoundationEnemyFreezeReducesNextTurnSpirit()
+        {
+            var battleEngine = new BattleEngine(1);
+            var battle = battleEngine.CreateBattle(CreateDefensiveDeck(), CultivationSeedData.FrostSerpentDemon, 110, 110, 4, 6);
+
+            battleEngine.EndPlayerTurn(battle);
+
+            Assert.AreEqual(1, battle.Player.FreezeStacks);
+            StringAssert.Contains("施加冰冻 1 层", string.Join("\n", battle.Logs.Select(log => log.Message)));
+            Assert.AreEqual(3, battle.Spirit);
+            Assert.AreEqual(1, battle.Player.FreezeTurns);
+            StringAssert.Contains("冰冻使本回合灵力 -1", string.Join("\n", battle.Logs.Select(log => log.Message)));
+        }
+
+        [Test]
+        public void BranchingPrototypeFoundationLayerOffersShortRouteChoicesAfterFirstFoundationBattle()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var run = engine.StartRun(CreateInstantWinDeck(), CultivationSeedData.CreateFirstPrototypeBranchingRoute());
+
+            ReachFoundationSwordCultivator(engine, run);
+            WinCurrentBattle(engine, run);
+            engine.SkipReward(run);
+
+            Assert.AreEqual(CultivationRunStatus.RouteChoice, run.Status);
+            Assert.AreEqual(2, run.CurrentRouteChoices.Count);
+            Assert.AreEqual("node_frost_serpent_demon", run.CurrentRouteChoices[0].TargetNode.Id);
+            Assert.AreEqual("node_foundation_meditation", run.CurrentRouteChoices[1].TargetNode.Id);
+            Assert.IsTrue(run.CurrentRouteChoices.All(choice => choice.TargetNode.Realm == CultivationRealm.Foundation));
+        }
+
+        [Test]
+        public void BranchingPrototypeFoundationShortRouteCanReachEliteAndComplete()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var run = engine.StartRun(CreateInstantWinDeck(), CultivationSeedData.CreateFirstPrototypeBranchingRoute());
+
+            ReachFoundationSwordCultivator(engine, run);
+            WinCurrentBattle(engine, run);
+            engine.SkipReward(run);
+            engine.ChooseRoute(run, 0);
+
+            Assert.AreEqual("node_frost_serpent_demon", run.CurrentNode.Id);
+
+            WinCurrentBattle(engine, run);
+            engine.SkipReward(run);
+
+            Assert.AreEqual("node_wind_spirit_bird", run.CurrentNode.Id);
+            Assert.AreEqual(CultivationRealm.Foundation, run.CurrentRealm);
+
+            WinCurrentBattle(engine, run);
+            engine.SkipReward(run);
+
+            Assert.AreEqual("node_dual_head_ice_fire_serpent", run.CurrentNode.Id);
+            Assert.AreEqual(CultivationRunNodeType.Elite, run.CurrentNode.Type);
+
+            WinCurrentBattle(engine, run);
+            engine.SkipReward(run);
+
+            Assert.AreEqual(CultivationRunStatus.Completed, run.Status);
+            Assert.AreEqual(CultivationRealm.Foundation, run.CurrentRealm);
+            Assert.AreEqual(1, run.RealmBreakthroughCount);
+            Assert.AreEqual(2, run.DroppedArtifacts.Count);
+            Assert.GreaterOrEqual(run.SpiritStones, 135);
+        }
+
+        [Test]
         public void NormalBattleVictoryDoesNotDropArtifact()
         {
             var engine = new CultivationRunEngine(new BattleEngine(1));
@@ -1051,6 +1118,31 @@ namespace GameLogic.Tests
                 instantWin,
                 instantWin,
                 instantWin,
+            };
+        }
+
+        private static void ReachFoundationSwordCultivator(CultivationRunEngine engine, CultivationRunState run)
+        {
+            WinCurrentBattle(engine, run);
+            engine.SkipReward(run);
+            engine.ChooseRoute(run, 1);
+            engine.Rest(run);
+            engine.ChooseRoute(run, 3);
+            WinCurrentBattle(engine, run);
+            engine.SkipReward(run);
+        }
+
+        private static IReadOnlyList<CardDefinition> CreateDefensiveDeck()
+        {
+            var guard = new CardDefinition("guard", "guard", 0, new CardEffect(CardEffectType.Shield, 20, CardTarget.Self));
+            return new[]
+            {
+                guard,
+                guard,
+                guard,
+                guard,
+                guard,
+                guard,
             };
         }
 
