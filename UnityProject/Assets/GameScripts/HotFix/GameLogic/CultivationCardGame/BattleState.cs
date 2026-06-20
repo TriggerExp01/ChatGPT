@@ -57,6 +57,16 @@ namespace GameLogic.Cultivation
 
         public int AttackCounterChancePercent { get; private set; }
 
+        public int PoisonCounterStacks { get; private set; }
+
+        public int PoisonCounterTurns { get; private set; }
+
+        public int RegenerationPerTurn { get; private set; }
+
+        public int RegenerationTurns { get; private set; }
+
+        public bool PoisonDamageTriggeredThisTurn { get; private set; }
+
         public int TurnNumber { get; set; }
 
         public BattleOutcome Outcome { get; set; } = BattleOutcome.InProgress;
@@ -109,6 +119,16 @@ namespace GameLogic.Cultivation
             HasTriggeredCriticalThisTurn = false;
         }
 
+        public void MarkPoisonDamageTriggered()
+        {
+            PoisonDamageTriggeredThisTurn = true;
+        }
+
+        public void ResetPoisonDamageTriggered()
+        {
+            PoisonDamageTriggeredThisTurn = false;
+        }
+
         public void AddDodgeCharges(int amount)
         {
             DodgeCharges += Math.Max(0, amount);
@@ -130,6 +150,52 @@ namespace GameLogic.Cultivation
         {
             AttackCounterDamage = 0;
             AttackCounterChancePercent = 0;
+        }
+
+        public void AddPoisonCounter(int stacks, int turns)
+        {
+            PoisonCounterStacks += Math.Max(0, stacks);
+            PoisonCounterTurns = Math.Max(PoisonCounterTurns, Math.Max(1, turns));
+        }
+
+        public void ResolvePoisonCounterDurationAtTurnStart()
+        {
+            if (PoisonCounterTurns <= 0)
+            {
+                PoisonCounterStacks = 0;
+                return;
+            }
+
+            PoisonCounterTurns--;
+            if (PoisonCounterTurns == 0)
+            {
+                PoisonCounterStacks = 0;
+            }
+        }
+
+        public void AddRegeneration(int amount, int turns)
+        {
+            RegenerationPerTurn += Math.Max(0, amount);
+            RegenerationTurns = Math.Max(RegenerationTurns, Math.Max(1, turns));
+        }
+
+        public int ResolveRegenerationAtTurnStart()
+        {
+            if (RegenerationPerTurn <= 0 || RegenerationTurns <= 0)
+            {
+                return 0;
+            }
+
+            var before = Player.CurrentHp;
+            Player.Heal(RegenerationPerTurn);
+            var healed = Player.CurrentHp - before;
+            RegenerationTurns--;
+            if (RegenerationTurns == 0)
+            {
+                RegenerationPerTurn = 0;
+            }
+
+            return healed;
         }
 
         public bool TryConsumeDodge()

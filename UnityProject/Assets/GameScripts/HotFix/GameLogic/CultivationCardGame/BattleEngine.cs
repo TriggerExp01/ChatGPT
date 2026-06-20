@@ -74,10 +74,18 @@ namespace GameLogic.Cultivation
 
             state.TurnNumber++;
             state.ResetTurnCriticalState();
+            state.ResetPoisonDamageTriggered();
             state.ClearAttackCounter();
+            state.ResolvePoisonCounterDurationAtTurnStart();
             state.Player.ClearShield();
             state.Player.ResolveSharpnessAtTurnStart();
             state.Spirit = state.SpiritMax;
+
+            var regeneration = state.ResolveRegenerationAtTurnStart();
+            if (regeneration > 0)
+            {
+                state.Logs.Add(new BattleLogEntry($"生生不息恢复 {regeneration} HP。"));
+            }
 
             var freezePenalty = state.Player.ResolveFreezeAtTurnStart();
             if (freezePenalty > 0)
@@ -90,6 +98,13 @@ namespace GameLogic.Cultivation
             if (burnDamage > 0)
             {
                 state.Logs.Add(new BattleLogEntry($"玩家受到灼烧 {burnDamage} 点伤害。"));
+            }
+
+            var poisonDamage = state.Player.ResolvePoisonAtTurnStart();
+            if (poisonDamage > 0)
+            {
+                state.MarkPoisonDamageTriggered();
+                state.Logs.Add(new BattleLogEntry($"玩家受到中毒 {poisonDamage} 点伤害。"));
             }
 
             var stunned = state.Player.ResolveStunAtTurnStart();
@@ -106,6 +121,13 @@ namespace GameLogic.Cultivation
                 if (enemyBurnDamage > 0)
                 {
                     state.Logs.Add(new BattleLogEntry($"{enemy.Body.Name} 受到灼烧 {enemyBurnDamage} 点伤害。"));
+                }
+
+                var enemyPoisonDamage = enemy.Body.ResolvePoisonAtTurnStart();
+                if (enemyPoisonDamage > 0)
+                {
+                    state.MarkPoisonDamageTriggered();
+                    state.Logs.Add(new BattleLogEntry($"{enemy.Body.Name} 受到中毒 {enemyPoisonDamage} 点伤害。"));
                 }
             }
 
@@ -232,6 +254,53 @@ namespace GameLogic.Cultivation
                         enemy.Body.AddBurn(effect.Value, Math.Max(1, effect.Duration));
                     }
 
+                    break;
+                case CardEffectType.Poison:
+                    foreach (var enemy in SelectTargets(state, effect, explicitTarget))
+                    {
+                        enemy.Body.AddPoison(effect.Value);
+                        state.Logs.Add(new BattleLogEntry($"{card.Name} 对 {enemy.Body.Name} 施加 {effect.Value} 层中毒。"));
+                    }
+
+                    break;
+                case CardEffectType.PoisonBurst:
+                    foreach (var enemy in SelectTargets(state, effect, explicitTarget))
+                    {
+                        var poisonStacks = enemy.Body.ConsumePoison();
+                        var burstDamage = poisonStacks * effect.Value;
+                        if (burstDamage <= 0)
+                        {
+                            state.Logs.Add(new BattleLogEntry($"{card.Name} 未检测到中毒，毒爆未造成伤害。"));
+                            continue;
+                        }
+
+                        var dealt = enemy.Body.TakeDirectDamage(burstDamage);
+                        state.Logs.Add(new BattleLogEntry($"{card.Name} 引爆 {poisonStacks} 层中毒，造成 {dealt} 点伤害。"));
+                        if (effect.SecondaryValue > 0 && !enemy.Body.IsDefeated)
+                        {
+                            enemy.Body.AddPoison(effect.SecondaryValue);
+                            state.Logs.Add(new BattleLogEntry($"{card.Name} 留下 {effect.SecondaryValue} 层余毒。"));
+                        }
+                    }
+
+                    break;
+                case CardEffectType.Leech:
+                    foreach (var enemy in SelectTargets(state, effect, explicitTarget))
+                    {
+                        var dealt = enemy.Body.TakeDamage(effect.Value, state.Player.Sharpness);
+                        var healed = dealt * Math.Max(0, effect.SecondaryValue) / 100;
+                        state.Player.Heal(healed);
+                        state.Logs.Add(new BattleLogEntry($"{card.Name} 对 {enemy.Body.Name} 造成 {dealt} 点伤害，并吸灵恢复 {healed} HP。"));
+                    }
+
+                    break;
+                case CardEffectType.Regeneration:
+                    state.AddRegeneration(effect.Value, Math.Max(1, effect.Duration));
+                    state.Logs.Add(new BattleLogEntry($"{card.Name} 获得生生不息 {effect.Value} HP/{Math.Max(1, effect.Duration)} 回合。"));
+                    break;
+                case CardEffectType.PoisonAttackCounter:
+                    state.AddPoisonCounter(effect.Value, Math.Max(1, effect.Duration));
+                    state.Logs.Add(new BattleLogEntry($"{card.Name} 本回合受击时施加中毒 {effect.Value} 层。"));
                     break;
                 case CardEffectType.SwordMark:
                     foreach (var enemy in SelectTargets(state, effect, explicitTarget))
@@ -699,6 +768,7 @@ namespace GameLogic.Cultivation
 
             var dealt = state.Player.TakeDamage(damage + enemy.AttackBonus);
             ResolveAttackCounter(state, enemy);
+            ResolvePoisonCounter(state, enemy);
             state.Logs.Add(new BattleLogEntry($"{enemy.Body.Name} 对玩家造成 {dealt} 点伤害。"));
             return true;
         }
@@ -718,6 +788,17 @@ namespace GameLogic.Cultivation
 
             var counterDealt = enemy.Body.TakeDamage(state.AttackCounterDamage, state.Player.Sharpness);
             state.Logs.Add(new BattleLogEntry($"attack-counter dealt {counterDealt} to {enemy.Body.Name}."));
+        }
+
+        private static void ResolvePoisonCounter(BattleState state, EnemyState enemy)
+        {
+            if (state.PoisonCounterStacks <= 0 || enemy.Body.IsDefeated)
+            {
+                return;
+            }
+
+            enemy.Body.AddPoison(state.PoisonCounterStacks);
+            state.Logs.Add(new BattleLogEntry($"毒瘴反噬使 {enemy.Body.Name} 中毒 {state.PoisonCounterStacks} 层。"));
         }
 
         private void DrawToHandLimit(BattleState state)
@@ -2131,6 +2212,364 @@ namespace GameLogic.Cultivation
             new CardEffect(CardEffectType.Damage, 4),
             new CardEffect(CardEffectType.AttackCounter, 5, CardTarget.Self));
 
+        public static CardDefinition PoisonVineArt { get; } = new CardDefinition(
+            "poison_vine_art",
+            "毒藤术",
+            1,
+            new[]
+            {
+                new CardUpgradeOption(
+                    "poison_vine_art_poison_1",
+                    "毒蔓术",
+                    "造成 3 伤害，施加 3 层中毒。",
+                    new CardDefinition(
+                        "poison_vine_art_poison_1",
+                        "毒蔓术",
+                        1,
+                        new[]
+                        {
+                            new CardUpgradeOption(
+                                "poison_vine_art_poison_2",
+                                "毒林术",
+                                "造成 3 伤害，施加 5 层中毒。",
+                                new CardDefinition("poison_vine_art_poison_2", "毒林术", 1, new CardEffect(CardEffectType.Damage, 3), new CardEffect(CardEffectType.Poison, 5))),
+                            new CardUpgradeOption(
+                                "poison_vine_art_damage_2",
+                                "毒棘术",
+                                "造成 8 伤害，施加 2 层中毒。",
+                                new CardDefinition("poison_vine_art_damage_2", "毒棘术", 1, new CardEffect(CardEffectType.Damage, 8), new CardEffect(CardEffectType.Poison, 2))),
+                        },
+                        new CardEffect(CardEffectType.Damage, 3),
+                        new CardEffect(CardEffectType.Poison, 3))),
+                new CardUpgradeOption(
+                    "poison_vine_art_cost_1",
+                    "速发毒藤",
+                    "灵力消耗降为 0，造成 3 伤害，施加 2 层中毒。",
+                    new CardDefinition(
+                        "poison_vine_art_cost_1",
+                        "速发毒藤",
+                        0,
+                        new[]
+                        {
+                            new CardUpgradeOption(
+                                "poison_vine_art_cost_2_break",
+                                "毒藤缠绕",
+                                "造成 3 伤害，施加 2 层中毒和 1 层破防。",
+                                new CardDefinition("poison_vine_art_cost_2_break", "毒藤缠绕", 0, new CardEffect(CardEffectType.Damage, 3), new CardEffect(CardEffectType.Poison, 2), new CardEffect(CardEffectType.BreakDefense, 1))),
+                            new CardUpgradeOption(
+                                "poison_vine_art_cost_2_all",
+                                "毒藤蔓延",
+                                "对全体敌人施加 2 层中毒。",
+                                new CardDefinition("poison_vine_art_cost_2_all", "毒藤蔓延", 0, new CardEffect(CardEffectType.Poison, 2, CardTarget.EnemyAll))),
+                        },
+                        new CardEffect(CardEffectType.Damage, 3),
+                        new CardEffect(CardEffectType.Poison, 2))),
+            },
+            new CardEffect(CardEffectType.Damage, 3),
+            new CardEffect(CardEffectType.Poison, 2));
+
+        public static CardDefinition CorrosivePoisonPalm { get; } = new CardDefinition(
+            "corrosive_poison_palm",
+            "腐毒掌",
+            2,
+            new[]
+            {
+                new CardUpgradeOption(
+                    "corrosive_poison_palm_poison_1",
+                    "剧毒掌",
+                    "造成 5 伤害，施加 5 层中毒。",
+                    new CardDefinition(
+                        "corrosive_poison_palm_poison_1",
+                        "剧毒掌",
+                        2,
+                        new[]
+                        {
+                            new CardUpgradeOption(
+                                "corrosive_poison_palm_poison_2",
+                                "猛毒掌",
+                                "造成 5 伤害，施加 7 层中毒。",
+                                new CardDefinition("corrosive_poison_palm_poison_2", "猛毒掌", 2, new CardEffect(CardEffectType.Damage, 5), new CardEffect(CardEffectType.Poison, 7))),
+                            new CardUpgradeOption(
+                                "corrosive_poison_palm_damage_2",
+                                "腐毒蚀骨",
+                                "造成 13 伤害，施加 3 层中毒。",
+                                new CardDefinition("corrosive_poison_palm_damage_2", "腐毒蚀骨", 2, new CardEffect(CardEffectType.Damage, 13), new CardEffect(CardEffectType.Poison, 3))),
+                        },
+                        new CardEffect(CardEffectType.Damage, 5),
+                        new CardEffect(CardEffectType.Poison, 5))),
+                new CardUpgradeOption(
+                    "corrosive_poison_palm_cost_1",
+                    "毒雾掌",
+                    "灵力消耗降为 1，造成 5 伤害，施加 3 层中毒。",
+                    new CardDefinition(
+                        "corrosive_poison_palm_cost_1",
+                        "毒雾掌",
+                        1,
+                        new[]
+                        {
+                            new CardUpgradeOption(
+                                "corrosive_poison_palm_cost_2_guard",
+                                "毒障掌",
+                                "造成 5 伤害，施加 3 层中毒，获得 5 护盾。",
+                                new CardDefinition("corrosive_poison_palm_cost_2_guard", "毒障掌", 1, new CardEffect(CardEffectType.Damage, 5), new CardEffect(CardEffectType.Poison, 3), new CardEffect(CardEffectType.Shield, 5, CardTarget.Self))),
+                            new CardUpgradeOption(
+                                "corrosive_poison_palm_cost_2_all",
+                                "毒云掌",
+                                "对全体敌人施加 3 层中毒。",
+                                new CardDefinition("corrosive_poison_palm_cost_2_all", "毒云掌", 1, new CardEffect(CardEffectType.Poison, 3, CardTarget.EnemyAll))),
+                        },
+                        new CardEffect(CardEffectType.Damage, 5),
+                        new CardEffect(CardEffectType.Poison, 3))),
+            },
+            new CardEffect(CardEffectType.Damage, 5),
+            new CardEffect(CardEffectType.Poison, 3));
+
+        public static CardDefinition SpiritLeechArt { get; } = new CardDefinition(
+            "spirit_leech_art",
+            "吸灵术",
+            1,
+            new[]
+            {
+                new CardUpgradeOption(
+                    "spirit_leech_art_heal_1",
+                    "吸灵大法",
+                    "造成 4 伤害，恢复伤害的 75%。",
+                    new CardDefinition(
+                        "spirit_leech_art_heal_1",
+                        "吸灵大法",
+                        1,
+                        new[]
+                        {
+                            new CardUpgradeOption(
+                                "spirit_leech_art_heal_2",
+                                "吸灵真诀",
+                                "造成 4 伤害，恢复伤害的 100%。",
+                                new CardDefinition("spirit_leech_art_heal_2", "吸灵真诀", 1, new CardEffect(CardEffectType.Leech, 4, secondaryValue: 100))),
+                            new CardUpgradeOption(
+                                "spirit_leech_art_damage_2",
+                                "强力吸灵",
+                                "造成 8 伤害，恢复伤害的 50%。",
+                                new CardDefinition("spirit_leech_art_damage_2", "强力吸灵", 1, new CardEffect(CardEffectType.Leech, 8, secondaryValue: 50))),
+                        },
+                        new CardEffect(CardEffectType.Leech, 4, secondaryValue: 75))),
+                new CardUpgradeOption(
+                    "spirit_leech_art_poison_1",
+                    "吸灵毒引",
+                    "造成 4 伤害，恢复伤害的 50%，施加 2 层中毒。",
+                    new CardDefinition(
+                        "spirit_leech_art_poison_1",
+                        "吸灵毒引",
+                        1,
+                        new[]
+                        {
+                            new CardUpgradeOption(
+                                "spirit_leech_art_poison_2_cost",
+                                "速发毒引",
+                                "灵力消耗降为 0，造成 4 伤害，恢复伤害的 50%，施加 1 层中毒。",
+                                new CardDefinition("spirit_leech_art_poison_2_cost", "速发毒引", 0, new CardEffect(CardEffectType.Leech, 4, secondaryValue: 50), new CardEffect(CardEffectType.Poison, 1))),
+                            new CardUpgradeOption(
+                                "spirit_leech_art_poison_2_guard",
+                                "护体毒引",
+                                "造成 4 伤害，恢复伤害的 50%，施加 2 层中毒，获得 4 护盾。",
+                                new CardDefinition("spirit_leech_art_poison_2_guard", "护体毒引", 1, new CardEffect(CardEffectType.Leech, 4, secondaryValue: 50), new CardEffect(CardEffectType.Poison, 2), new CardEffect(CardEffectType.Shield, 4, CardTarget.Self))),
+                        },
+                        new CardEffect(CardEffectType.Leech, 4, secondaryValue: 50),
+                        new CardEffect(CardEffectType.Poison, 2))),
+            },
+            new CardEffect(CardEffectType.Leech, 4, secondaryValue: 50));
+
+        public static CardDefinition RejuvenationArt { get; } = new CardDefinition(
+            "rejuvenation_art",
+            "回春术",
+            1,
+            new[]
+            {
+                new CardUpgradeOption(
+                    "rejuvenation_art_heal_1",
+                    "回春大法",
+                    "恢复 9 HP。",
+                    new CardDefinition(
+                        "rejuvenation_art_heal_1",
+                        "回春大法",
+                        1,
+                        new[]
+                        {
+                            new CardUpgradeOption(
+                                "rejuvenation_art_heal_2",
+                                "回春真诀",
+                                "恢复 13 HP。",
+                                new CardDefinition("rejuvenation_art_heal_2", "回春真诀", 1, new CardEffect(CardEffectType.Heal, 13, CardTarget.Self))),
+                            new CardUpgradeOption(
+                                "rejuvenation_art_guard_2",
+                                "回春护体",
+                                "恢复 9 HP，获得 5 护盾。",
+                                new CardDefinition("rejuvenation_art_guard_2", "回春护体", 1, new CardEffect(CardEffectType.Heal, 9, CardTarget.Self), new CardEffect(CardEffectType.Shield, 5, CardTarget.Self))),
+                        },
+                        new CardEffect(CardEffectType.Heal, 9, CardTarget.Self))),
+                new CardUpgradeOption(
+                    "rejuvenation_art_cost_1",
+                    "速发回春",
+                    "灵力消耗降为 0，恢复 5 HP。",
+                    new CardDefinition(
+                        "rejuvenation_art_cost_1",
+                        "速发回春",
+                        0,
+                        new[]
+                        {
+                            new CardUpgradeOption(
+                                "rejuvenation_art_cost_2_draw",
+                                "流转回春",
+                                "灵力消耗为 0，恢复 5 HP，抽 1 张牌。",
+                                new CardDefinition("rejuvenation_art_cost_2_draw", "流转回春", 0, new CardEffect(CardEffectType.Heal, 5, CardTarget.Self), new CardEffect(CardEffectType.Draw, 1, CardTarget.Self))),
+                            new CardUpgradeOption(
+                                "rejuvenation_art_cost_2_guard",
+                                "护脉回春",
+                                "灵力消耗为 0，恢复 5 HP，获得 4 护盾。",
+                                new CardDefinition("rejuvenation_art_cost_2_guard", "护脉回春", 0, new CardEffect(CardEffectType.Heal, 5, CardTarget.Self), new CardEffect(CardEffectType.Shield, 4, CardTarget.Self))),
+                        },
+                        new CardEffect(CardEffectType.Heal, 5, CardTarget.Self))),
+            },
+            new CardEffect(CardEffectType.Heal, 5, CardTarget.Self));
+
+        public static CardDefinition PoisonMiasmaGuard { get; } = new CardDefinition(
+            "poison_miasma_guard",
+            "毒瘴护体",
+            1,
+            new[]
+            {
+                new CardUpgradeOption(
+                    "poison_miasma_guard_poison_1",
+                    "毒雾护体",
+                    "获得 4 护盾，本回合受到攻击时对攻击者施加 2 层中毒。",
+                    new CardDefinition(
+                        "poison_miasma_guard_poison_1",
+                        "毒雾护体",
+                        1,
+                        new[]
+                        {
+                            new CardUpgradeOption(
+                                "poison_miasma_guard_poison_2",
+                                "毒云护体",
+                                "获得 4 护盾，本回合受到攻击时对攻击者施加 3 层中毒。",
+                                new CardDefinition("poison_miasma_guard_poison_2", "毒云护体", 1, new CardEffect(CardEffectType.Shield, 4, CardTarget.Self), new CardEffect(CardEffectType.PoisonAttackCounter, 3, CardTarget.Self, duration: 1))),
+                            new CardUpgradeOption(
+                                "poison_miasma_guard_heal_2",
+                                "毒瘴回春",
+                                "获得 4 护盾，本回合受到攻击时对攻击者施加 2 层中毒，并获得生生不息 1 HP/2 回合。",
+                                new CardDefinition("poison_miasma_guard_heal_2", "毒瘴回春", 1, new CardEffect(CardEffectType.Shield, 4, CardTarget.Self), new CardEffect(CardEffectType.PoisonAttackCounter, 2, CardTarget.Self, duration: 1), new CardEffect(CardEffectType.Regeneration, 1, CardTarget.Self, duration: 2))),
+                        },
+                        new CardEffect(CardEffectType.Shield, 4, CardTarget.Self),
+                        new CardEffect(CardEffectType.PoisonAttackCounter, 2, CardTarget.Self, duration: 1))),
+                new CardUpgradeOption(
+                    "poison_miasma_guard_shield_1",
+                    "毒瘴加护",
+                    "获得 8 护盾，本回合受到攻击时对攻击者施加 1 层中毒。",
+                    new CardDefinition(
+                        "poison_miasma_guard_shield_1",
+                        "毒瘴加护",
+                        1,
+                        new[]
+                        {
+                            new CardUpgradeOption(
+                                "poison_miasma_guard_shield_2_draw",
+                                "流毒护体",
+                                "获得 8 护盾，抽 1 张牌，本回合受到攻击时对攻击者施加 1 层中毒。",
+                                new CardDefinition("poison_miasma_guard_shield_2_draw", "流毒护体", 1, new CardEffect(CardEffectType.Shield, 8, CardTarget.Self), new CardEffect(CardEffectType.Draw, 1, CardTarget.Self), new CardEffect(CardEffectType.PoisonAttackCounter, 1, CardTarget.Self, duration: 1))),
+                            new CardUpgradeOption(
+                                "poison_miasma_guard_shield_2_long",
+                                "毒瘴不散",
+                                "获得 8 护盾，接下来 2 回合受到攻击时对攻击者施加 1 层中毒。",
+                                new CardDefinition("poison_miasma_guard_shield_2_long", "毒瘴不散", 1, new CardEffect(CardEffectType.Shield, 8, CardTarget.Self), new CardEffect(CardEffectType.PoisonAttackCounter, 1, CardTarget.Self, duration: 2))),
+                        },
+                        new CardEffect(CardEffectType.Shield, 8, CardTarget.Self),
+                        new CardEffect(CardEffectType.PoisonAttackCounter, 1, CardTarget.Self, duration: 1))),
+            },
+            new CardEffect(CardEffectType.Shield, 4, CardTarget.Self),
+            new CardEffect(CardEffectType.PoisonAttackCounter, 1, CardTarget.Self, duration: 1));
+
+        public static CardDefinition WoodEscape { get; } = new CardDefinition(
+            "wood_escape",
+            "草木遁",
+            0,
+            new[]
+            {
+                new CardUpgradeOption(
+                    "wood_escape_draw_1",
+                    "草木皆兵",
+                    "恢复 2 HP，抽 2 张牌。",
+                    new CardDefinition(
+                        "wood_escape_draw_1",
+                        "草木皆兵",
+                        0,
+                        new[]
+                        {
+                            new CardUpgradeOption(
+                                "wood_escape_draw_2",
+                                "草木皆阵",
+                                "恢复 2 HP，抽 3 张牌。",
+                                new CardDefinition("wood_escape_draw_2", "草木皆阵", 0, new CardEffect(CardEffectType.Heal, 2, CardTarget.Self), new CardEffect(CardEffectType.Draw, 3, CardTarget.Self))),
+                            new CardUpgradeOption(
+                                "wood_escape_poison_2",
+                                "草木皆毒",
+                                "恢复 2 HP，抽 2 张牌，对目标施加 1 层中毒。",
+                                new CardDefinition("wood_escape_poison_2", "草木皆毒", 0, new CardEffect(CardEffectType.Heal, 2, CardTarget.Self), new CardEffect(CardEffectType.Draw, 2, CardTarget.Self), new CardEffect(CardEffectType.Poison, 1))),
+                        },
+                        new CardEffect(CardEffectType.Heal, 2, CardTarget.Self),
+                        new CardEffect(CardEffectType.Draw, 2, CardTarget.Self))),
+                new CardUpgradeOption(
+                    "wood_escape_heal_1",
+                    "草木回春",
+                    "恢复 5 HP，抽 1 张牌。",
+                    new CardDefinition(
+                        "wood_escape_heal_1",
+                        "草木回春",
+                        0,
+                        new[]
+                        {
+                            new CardUpgradeOption(
+                                "wood_escape_heal_2_guard",
+                                "草木护体",
+                                "恢复 5 HP，抽 1 张牌，获得 3 护盾。",
+                                new CardDefinition("wood_escape_heal_2_guard", "草木护体", 0, new CardEffect(CardEffectType.Heal, 5, CardTarget.Self), new CardEffect(CardEffectType.Draw, 1, CardTarget.Self), new CardEffect(CardEffectType.Shield, 3, CardTarget.Self))),
+                            new CardUpgradeOption(
+                                "wood_escape_heal_2_poison",
+                                "草木生毒",
+                                "恢复 5 HP，抽 1 张牌，施加 1 层中毒。",
+                                new CardDefinition("wood_escape_heal_2_poison", "草木生毒", 0, new CardEffect(CardEffectType.Heal, 5, CardTarget.Self), new CardEffect(CardEffectType.Draw, 1, CardTarget.Self), new CardEffect(CardEffectType.Poison, 1))),
+                        },
+                        new CardEffect(CardEffectType.Heal, 5, CardTarget.Self),
+                        new CardEffect(CardEffectType.Draw, 1, CardTarget.Self))),
+            },
+            new CardEffect(CardEffectType.Heal, 2, CardTarget.Self),
+            new CardEffect(CardEffectType.Draw, 1, CardTarget.Self));
+
+        public static CardDefinition MiasmaSpread { get; } = new CardDefinition(
+            "miasma_spread",
+            "瘴气弥漫",
+            2,
+            new CardEffect(CardEffectType.Poison, 2, CardTarget.EnemyAll),
+            new CardEffect(CardEffectType.BreakDefense, 1, CardTarget.EnemyAll));
+
+        public static CardDefinition PoisonBurstArt { get; } = new CardDefinition(
+            "poison_burst_art",
+            "毒爆术",
+            2,
+            new CardEffect(CardEffectType.PoisonBurst, 3, secondaryValue: 1));
+
+        public static CardDefinition ParasiticSeed { get; } = new CardDefinition(
+            "parasitic_seed",
+            "寄生种子",
+            1,
+            new CardEffect(CardEffectType.Poison, 3),
+            new CardEffect(CardEffectType.Regeneration, 3, CardTarget.Self, duration: 3));
+
+        public static CardDefinition EndlessVitality { get; } = new CardDefinition(
+            "endless_vitality",
+            "生生不息",
+            2,
+            new CardEffect(CardEffectType.Regeneration, 4, CardTarget.Self, duration: 4),
+            new CardEffect(CardEffectType.Draw, 1, CardTarget.Self));
+
         public static PillDefinition SmallRestorePillItem { get; } = new PillDefinition(
             "small_restore_pill",
             "小还丹",
@@ -2238,6 +2677,20 @@ namespace GameLogic.Cultivation
             };
         }
 
+        public static IReadOnlyList<CardDefinition> CreateMedicineSectStarterDeck()
+        {
+            return new List<CardDefinition>
+            {
+                PoisonVineArt, PoisonVineArt, PoisonVineArt,
+                CorrosivePoisonPalm, CorrosivePoisonPalm,
+                SpiritLeechArt, SpiritLeechArt,
+                RejuvenationArt, RejuvenationArt,
+                PoisonMiasmaGuard,
+                WoodEscape,
+                HealingPill,
+            };
+        }
+
         public static IReadOnlyList<CardDefinition> CreateStarterDeck(CultivationSect sect)
         {
             switch (sect)
@@ -2250,6 +2703,8 @@ namespace GameLogic.Cultivation
                     return CreateThunderSectStarterDeck();
                 case CultivationSect.Earth:
                     return CreateEarthSectStarterDeck();
+                case CultivationSect.Medicine:
+                    return CreateMedicineSectStarterDeck();
                 default:
                     throw new ArgumentOutOfRangeException(nameof(sect), sect, "Unsupported cultivation sect.");
             }
@@ -2425,6 +2880,24 @@ namespace GameLogic.Cultivation
             };
         }
 
+        public static IReadOnlyList<CultivationRunReward> CreateMedicineSectRewardPool()
+        {
+            return new List<CultivationRunReward>
+            {
+                new CultivationRunReward("reward_poison_vine_art", PoisonVineArt),
+                new CultivationRunReward("reward_corrosive_poison_palm", CorrosivePoisonPalm),
+                new CultivationRunReward("reward_spirit_leech_art", SpiritLeechArt),
+                new CultivationRunReward("reward_rejuvenation_art", RejuvenationArt),
+                new CultivationRunReward("reward_poison_miasma_guard", PoisonMiasmaGuard),
+                new CultivationRunReward("reward_wood_escape", WoodEscape),
+                new CultivationRunReward("reward_miasma_spread", MiasmaSpread),
+                new CultivationRunReward("reward_poison_burst_art", PoisonBurstArt),
+                new CultivationRunReward("reward_parasitic_seed", ParasiticSeed),
+                new CultivationRunReward("reward_endless_vitality", EndlessVitality),
+                new CultivationRunReward("reward_healing_pill", HealingPill),
+            };
+        }
+
         public static IReadOnlyList<CultivationRunReward> CreateRewardPool(CultivationSect sect)
         {
             switch (sect)
@@ -2437,6 +2910,8 @@ namespace GameLogic.Cultivation
                     return CreateThunderSectRewardPool();
                 case CultivationSect.Earth:
                     return CreateEarthSectRewardPool();
+                case CultivationSect.Medicine:
+                    return CreateMedicineSectRewardPool();
                 default:
                     throw new ArgumentOutOfRangeException(nameof(sect), sect, "Unsupported cultivation sect.");
             }

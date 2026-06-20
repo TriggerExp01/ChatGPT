@@ -190,9 +190,9 @@ namespace GameLogic.Cultivation
             }
 
             var snapshot = Snapshot;
-            _playerText.text = $"玩家\nHP {snapshot.PlayerHp}/{snapshot.PlayerMaxHp}\n护盾 {snapshot.PlayerShield}\n灵力 {snapshot.Spirit}/{snapshot.SpiritMax}\n回合 {snapshot.TurnNumber}\n闪避 {snapshot.DodgeCharges} / 反击 {snapshot.DodgeCounterDamage}\n受击反伤 {snapshot.AttackCounterDamage}/{snapshot.AttackCounterChancePercent}%";
+            _playerText.text = $"玩家\nHP {snapshot.PlayerHp}/{snapshot.PlayerMaxHp}\n护盾 {snapshot.PlayerShield}\n灵力 {snapshot.Spirit}/{snapshot.SpiritMax}\n回合 {snapshot.TurnNumber}\n闪避 {snapshot.DodgeCharges} / 反击 {snapshot.DodgeCounterDamage}\n受击反伤 {snapshot.AttackCounterDamage}/{snapshot.AttackCounterChancePercent}%\n中毒 {snapshot.PlayerPoisonStacks}  生生不息 {snapshot.RegenerationPerTurn}/{snapshot.RegenerationTurns}  毒瘴 {snapshot.PoisonCounterStacks}/{snapshot.PoisonCounterTurns}";
             _pileText.text = $"牌堆 {snapshot.DrawPileCount}    弃牌 {snapshot.DiscardPileCount}\n手牌 {snapshot.HandCount}\n状态：{snapshot.Outcome}";
-            _enemyText.text = $"敌人：{snapshot.EnemyName}\nHP {snapshot.EnemyHp}/{snapshot.EnemyMaxHp}\n护盾 {snapshot.EnemyShield}\n破防 {snapshot.EnemyBreakDefenseStacks}\n灼烧 {snapshot.EnemyBurnStacks} / {snapshot.EnemyBurnTurns} 回合\n意图：{snapshot.EnemyIntent}";
+            _enemyText.text = $"敌人：{snapshot.EnemyName}\nHP {snapshot.EnemyHp}/{snapshot.EnemyMaxHp}\n护盾 {snapshot.EnemyShield}\n破防 {snapshot.EnemyBreakDefenseStacks}\n灼烧 {snapshot.EnemyBurnStacks} / {snapshot.EnemyBurnTurns} 回合\n中毒 {snapshot.EnemyPoisonStacks}\n意图：{snapshot.EnemyIntent}";
             _resultText.text = snapshot.Outcome == BattleOutcome.InProgress ? string.Empty : snapshot.Outcome == BattleOutcome.Victory ? "胜利" : "失败";
             _logText.text = BuildLogText();
             _endTurnButton.interactable = _state.Outcome == BattleOutcome.InProgress;
@@ -264,6 +264,18 @@ namespace GameLogic.Cultivation
                     return $"破防 {effect.Value}";
                 case CardEffectType.Burn:
                     return $"灼烧 {effect.Value} / {effect.Duration} 回合";
+                case CardEffectType.Poison:
+                    return $"中毒 {effect.Value}";
+                case CardEffectType.PoisonBurst:
+                    return effect.SecondaryValue > 0
+                        ? $"毒爆：消耗中毒 ×{effect.Value} 伤害，留下 {effect.SecondaryValue} 层余毒"
+                        : $"毒爆：消耗中毒 ×{effect.Value} 伤害";
+                case CardEffectType.Leech:
+                    return $"吸灵 {effect.Value} 伤害，恢复伤害的 {effect.SecondaryValue}%";
+                case CardEffectType.Regeneration:
+                    return $"生生不息 {effect.Value} HP / {Math.Max(1, effect.Duration)} 回合";
+                case CardEffectType.PoisonAttackCounter:
+                    return $"受击施加中毒 {effect.Value} / {Math.Max(1, effect.Duration)} 回合";
                 case CardEffectType.ChanceDamage:
                     return effect.RepeatCount > 1
                         ? $"造成 {effect.FallbackValue} 伤害 × {effect.RepeatCount}，每击 {effect.ChancePercent}% 概率暴击"
@@ -472,6 +484,16 @@ namespace GameLogic.Cultivation
 
         public int AttackCounterChancePercent { get; private set; }
 
+        public int PlayerPoisonStacks { get; private set; }
+
+        public int PoisonCounterStacks { get; private set; }
+
+        public int PoisonCounterTurns { get; private set; }
+
+        public int RegenerationPerTurn { get; private set; }
+
+        public int RegenerationTurns { get; private set; }
+
         public int Spirit { get; private set; }
 
         public int SpiritMax { get; private set; }
@@ -496,6 +518,8 @@ namespace GameLogic.Cultivation
 
         public int EnemyBurnTurns { get; private set; }
 
+        public int EnemyPoisonStacks { get; private set; }
+
         public string EnemyIntent { get; private set; }
 
         public BattleOutcome Outcome { get; private set; }
@@ -518,6 +542,11 @@ namespace GameLogic.Cultivation
                 DodgeCounterDamage = state.DodgeCounterDamage,
                 AttackCounterDamage = state.AttackCounterDamage,
                 AttackCounterChancePercent = state.AttackCounterChancePercent,
+                PlayerPoisonStacks = state.Player.PoisonStacks,
+                PoisonCounterStacks = state.PoisonCounterStacks,
+                PoisonCounterTurns = state.PoisonCounterTurns,
+                RegenerationPerTurn = state.RegenerationPerTurn,
+                RegenerationTurns = state.RegenerationTurns,
                 Spirit = state.Spirit,
                 SpiritMax = state.SpiritMax,
                 DrawPileCount = state.DrawPile.Count,
@@ -530,6 +559,7 @@ namespace GameLogic.Cultivation
                 EnemyBreakDefenseStacks = enemy?.Body.BreakDefenseStacks ?? 0,
                 EnemyBurnStacks = enemy?.Body.BurnStacks ?? 0,
                 EnemyBurnTurns = enemy?.Body.BurnTurns ?? 0,
+                EnemyPoisonStacks = enemy?.Body.PoisonStacks ?? 0,
                 EnemyIntent = enemy?.CurrentIntent.Description ?? string.Empty,
                 Outcome = state.Outcome,
             };

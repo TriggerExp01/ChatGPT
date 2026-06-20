@@ -136,6 +136,161 @@ namespace GameLogic.Tests
         }
 
         [Test]
+        public void PoisonStacksDealDamageAtTurnStartWithoutDecay()
+        {
+            var engine = new BattleEngine(1);
+            var poisonCard = new CardDefinition(
+                "poison_test",
+                "中毒测试",
+                0,
+                new CardEffect(CardEffectType.Poison, 3));
+            var state = CreateOrderedBattle(engine, poisonCard, CultivationSeedData.GuardQi, CultivationSeedData.GuardQi);
+            var enemy = state.Enemies[0];
+
+            engine.PlayCard(state, state.Hand[0], enemy);
+            engine.EndPlayerTurn(state);
+
+            Assert.AreEqual(37, enemy.Body.CurrentHp);
+            Assert.AreEqual(3, enemy.Body.PoisonStacks);
+            Assert.IsTrue(state.PoisonDamageTriggeredThisTurn);
+
+            engine.EndPlayerTurn(state);
+
+            Assert.AreEqual(34, enemy.Body.CurrentHp);
+            Assert.AreEqual(3, enemy.Body.PoisonStacks);
+        }
+
+        [Test]
+        public void PoisonBurstConsumesPoisonAndDealsScaledDamage()
+        {
+            var engine = new BattleEngine(1);
+            var poisonCard = new CardDefinition(
+                "poison_setup_test",
+                "毒爆准备",
+                0,
+                new CardEffect(CardEffectType.Poison, 4));
+            var burstCard = new CardDefinition(
+                "poison_burst_test",
+                "毒爆测试",
+                0,
+                new CardEffect(CardEffectType.PoisonBurst, 3, secondaryValue: 1));
+            var state = CreateOrderedBattle(engine, poisonCard, burstCard);
+            var enemy = state.Enemies[0];
+
+            engine.PlayCard(state, state.Hand[0], enemy);
+            engine.PlayCard(state, state.Hand[0], enemy);
+
+            Assert.AreEqual(28, enemy.Body.CurrentHp);
+            Assert.AreEqual(1, enemy.Body.PoisonStacks);
+        }
+
+        [Test]
+        public void RegenerationHealsAtPlayerTurnStart()
+        {
+            var engine = new BattleEngine(1);
+            var regenCard = new CardDefinition(
+                "regen_test",
+                "生生不息测试",
+                0,
+                new CardEffect(CardEffectType.Regeneration, 4, CardTarget.Self, duration: 2));
+            var state = engine.CreateBattle(new[] { regenCard }.Concat(CultivationSeedData.CreateSwordSectStarterDeck()), CultivationSeedData.StoneDemon, 80);
+            state.Hand.Clear();
+            state.DrawPile.Remove(regenCard);
+            state.Hand.Add(regenCard);
+
+            engine.PlayCard(state, state.Hand[0], state.Enemies[0]);
+            engine.EndPlayerTurn(state);
+
+            Assert.AreEqual(78, state.Player.CurrentHp);
+            Assert.AreEqual(4, state.RegenerationPerTurn);
+            Assert.AreEqual(1, state.RegenerationTurns);
+        }
+
+        [Test]
+        public void LeechDamageHealsFromDamageDealt()
+        {
+            var engine = new BattleEngine(1);
+            var leechCard = new CardDefinition(
+                "leech_test",
+                "吸灵测试",
+                0,
+                new CardEffect(CardEffectType.Leech, 6, secondaryValue: 50));
+            var state = engine.CreateBattle(new[] { leechCard }.Concat(CultivationSeedData.CreateSwordSectStarterDeck()), CultivationSeedData.StoneDemon, 80);
+            state.Hand.Clear();
+            state.DrawPile.Remove(leechCard);
+            state.Hand.Add(leechCard);
+
+            engine.PlayCard(state, state.Hand[0], state.Enemies[0]);
+
+            Assert.AreEqual(36, state.Enemies[0].Body.CurrentHp);
+            Assert.AreEqual(82, state.Player.CurrentHp);
+        }
+
+        [Test]
+        public void LeechDoesNotHealWhenDefenseBlocksAllDamage()
+        {
+            var engine = new BattleEngine(1);
+            var leechCard = new CardDefinition(
+                "leech_blocked_test",
+                "吸灵格挡测试",
+                0,
+                new CardEffect(CardEffectType.Leech, 4, secondaryValue: 100));
+            var shieldedEnemy = new EnemyDefinition(
+                "armored_dummy",
+                "重甲傀儡",
+                20,
+                8,
+                new EnemyIntent(EnemyIntentType.Defend, 0));
+            var state = engine.CreateBattle(new[] { leechCard }.Concat(CultivationSeedData.CreateSwordSectStarterDeck()), shieldedEnemy, 80);
+            state.Hand.Clear();
+            state.DrawPile.Remove(leechCard);
+            state.Hand.Add(leechCard);
+
+            engine.PlayCard(state, state.Hand[0], state.Enemies[0]);
+
+            Assert.AreEqual(20, state.Enemies[0].Body.CurrentHp);
+            Assert.AreEqual(80, state.Player.CurrentHp);
+        }
+
+        [Test]
+        public void PoisonCounterAppliesPoisonWhenEnemyAttackHits()
+        {
+            var engine = new BattleEngine(1);
+            var poisonCounterCard = new CardDefinition(
+                "poison_counter_test",
+                "毒瘴护体测试",
+                0,
+                new CardEffect(CardEffectType.Shield, 8, CardTarget.Self),
+                new CardEffect(CardEffectType.PoisonAttackCounter, 2, CardTarget.Self, duration: 1));
+            var state = CreateOrderedBattle(engine, poisonCounterCard);
+
+            engine.PlayCard(state, state.Hand[0], state.Enemies[0]);
+            engine.EndPlayerTurn(state);
+
+            Assert.AreEqual(100, state.Player.CurrentHp);
+            Assert.AreEqual(2, state.Enemies[0].Body.PoisonStacks);
+            Assert.IsTrue(state.Logs.Any(log => log.Message.Contains("毒瘴反噬")));
+        }
+
+        [Test]
+        public void MedicineSectStarterDeckUsesPoisonLeechAndRegenerationCards()
+        {
+            var deck = CultivationSeedData.CreateMedicineSectStarterDeck();
+
+            Assert.AreEqual(12, deck.Count);
+            Assert.AreEqual(3, deck.Count(card => card.Id == "poison_vine_art"));
+            Assert.AreEqual(2, deck.Count(card => card.Id == "corrosive_poison_palm"));
+            Assert.AreEqual(2, deck.Count(card => card.Id == "spirit_leech_art"));
+            Assert.AreEqual(2, deck.Count(card => card.Id == "rejuvenation_art"));
+            Assert.AreEqual(1, deck.Count(card => card.Id == "poison_miasma_guard"));
+            Assert.AreEqual(1, deck.Count(card => card.Id == "wood_escape"));
+            Assert.AreEqual(1, deck.Count(card => card.Id == "healing_pill"));
+            Assert.IsTrue(deck.Any(card => card.Effects.Any(effect => effect.Type == CardEffectType.Poison)));
+            Assert.IsTrue(deck.Any(card => card.Effects.Any(effect => effect.Type == CardEffectType.Leech)));
+            Assert.IsTrue(deck.Any(card => card.Effects.Any(effect => effect.Type == CardEffectType.PoisonAttackCounter)));
+        }
+
+        [Test]
         public void ThunderSectStarterDeckUsesStunAndCyclingCards()
         {
             var deck = CultivationSeedData.CreateThunderSectStarterDeck();

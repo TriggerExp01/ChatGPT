@@ -421,11 +421,12 @@ namespace GameLogic.Cultivation
             var enemy = battle.Enemies.FirstOrDefault(item => !item.Body.IsDefeated);
             var incomingAttack = IsIncomingAttack(enemy?.CurrentIntent.Type);
             var missingHp = Math.Max(0, battle.Player.MaxHp - battle.Player.CurrentHp);
+            var enemyPoisonStacks = enemy?.Body.PoisonStacks ?? 0;
             var score = card.SpiritCost == 0 ? 4 : 0;
 
             foreach (var effect in card.Effects)
             {
-                score += ScoreEffect(effect, incomingAttack, missingHp);
+                score += ScoreEffect(effect, incomingAttack, missingHp, enemyPoisonStacks);
             }
 
             score -= battle.GetEffectiveSpiritCost(card) * 2;
@@ -442,13 +443,13 @@ namespace GameLogic.Cultivation
             var score = card.SpiritCost == 0 ? 4 : 0;
             foreach (var effect in card.Effects)
             {
-                score += ScoreEffect(effect, true, 20);
+                score += ScoreEffect(effect, true, 20, 8);
             }
 
             return score - card.SpiritCost;
         }
 
-        private static int ScoreEffect(CardEffect effect, bool incomingAttack, int missingHp)
+        private static int ScoreEffect(CardEffect effect, bool incomingAttack, int missingHp, int targetPoisonStacks)
         {
             switch (effect.Type)
             {
@@ -486,6 +487,16 @@ namespace GameLogic.Cultivation
                     return effect.Value * 8;
                 case CardEffectType.Burn:
                     return effect.Value * Math.Max(1, effect.Duration);
+                case CardEffectType.Poison:
+                    return effect.Value * 5;
+                case CardEffectType.PoisonBurst:
+                    return targetPoisonStacks > 0 ? targetPoisonStacks * effect.Value + effect.SecondaryValue * 4 : 0;
+                case CardEffectType.Leech:
+                    return effect.Value + Math.Min(missingHp, Math.Max(1, effect.Value * Math.Max(0, effect.SecondaryValue) / 100)) * 2;
+                case CardEffectType.Regeneration:
+                    return Math.Min(missingHp + 8, effect.Value * Math.Max(1, effect.Duration)) * 2;
+                case CardEffectType.PoisonAttackCounter:
+                    return incomingAttack ? effect.Value * Math.Max(1, effect.Duration) * 5 : effect.Value * 2;
                 case CardEffectType.SwordMark:
                     return effect.Value * 7;
                 case CardEffectType.Sharpness:

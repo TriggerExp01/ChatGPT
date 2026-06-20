@@ -45,6 +45,8 @@ namespace GameLogic.Cultivation
 
         public int BurnTurns { get; private set; }
 
+        public int PoisonStacks { get; private set; }
+
         public int FreezeStacks { get; private set; }
 
         public int FreezeTurns { get; private set; }
@@ -91,6 +93,13 @@ namespace GameLogic.Cultivation
             return hpDamage;
         }
 
+        public int TakeDirectDamage(int incomingDamage)
+        {
+            var hpDamage = Math.Max(0, incomingDamage);
+            CurrentHp = Math.Max(0, CurrentHp - hpDamage);
+            return hpDamage;
+        }
+
         public void AddBreakDefense(int stacks)
         {
             BreakDefenseStacks += Math.Max(0, stacks);
@@ -100,6 +109,18 @@ namespace GameLogic.Cultivation
         {
             BurnStacks += Math.Max(0, stacks);
             BurnTurns = Math.Max(BurnTurns, turns);
+        }
+
+        public void AddPoison(int stacks)
+        {
+            PoisonStacks = Math.Min(99, PoisonStacks + Math.Max(0, stacks));
+        }
+
+        public int ConsumePoison()
+        {
+            var consumed = PoisonStacks;
+            PoisonStacks = 0;
+            return consumed;
         }
 
         public void AddFreeze(int stacks, int turns)
@@ -118,6 +139,7 @@ namespace GameLogic.Cultivation
             BreakDefenseStacks = 0;
             BurnStacks = 0;
             BurnTurns = 0;
+            PoisonStacks = 0;
             FreezeStacks = 0;
             FreezeTurns = 0;
             StunTurns = 0;
@@ -159,13 +181,25 @@ namespace GameLogic.Cultivation
             }
 
             var damage = BurnStacks;
-            CurrentHp = Math.Max(0, CurrentHp - damage);
+            TakeDirectDamage(damage);
             BurnTurns--;
             if (BurnTurns == 0)
             {
                 BurnStacks = 0;
             }
 
+            return damage;
+        }
+
+        public int ResolvePoisonAtTurnStart()
+        {
+            if (PoisonStacks <= 0)
+            {
+                return 0;
+            }
+
+            var damage = PoisonStacks;
+            TakeDirectDamage(damage);
             return damage;
         }
 

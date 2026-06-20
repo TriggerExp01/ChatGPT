@@ -15,6 +15,11 @@ namespace GameLogic.Cultivation
         Heal,
         BreakDefense,
         Burn,
+        Poison,
+        PoisonBurst,
+        Leech,
+        Regeneration,
+        PoisonAttackCounter,
         SwordMark,
         Sharpness,
         Exhaust,
@@ -99,5 +104,6 @@ namespace GameLogic.Cultivation
         FireCloud,
         Thunder,
         Earth,
+        Medicine,
     }
 }
