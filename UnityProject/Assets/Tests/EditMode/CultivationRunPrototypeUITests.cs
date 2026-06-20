@@ -90,9 +90,21 @@ namespace GameLogic.Tests
             Assert.NotNull(prefab.GetComponent<GraphicRaycaster>());
             Assert.NotNull(prefab.transform.Find(CultivationRunPrototypeUI.RootName));
             Assert.NotNull(prefab.transform.Find($"{CultivationRunPrototypeUI.RootName}/Header"));
+            Assert.NotNull(prefab.transform.Find($"{CultivationRunPrototypeUI.RootName}/Header/TitleRow/TitleBox/Title"));
+            Assert.NotNull(prefab.transform.Find($"{CultivationRunPrototypeUI.RootName}/Header/StatsBar/资源Label"));
+            Assert.NotNull(prefab.transform.Find($"{CultivationRunPrototypeUI.RootName}/Header/MapBar/路线图Label"));
             Assert.NotNull(prefab.transform.Find($"{CultivationRunPrototypeUI.RootName}/Body"));
+            Assert.NotNull(prefab.transform.Find($"{CultivationRunPrototypeUI.RootName}/Body/RunPanel/RunText"));
+            Assert.NotNull(prefab.transform.Find($"{CultivationRunPrototypeUI.RootName}/Body/BattlePanel/战斗详情Label"));
+            Assert.NotNull(prefab.transform.Find($"{CultivationRunPrototypeUI.RootName}/Body/BattlePanel/BattleText"));
+            Assert.NotNull(prefab.transform.Find($"{CultivationRunPrototypeUI.RootName}/Body/DeckPanel/DeckText"));
+            Assert.NotNull(prefab.transform.Find($"{CultivationRunPrototypeUI.RootName}/Body/DeckPanel/LogText"));
             Assert.NotNull(prefab.transform.Find($"{CultivationRunPrototypeUI.RootName}/Lower"));
+            Assert.NotNull(prefab.transform.Find($"{CultivationRunPrototypeUI.RootName}/Lower/ChoicesScrollPanel/Viewport/Content"));
+            Assert.NotNull(prefab.transform.Find($"{CultivationRunPrototypeUI.RootName}/Lower/HandScrollPanel/Viewport/Content"));
             Assert.NotNull(prefab.transform.Find($"{CultivationRunPrototypeUI.RootName}/Lower/ActionBar"));
+            Assert.NotNull(prefab.transform.Find($"{CultivationRunPrototypeUI.RootName}/Lower/ActionBar/ResetButton/Label"));
+            Assert.NotNull(prefab.transform.Find($"{CultivationRunPrototypeUI.RootName}/Lower/ActionBar/EndTurnButton/Label"));
             Assert.NotNull(prefab.transform.Find("PrefabAnchors"));
         }
 
@@ -105,6 +117,10 @@ namespace GameLogic.Tests
             var headerAnchor = shell.Find("Header");
             var bodyAnchor = shell.Find("Body");
             var lowerAnchor = shell.Find("Lower");
+            var titleAnchor = shell.Find("Header/TitleRow/TitleBox/Title");
+            var choicesContentAnchor = shell.Find("Lower/ChoicesScrollPanel/Viewport/Content");
+            var handContentAnchor = shell.Find("Lower/HandScrollPanel/Viewport/Content");
+            var resetButtonAnchor = shell.Find("Lower/ActionBar/ResetButton");
 
             var ui = CultivationRunPrototypeUI.Open(instance.transform);
 
@@ -113,6 +129,10 @@ namespace GameLogic.Tests
             Assert.AreSame(headerAnchor.gameObject, ui.transform.Find("Header").gameObject);
             Assert.AreSame(bodyAnchor.gameObject, ui.transform.Find("Body").gameObject);
             Assert.AreSame(lowerAnchor.gameObject, ui.transform.Find("Lower").gameObject);
+            Assert.AreSame(titleAnchor.gameObject, ui.transform.Find("Header/TitleRow/TitleBox/Title").gameObject);
+            Assert.AreSame(choicesContentAnchor.gameObject, ui.transform.Find("Lower/ChoicesScrollPanel/Viewport/Content").gameObject);
+            Assert.AreSame(handContentAnchor.gameObject, ui.transform.Find("Lower/HandScrollPanel/Viewport/Content").gameObject);
+            Assert.AreSame(resetButtonAnchor.gameObject, ui.transform.Find("Lower/ActionBar/ResetButton").gameObject);
             Assert.NotNull(ui.transform.Find("Header/TitleRow/TitleBox/Title"));
             Assert.NotNull(ui.transform.Find("Lower/ActionBar/ResetButton"));
         }

@@ -42,6 +42,7 @@ namespace GameLogic.Cultivation
                 var existing = old.GetComponent<CultivationRunPrototypeUI>();
                 if (existing != null)
                 {
+                    existing.Initialize();
                     existing.ResetRun();
                     return existing;
                 }
@@ -57,6 +58,7 @@ namespace GameLogic.Cultivation
             EnsureEventSystem();
             var view = root.gameObject.AddComponent<CultivationRunPrototypeUI>();
             view.Initialize();
+            view.ResetRun();
             return view;
         }
 
@@ -287,16 +289,14 @@ namespace GameLogic.Cultivation
             {
                 BuildView();
             }
-
-            ResetRun();
         }
 
         private void BuildView()
         {
-            var background = gameObject.AddComponent<Image>();
+            var background = GetOrAdd<Image>(gameObject);
             background.color = new Color(0.035f, 0.042f, 0.050f, 0.98f);
 
-            var rootLayout = gameObject.AddComponent<VerticalLayoutGroup>();
+            var rootLayout = GetOrAdd<VerticalLayoutGroup>(gameObject);
             rootLayout.padding = new RectOffset(22, 22, 18, 18);
             rootLayout.spacing = 10;
             rootLayout.childForceExpandWidth = true;
@@ -310,7 +310,7 @@ namespace GameLogic.Cultivation
             SetLayout(header.gameObject, flexibleWidth: 1, preferredHeight: 166);
 
             var titleRow = CreateRect("TitleRow", header, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
-            var titleRowLayout = titleRow.gameObject.AddComponent<HorizontalLayoutGroup>();
+            var titleRowLayout = GetOrAdd<HorizontalLayoutGroup>(titleRow.gameObject);
             titleRowLayout.spacing = 12;
             titleRowLayout.childForceExpandWidth = true;
             titleRowLayout.childForceExpandHeight = true;
@@ -319,7 +319,7 @@ namespace GameLogic.Cultivation
             SetLayout(titleRow.gameObject, flexibleWidth: 1, preferredHeight: 56);
 
             var titleBox = CreateRect("TitleBox", titleRow, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
-            var titleBoxLayout = titleBox.gameObject.AddComponent<VerticalLayoutGroup>();
+            var titleBoxLayout = GetOrAdd<VerticalLayoutGroup>(titleBox.gameObject);
             titleBoxLayout.spacing = 4;
             titleBoxLayout.childForceExpandWidth = true;
             titleBoxLayout.childForceExpandHeight = false;
@@ -343,7 +343,7 @@ namespace GameLogic.Cultivation
             _mapRoot = CreateRowContent("MapBar", header, "路线图", 52);
 
             var body = CreateRect("Body", transform, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
-            var bodyLayout = body.gameObject.AddComponent<HorizontalLayoutGroup>();
+            var bodyLayout = GetOrAdd<HorizontalLayoutGroup>(body.gameObject);
             bodyLayout.spacing = 12;
             bodyLayout.childForceExpandWidth = true;
             bodyLayout.childForceExpandHeight = true;
@@ -381,7 +381,7 @@ namespace GameLogic.Cultivation
             SetLayout(_logText.gameObject, flexibleWidth: 1, preferredHeight: 170);
 
             var lower = CreateRect("Lower", transform, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
-            var lowerLayout = lower.gameObject.AddComponent<VerticalLayoutGroup>();
+            var lowerLayout = GetOrAdd<VerticalLayoutGroup>(lower.gameObject);
             lowerLayout.spacing = 10;
             lowerLayout.childForceExpandWidth = true;
             lowerLayout.childForceExpandHeight = false;
@@ -393,7 +393,7 @@ namespace GameLogic.Cultivation
             _handRoot = CreateScrollContent("HandScroll", lower, "手牌 / 背包 / 坊市操作", 144);
 
             var actionBar = CreateRect("ActionBar", lower, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
-            var actionLayout = actionBar.gameObject.AddComponent<HorizontalLayoutGroup>();
+            var actionLayout = GetOrAdd<HorizontalLayoutGroup>(actionBar.gameObject);
             actionLayout.spacing = 12;
             actionLayout.childAlignment = TextAnchor.MiddleRight;
             actionLayout.childForceExpandWidth = false;
