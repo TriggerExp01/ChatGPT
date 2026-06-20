@@ -2,6 +2,45 @@ using System;
 
 namespace GameLogic.Cultivation
 {
+    public enum GoldenCorePassiveType
+    {
+        SwordHeart,
+        FlowingWater,
+        ThunderSeed,
+    }
+
+    public sealed class GoldenCorePassiveDefinition
+    {
+        public GoldenCorePassiveDefinition(string id, string name, string description, GoldenCorePassiveType type, int effectValue)
+        {
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                throw new ArgumentException("Passive id is required.", nameof(id));
+            }
+
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                throw new ArgumentException("Passive name is required.", nameof(name));
+            }
+
+            Id = id;
+            Name = name;
+            Description = description ?? string.Empty;
+            Type = type;
+            EffectValue = Math.Max(0, effectValue);
+        }
+
+        public string Id { get; }
+
+        public string Name { get; }
+
+        public string Description { get; }
+
+        public GoldenCorePassiveType Type { get; }
+
+        public int EffectValue { get; }
+    }
+
     public enum PillEffectType
     {
         Heal,

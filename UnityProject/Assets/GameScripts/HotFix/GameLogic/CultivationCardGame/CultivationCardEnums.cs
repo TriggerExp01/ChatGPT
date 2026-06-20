@@ -19,6 +19,7 @@ namespace GameLogic.Cultivation
         Sharpness,
         Exhaust,
         DamagePerSwordMark,
+        Stun,
     }
 
     public enum EnemyIntentType
@@ -30,6 +31,9 @@ namespace GameLogic.Cultivation
         Buff,
         Summon,
         Sweep,
+        Heal,
+        BuffAttack,
+        AttackAndStun,
     }
 
     public enum BattleOutcome
@@ -57,6 +61,7 @@ namespace GameLogic.Cultivation
         Market,
         Chest,
         Mystic,
+        GoldenCorePassiveChoice,
         RouteChoice,
         Completed,
         Defeated,

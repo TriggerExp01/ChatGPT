@@ -41,6 +41,8 @@ namespace GameLogic.Cultivation
 
         public int SpiritCostReduction { get; private set; }
 
+        public int ExtraDrawPerTurn { get; private set; }
+
         public int TurnNumber { get; set; }
 
         public BattleOutcome Outcome { get; set; } = BattleOutcome.InProgress;
@@ -48,6 +50,11 @@ namespace GameLogic.Cultivation
         public void AddSpiritCostReduction(int amount)
         {
             SpiritCostReduction += Math.Max(0, amount);
+        }
+
+        public void AddExtraDrawPerTurn(int amount)
+        {
+            ExtraDrawPerTurn += Math.Max(0, amount);
         }
 
         public int GetEffectiveSpiritCost(CardDefinition card)

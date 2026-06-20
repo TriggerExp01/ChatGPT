@@ -25,6 +25,11 @@ namespace GameLogic.Cultivation
 
         public BattleState CreateBattle(IEnumerable<CardDefinition> deck, EnemyDefinition enemy, int playerCurrentHp, int playerMaxHp, int spiritMax, int handLimit)
         {
+            return CreateBattle(deck, enemy, playerCurrentHp, playerMaxHp, spiritMax, handLimit, null);
+        }
+
+        public BattleState CreateBattle(IEnumerable<CardDefinition> deck, EnemyDefinition enemy, int playerCurrentHp, int playerMaxHp, int spiritMax, int handLimit, GoldenCorePassiveDefinition passive)
+        {
             if (deck == null)
             {
                 throw new ArgumentNullException(nameof(deck));
@@ -57,6 +62,7 @@ namespace GameLogic.Cultivation
 
             var player = new CombatantState("修士", playerMaxHp, currentHp: playerCurrentHp);
             var state = new BattleState(player, deck, new[] { new EnemyState(enemy) }, spiritMax, handLimit);
+            ApplyGoldenCorePassive(state, passive);
             Shuffle(state.DrawPile);
             StartPlayerTurn(state);
             return state;
@@ -84,6 +90,14 @@ namespace GameLogic.Cultivation
                 state.Logs.Add(new BattleLogEntry($"玩家受到灼烧 {burnDamage} 点伤害。"));
             }
 
+            var stunned = state.Player.ResolveStunAtTurnStart();
+            if (stunned)
+            {
+                state.Spirit = 0;
+                state.Hand.Clear();
+                state.Logs.Add(new BattleLogEntry("眩晕使本回合无法行动。"));
+            }
+
             foreach (var enemy in state.Enemies)
             {
                 var enemyBurnDamage = enemy.Body.ResolveBurnAtTurnStart();
@@ -93,7 +107,11 @@ namespace GameLogic.Cultivation
                 }
             }
 
-            DrawToHandLimit(state);
+            if (!stunned)
+            {
+                DrawToHandLimit(state);
+            }
+
             RefreshOutcome(state);
         }
 
@@ -145,6 +163,13 @@ namespace GameLogic.Cultivation
             foreach (var enemy in state.Enemies.Where(enemy => !enemy.Body.IsDefeated).ToList())
             {
                 enemy.Body.ClearShield();
+                if (enemy.Body.ResolveStunAtTurnStart())
+                {
+                    state.Logs.Add(new BattleLogEntry($"{enemy.Body.Name} 因眩晕跳过行动。"));
+                    enemy.AdvanceIntent();
+                    continue;
+                }
+
                 ResolveEnemyIntent(state, enemy);
                 enemy.AdvanceIntent();
                 if (state.Player.IsDefeated)
@@ -222,6 +247,14 @@ namespace GameLogic.Cultivation
                     }
 
                     break;
+                case CardEffectType.Stun:
+                    foreach (var enemy in SelectTargets(state, effect, explicitTarget))
+                    {
+                        enemy.Body.AddStun(Math.Max(1, effect.Duration));
+                        state.Logs.Add(new BattleLogEntry($"{card.Name} 使 {enemy.Body.Name} 眩晕 {Math.Max(1, effect.Duration)} 回合。"));
+                    }
+
+                    break;
                 case CardEffectType.Sharpness:
                     state.Player.AddSharpness(effect.Value, Math.Max(1, effect.Duration));
                     state.Logs.Add(new BattleLogEntry($"{card.Name} 获得锋锐 {effect.Value}，持续 {Math.Max(1, effect.Duration)} 回合。"));
@@ -286,8 +319,26 @@ namespace GameLogic.Cultivation
                     state.Player.AddFreeze(intent.SecondaryValue, 2);
                     state.Logs.Add(new BattleLogEntry($"{enemy.Body.Name} 施加冰冻 {intent.SecondaryValue} 层。"));
                     break;
+                case EnemyIntentType.AttackAndStun:
+                    DealEnemyDamage(state, enemy, intent.Value);
+                    state.Player.AddStun(Math.Max(1, intent.SecondaryValue));
+                    state.Logs.Add(new BattleLogEntry($"{enemy.Body.Name} 施加眩晕 {Math.Max(1, intent.SecondaryValue)} 回合。"));
+                    break;
                 case EnemyIntentType.Buff:
                     state.Logs.Add(new BattleLogEntry($"{enemy.Body.Name} 正在蓄力。"));
+                    break;
+                case EnemyIntentType.Heal:
+                    enemy.Body.Heal(intent.Value);
+                    state.Logs.Add(new BattleLogEntry($"{enemy.Body.Name} 回复 {intent.Value} HP。"));
+                    break;
+                case EnemyIntentType.BuffAttack:
+                    enemy.AddAttackBonus(intent.Value);
+                    if (intent.SecondaryValue > 0)
+                    {
+                        enemy.Body.AddShield(intent.SecondaryValue);
+                    }
+
+                    state.Logs.Add(new BattleLogEntry($"{enemy.Body.Name} 强化攻击 +{intent.Value}，护盾 +{intent.SecondaryValue}。"));
                     break;
                 case EnemyIntentType.Summon:
                     state.Logs.Add(new BattleLogEntry($"{enemy.Body.Name} 准备召唤。"));
@@ -299,13 +350,13 @@ namespace GameLogic.Cultivation
 
         private static void DealEnemyDamage(BattleState state, EnemyState enemy, int damage)
         {
-            var dealt = state.Player.TakeDamage(damage);
+            var dealt = state.Player.TakeDamage(damage + enemy.AttackBonus);
             state.Logs.Add(new BattleLogEntry($"{enemy.Body.Name} 对玩家造成 {dealt} 点伤害。"));
         }
 
         private void DrawToHandLimit(BattleState state)
         {
-            DrawCards(state, Math.Max(0, state.HandLimit - state.Hand.Count));
+            DrawCards(state, Math.Max(0, state.HandLimit - state.Hand.Count) + state.ExtraDrawPerTurn);
         }
 
         private void DrawCards(BattleState state, int count)
@@ -354,6 +405,32 @@ namespace GameLogic.Cultivation
             }
 
             state.Outcome = BattleOutcome.InProgress;
+        }
+
+        private static void ApplyGoldenCorePassive(BattleState state, GoldenCorePassiveDefinition passive)
+        {
+            if (state == null || passive == null)
+            {
+                return;
+            }
+
+            switch (passive.Type)
+            {
+                case GoldenCorePassiveType.SwordHeart:
+                    state.Player.AddSharpness(passive.EffectValue, 999);
+                    state.Logs.Add(new BattleLogEntry($"金丹被动「{passive.Name}」生效：锋锐 +{passive.EffectValue}。"));
+                    break;
+                case GoldenCorePassiveType.FlowingWater:
+                    state.AddExtraDrawPerTurn(passive.EffectValue);
+                    state.Logs.Add(new BattleLogEntry($"金丹被动「{passive.Name}」生效：每回合额外抽 {passive.EffectValue} 张牌。"));
+                    break;
+                case GoldenCorePassiveType.ThunderSeed:
+                    state.AddSpiritCostReduction(passive.EffectValue);
+                    state.Logs.Add(new BattleLogEntry($"金丹被动「{passive.Name}」生效：功法灵力消耗 -{passive.EffectValue}。"));
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(passive.Type), passive.Type, "Unsupported golden core passive type.");
+            }
         }
 
         private static void EnsureBattleActive(BattleState state)
@@ -937,9 +1014,40 @@ namespace GameLogic.Cultivation
             95,
             4,
             new EnemyIntent(EnemyIntentType.Attack, 14, description: "灵品功法 14"),
-            new EnemyIntent(EnemyIntentType.Defend, 10, description: "吞丹调息 10"),
-            new EnemyIntent(EnemyIntentType.Attack, 18, description: "金丹之力 18"),
+            new EnemyIntent(EnemyIntentType.Heal, 12, description: "吞丹调息 回复 12"),
+            new EnemyIntent(EnemyIntentType.BuffAttack, 6, 8, "金丹之力 攻击+6 护盾8"),
             new EnemyIntent(EnemyIntentType.Sweep, 10, description: "金丹连击 10x2"));
+
+        public static GoldenCorePassiveDefinition SwordHeartPassive { get; } = new GoldenCorePassiveDefinition(
+            "golden_core_sword_heart",
+            "剑心成丹",
+            "每场战斗开始获得锋锐 2，剑修爆发更稳定。",
+            GoldenCorePassiveType.SwordHeart,
+            2);
+
+        public static GoldenCorePassiveDefinition FlowingWaterPassive { get; } = new GoldenCorePassiveDefinition(
+            "golden_core_flowing_water",
+            "流水之势",
+            "每回合额外抽 1 张牌，控制和回复流更顺滑。",
+            GoldenCorePassiveType.FlowingWater,
+            1);
+
+        public static GoldenCorePassiveDefinition ThunderSeedPassive { get; } = new GoldenCorePassiveDefinition(
+            "golden_core_thunder_seed",
+            "雷种入体",
+            "本场战斗功法灵力消耗 -1，预览天雷阁高方差节奏。",
+            GoldenCorePassiveType.ThunderSeed,
+            1);
+
+        public static IReadOnlyList<GoldenCorePassiveDefinition> CreateGoldenCorePassiveChoices()
+        {
+            return new List<GoldenCorePassiveDefinition>
+            {
+                SwordHeartPassive,
+                FlowingWaterPassive,
+                ThunderSeedPassive,
+            };
+        }
 
         public static IReadOnlyList<CultivationRunReward> CreateSwordSectRewardPool()
         {

@@ -477,7 +477,7 @@ namespace GameLogic.Tests
         }
 
         [Test]
-        public void PrototypeUiCanBreakThroughToGoldenCoreEntry()
+        public void PrototypeUiCanBreakThroughToGoldenCorePassiveChoice()
         {
             ReachFoundationSwordCultivator();
 
@@ -507,7 +507,7 @@ namespace GameLogic.Tests
             _ui.ResolveBattle();
             _ui.SkipReward();
 
-            Assert.AreEqual(CultivationRunStatus.InBattle, _ui.Snapshot.Status);
+            Assert.AreEqual(CultivationRunStatus.GoldenCorePassiveChoice, _ui.Snapshot.Status);
             Assert.AreEqual(CultivationRealm.GoldenCore, _ui.Snapshot.CurrentRealm);
             Assert.AreEqual(2, _ui.Snapshot.RealmBreakthroughCount);
             Assert.AreEqual("金丹魔修", _ui.Snapshot.CurrentNodeName);
@@ -515,7 +515,29 @@ namespace GameLogic.Tests
             Assert.AreEqual(120, _ui.Snapshot.PlayerHp);
             Assert.AreEqual(5, _ui.Snapshot.SpiritMax);
             Assert.AreEqual(7, _ui.Snapshot.HandLimit);
+            Assert.AreEqual(3, _ui.Snapshot.GoldenCorePassiveChoiceCount);
+            Assert.AreEqual(string.Empty, _ui.Snapshot.SelectedGoldenCorePassiveName);
             Assert.AreEqual(2, _ui.Snapshot.DroppedArtifactCount);
+            Assert.NotNull(_root.transform.Find("CultivationRunPrototypeUI/Lower/ChoicesScrollPanel/Viewport/Content/GoldenCorePassive_0_golden_core_sword_heart"));
+            Assert.NotNull(_root.transform.Find("CultivationRunPrototypeUI/Lower/ChoicesScrollPanel/Viewport/Content/GoldenCorePassive_1_golden_core_flowing_water"));
+            Assert.NotNull(_root.transform.Find("CultivationRunPrototypeUI/Lower/ChoicesScrollPanel/Viewport/Content/GoldenCorePassive_2_golden_core_thunder_seed"));
+        }
+
+        [Test]
+        public void PrototypeUiCanChooseGoldenCorePassiveAndEnterEntryBattle()
+        {
+            ReachGoldenCorePassiveChoice();
+
+            _ui.ChooseGoldenCorePassive(1);
+
+            Assert.AreEqual(CultivationRunStatus.InBattle, _ui.Snapshot.Status);
+            Assert.AreEqual(CultivationRealm.GoldenCore, _ui.Snapshot.CurrentRealm);
+            Assert.AreEqual("金丹魔修", _ui.Snapshot.CurrentNodeName);
+            Assert.AreEqual("流水之势", _ui.Snapshot.SelectedGoldenCorePassiveName);
+            Assert.AreEqual(0, _ui.Snapshot.GoldenCorePassiveChoiceCount);
+            Assert.AreEqual(8, GetRun().CurrentBattle.HandLimit + GetRun().CurrentBattle.ExtraDrawPerTurn);
+            Assert.AreEqual(1, GetRun().CurrentBattle.ExtraDrawPerTurn);
+            StringAssert.Contains("选择金丹被动：流水之势", GetCurrentBattleLogText());
         }
 
         [Test]
@@ -604,6 +626,12 @@ namespace GameLogic.Tests
         }
 
         private void ReachGoldenCoreDemonicCultivator()
+        {
+            ReachGoldenCorePassiveChoice();
+            _ui.ChooseGoldenCorePassive(0);
+        }
+
+        private void ReachGoldenCorePassiveChoice()
         {
             ReachFoundationSwordCultivator();
             ForceCurrentBattleVictory();

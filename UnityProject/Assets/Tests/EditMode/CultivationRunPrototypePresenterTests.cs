@@ -23,7 +23,7 @@ namespace GameLogic.Tests
             StringAssert.Contains("可选路线", text.NodeText);
             StringAssert.Contains("火蝠洞", text.NodeText);
             StringAssert.Contains("闭关调息", text.NodeText);
-            StringAssert.Contains("等待操作：RouteChoice", text.BattleText);
+            StringAssert.Contains("等待操作：路线选择", text.BattleText);
         }
 
         [Test]
@@ -71,15 +71,20 @@ namespace GameLogic.Tests
         public void BuildTextIncludesGoldenCoreRealmSummary()
         {
             var engine = new CultivationRunEngine(new BattleEngine(1));
-            var run = engine.StartRun(CreateDefensiveDeck(), CreateGoldenCoreRoute());
+            var run = engine.StartRun(CreateInstantWinDeck(), CultivationSeedData.CreateFirstPrototypeBranchingRoute());
+
+            ReachGoldenCorePassiveChoice(engine, run);
 
             var text = CultivationRunPrototypePresenter.BuildText(run);
             var snapshot = CultivationRunPrototypePresenter.CreateSnapshot(run);
 
+            Assert.AreEqual(CultivationRunStatus.GoldenCorePassiveChoice, snapshot.Status);
             Assert.AreEqual(CultivationRealm.GoldenCore, snapshot.CurrentRealm);
             StringAssert.Contains("境界：金丹", text.RunText);
+            StringAssert.Contains("金丹被动：待选择", text.RunText);
             StringAssert.Contains("境界层：金丹", text.NodeText);
             StringAssert.Contains("敌人：金丹魔修", text.NodeText);
+            StringAssert.Contains("金丹被动三选一", text.NodeText);
         }
 
         [Test]
@@ -115,13 +120,34 @@ namespace GameLogic.Tests
             Assert.AreEqual(2, routeChoiceView.MapNodes.Count(node => node.IsChoice));
             Assert.IsTrue(routeChoiceView.PrimaryActions.Any(action => action.Label == "选择路线"));
 
-            var goldenCoreRun = engine.StartRun(CreateInstantWinDeck(), CultivationSeedData.CreateFirstPrototypeBranchingRoute());
-            ReachGoldenCoreDemonicCultivator(engine, goldenCoreRun);
-            var goldenCoreView = CultivationRunPrototypePresenter.BuildViewModel(goldenCoreRun);
+            var goldenCoreChoiceRun = engine.StartRun(CreateInstantWinDeck(), CultivationSeedData.CreateFirstPrototypeBranchingRoute());
+            ReachGoldenCorePassiveChoice(engine, goldenCoreChoiceRun);
+            var goldenCoreView = CultivationRunPrototypePresenter.BuildViewModel(goldenCoreChoiceRun);
 
             StringAssert.Contains("金丹", goldenCoreView.PhaseTitle);
+            StringAssert.Contains("金丹被动选择", goldenCoreView.StatusSummary);
             Assert.IsTrue(goldenCoreView.MapNodes.Any(node => node.IsCurrent && node.Name == "金丹魔修" && node.RealmName == "金丹"));
             Assert.IsTrue(goldenCoreView.Stats.Any(stat => stat.Label == "境界" && stat.Value == "金丹"));
+            Assert.IsTrue(goldenCoreView.Stats.Any(stat => stat.Label == "金丹" && stat.Value == "待选择"));
+            Assert.IsTrue(goldenCoreView.PrimaryActions.Any(action => action.Label == "选择金丹被动"));
+        }
+
+        [Test]
+        public void BuildTextIncludesChosenGoldenCorePassiveBattleBonuses()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var run = engine.StartRun(CreateInstantWinDeck(), CultivationSeedData.CreateFirstPrototypeBranchingRoute());
+
+            ReachGoldenCorePassiveChoice(engine, run);
+            engine.ChooseGoldenCorePassive(run, 2);
+            var text = CultivationRunPrototypePresenter.BuildText(run);
+            var snapshot = CultivationRunPrototypePresenter.CreateSnapshot(run);
+
+            Assert.AreEqual(CultivationRunStatus.InBattle, snapshot.Status);
+            Assert.AreEqual("雷种入体", snapshot.SelectedGoldenCorePassiveName);
+            Assert.AreEqual(0, snapshot.GoldenCorePassiveChoiceCount);
+            StringAssert.Contains("金丹被动：雷种入体", text.RunText);
+            StringAssert.Contains("灵力消耗 -1", text.BattleText);
         }
 
         [Test]
@@ -142,7 +168,7 @@ namespace GameLogic.Tests
             StringAssert.Contains("移除卡牌：35 灵石", text.NodeText);
             StringAssert.Contains("升级卡牌：50 灵石", text.NodeText);
             StringAssert.Contains("出售卡牌：半价回收", text.NodeText);
-            StringAssert.Contains("等待操作：Market", text.BattleText);
+            StringAssert.Contains("等待操作：坊市交易", text.BattleText);
         }
 
         [Test]
@@ -235,7 +261,7 @@ namespace GameLogic.Tests
 
             Assert.AreEqual(CultivationRunStatus.Chest, beforeSnapshot.Status);
             StringAssert.Contains("宝箱法宝池：1 件", text.NodeText);
-            StringAssert.Contains("等待操作：Chest", text.BattleText);
+            StringAssert.Contains("等待操作：开启宝箱", text.BattleText);
             Assert.AreEqual(1, afterSnapshot.ArtifactCount);
             Assert.AreEqual(1, afterSnapshot.ChestArtifactCount);
             StringAssert.Contains("宝箱法宝：1", afterText.RunText);
@@ -398,6 +424,12 @@ namespace GameLogic.Tests
         }
 
         private static void ReachGoldenCoreDemonicCultivator(CultivationRunEngine engine, CultivationRunState run)
+        {
+            ReachGoldenCorePassiveChoice(engine, run);
+            engine.ChooseGoldenCorePassive(run, 0);
+        }
+
+        private static void ReachGoldenCorePassiveChoice(CultivationRunEngine engine, CultivationRunState run)
         {
             ReachFoundationSwordCultivator(engine, run);
             WinCurrentBattle(engine, run);

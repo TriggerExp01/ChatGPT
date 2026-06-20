@@ -85,6 +85,8 @@ namespace GameLogic.Cultivation
                     return "消耗";
                 case CardEffectType.DamagePerSwordMark:
                     return $"每层剑气印记 +{effect.Value} 伤害";
+                case CardEffectType.Stun:
+                    return $"眩晕 {Math.Max(1, effect.Duration)} 回合";
                 default:
                     return effect.Type.ToString();
             }
@@ -94,7 +96,8 @@ namespace GameLogic.Cultivation
         {
             var playerHp = state.CurrentBattle?.Player.CurrentHp ?? state.PlayerCurrentHp;
             var playerMaxHp = state.CurrentBattle?.Player.MaxHp ?? state.PlayerMaxHp;
-            return $"状态：{state.Status}\n境界：{FormatRealmName(state.CurrentRealm)}\n节点：{state.CurrentNodeIndex + 1}/{state.Route.Count}\nHP：{playerHp}/{playerMaxHp}\n灵力上限：{state.SpiritMax}\n手牌上限：{state.HandLimit}\n灵石：{state.SpiritStones}\n牌组：{state.Deck.Count} 张\n丹药：{state.Pills.Count}/{state.PillSlotLimit}\n法宝：{state.Artifacts.Count}\n精英法宝：{state.DroppedArtifacts.Count}\n宝箱法宝：{state.ChestArtifacts.Count}\n已拿奖励：{state.ClaimedRewards.Count}\n已突破：{state.RealmBreakthroughCount}\n坊市删牌：{state.RemovedMarketCards.Count}\n坊市售牌：{state.SoldMarketCards.Count}";
+            var passive = state.SelectedGoldenCorePassive?.Name ?? (state.CurrentGoldenCorePassiveChoices.Count > 0 ? "待选择" : "未获得");
+            return $"状态：{FormatStatusName(state.Status)}\n境界：{FormatRealmName(state.CurrentRealm)}\n金丹被动：{passive}\n节点：{state.CurrentNodeIndex + 1}/{state.Route.Count}\nHP：{playerHp}/{playerMaxHp}\n灵力上限：{state.SpiritMax}\n手牌上限：{state.HandLimit}\n灵石：{state.SpiritStones}\n牌组：{state.Deck.Count} 张\n丹药：{state.Pills.Count}/{state.PillSlotLimit}\n法宝：{state.Artifacts.Count}\n精英法宝：{state.DroppedArtifacts.Count}\n宝箱法宝：{state.ChestArtifacts.Count}\n已拿奖励：{state.ClaimedRewards.Count}\n已突破：{state.RealmBreakthroughCount}\n坊市删牌：{state.RemovedMarketCards.Count}\n坊市售牌：{state.SoldMarketCards.Count}";
         }
 
         private static string BuildNodeText(CultivationRunState state)
@@ -159,6 +162,17 @@ namespace GameLogic.Cultivation
                 }
             }
 
+            if (state.Status == CultivationRunStatus.GoldenCorePassiveChoice)
+            {
+                builder.AppendLine();
+                builder.AppendLine("金丹被动三选一：");
+                for (var i = 0; i < state.CurrentGoldenCorePassiveChoices.Count; i++)
+                {
+                    var passive = state.CurrentGoldenCorePassiveChoices[i];
+                    builder.Append(i + 1).Append(". ").Append(passive.Name).Append(" / ").Append(passive.Description).AppendLine();
+                }
+            }
+
             return builder.ToString();
         }
 
@@ -170,6 +184,7 @@ namespace GameLogic.Cultivation
             return new[]
             {
                 new RunPrototypeStat("境界", FormatRealmName(state.CurrentRealm), state.RealmBreakthroughCount > 0 ? $"突破 {state.RealmBreakthroughCount}" : "炼气起步"),
+                new RunPrototypeStat("金丹", state.SelectedGoldenCorePassive?.Name ?? (state.CurrentGoldenCorePassiveChoices.Count > 0 ? "待选择" : "未获得"), "被动"),
                 new RunPrototypeStat("HP", $"{playerHp}/{playerMaxHp}", "当前血量"),
                 new RunPrototypeStat("灵力", spirit, $"上限 {state.SpiritMax}"),
                 new RunPrototypeStat("手牌", state.HandLimit.ToString(), "上限"),
@@ -280,6 +295,10 @@ namespace GameLogic.Cultivation
                     return state.MysticEventChoices
                         .Select(option => new RunPrototypeAction("秘境抉择", option.Name, true))
                         .ToArray();
+                case CultivationRunStatus.GoldenCorePassiveChoice:
+                    return state.CurrentGoldenCorePassiveChoices
+                        .Select(passive => new RunPrototypeAction("选择金丹被动", passive.Name, true))
+                        .ToArray();
                 case CultivationRunStatus.Completed:
                     return new[] { new RunPrototypeAction("本轮完成", "可以重开 Run") };
                 case CultivationRunStatus.Defeated:
@@ -360,6 +379,8 @@ namespace GameLogic.Cultivation
                     return "开启宝箱";
                 case CultivationRunStatus.Mystic:
                     return "秘境事件";
+                case CultivationRunStatus.GoldenCorePassiveChoice:
+                    return "金丹被动选择";
                 case CultivationRunStatus.RouteChoice:
                     return "路线选择";
                 case CultivationRunStatus.Completed:
@@ -426,12 +447,12 @@ namespace GameLogic.Cultivation
 
             if (state.Status != CultivationRunStatus.InBattle || state.CurrentBattle == null)
             {
-                return $"等待操作：{state.Status}";
+                return $"等待操作：{FormatStatusName(state.Status)}";
             }
 
             var battle = state.CurrentBattle;
             var enemy = battle.Enemies.FirstOrDefault();
-            return $"玩家\nHP {battle.Player.CurrentHp}/{battle.Player.MaxHp}  护盾 {battle.Player.Shield}\n灵力 {battle.Spirit}/{battle.SpiritMax}  回合 {battle.TurnNumber}\n锋锐 {battle.Player.Sharpness}/{battle.Player.SharpnessTurns}  破防 {battle.Player.BreakDefenseStacks}  灼烧 {battle.Player.BurnStacks}/{battle.Player.BurnTurns}  冰冻 {battle.Player.FreezeStacks}/{battle.Player.FreezeTurns}  灵力消耗 -{battle.SpiritCostReduction}\n\n敌人：{enemy?.Body.Name ?? string.Empty}\nHP {enemy?.Body.CurrentHp ?? 0}/{enemy?.Body.MaxHp ?? 0}  护盾 {enemy?.Body.Shield ?? 0}\n破防 {enemy?.Body.BreakDefenseStacks ?? 0}  灼烧 {enemy?.Body.BurnStacks ?? 0}/{enemy?.Body.BurnTurns ?? 0}  冰冻 {enemy?.Body.FreezeStacks ?? 0}/{enemy?.Body.FreezeTurns ?? 0}  剑气印记 {enemy?.Body.SwordMarkStacks ?? 0}\n意图：{enemy?.CurrentIntent.Description ?? string.Empty}\n\n战斗结果：{battle.Outcome}";
+            return $"玩家\nHP {battle.Player.CurrentHp}/{battle.Player.MaxHp}  护盾 {battle.Player.Shield}\n灵力 {battle.Spirit}/{battle.SpiritMax}  回合 {battle.TurnNumber}\n锋锐 {battle.Player.Sharpness}/{battle.Player.SharpnessTurns}  破防 {battle.Player.BreakDefenseStacks}  灼烧 {battle.Player.BurnStacks}/{battle.Player.BurnTurns}  冰冻 {battle.Player.FreezeStacks}/{battle.Player.FreezeTurns}  眩晕 {battle.Player.StunTurns}\n灵力消耗 -{battle.SpiritCostReduction}  额外抽牌 +{battle.ExtraDrawPerTurn}\n\n敌人：{enemy?.Body.Name ?? string.Empty}\nHP {enemy?.Body.CurrentHp ?? 0}/{enemy?.Body.MaxHp ?? 0}  护盾 {enemy?.Body.Shield ?? 0}\n攻击强化 +{enemy?.AttackBonus ?? 0}  破防 {enemy?.Body.BreakDefenseStacks ?? 0}  灼烧 {enemy?.Body.BurnStacks ?? 0}/{enemy?.Body.BurnTurns ?? 0}  冰冻 {enemy?.Body.FreezeStacks ?? 0}/{enemy?.Body.FreezeTurns ?? 0}  眩晕 {enemy?.Body.StunTurns ?? 0}  剑气印记 {enemy?.Body.SwordMarkStacks ?? 0}\n意图：{enemy?.CurrentIntent.Description ?? string.Empty}\n\n战斗结果：{battle.Outcome}";
         }
 
         private static string BuildDeckText(CultivationRunState state)
@@ -734,6 +755,10 @@ namespace GameLogic.Cultivation
 
         public int SoldMarketCardCount { get; private set; }
 
+        public int GoldenCorePassiveChoiceCount { get; private set; }
+
+        public string SelectedGoldenCorePassiveName { get; private set; }
+
         public BattleOutcome BattleOutcome { get; private set; }
 
         public static RunPrototypeSnapshot From(CultivationRunState state)
@@ -774,6 +799,8 @@ namespace GameLogic.Cultivation
                 RemovedMarketCardCount = state.RemovedMarketCards.Count,
                 MarketUpgradedCardCount = state.MarketUpgradedCards.Count,
                 SoldMarketCardCount = state.SoldMarketCards.Count,
+                GoldenCorePassiveChoiceCount = state.CurrentGoldenCorePassiveChoices.Count,
+                SelectedGoldenCorePassiveName = state.SelectedGoldenCorePassive?.Name ?? string.Empty,
                 BattleOutcome = state.CurrentBattle?.Outcome ?? BattleOutcome.InProgress,
             };
         }

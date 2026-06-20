@@ -49,6 +49,8 @@ namespace GameLogic.Cultivation
 
         public int FreezeTurns { get; private set; }
 
+        public int StunTurns { get; private set; }
+
         public int SwordMarkStacks { get; private set; }
 
         public int Sharpness { get; private set; }
@@ -106,6 +108,11 @@ namespace GameLogic.Cultivation
             FreezeTurns = Math.Max(FreezeTurns, turns);
         }
 
+        public void AddStun(int turns)
+        {
+            StunTurns = Math.Max(StunTurns, Math.Max(0, turns));
+        }
+
         public void ClearNegativeStatuses()
         {
             BreakDefenseStacks = 0;
@@ -113,6 +120,7 @@ namespace GameLogic.Cultivation
             BurnTurns = 0;
             FreezeStacks = 0;
             FreezeTurns = 0;
+            StunTurns = 0;
         }
 
         public int AddSwordMark(int stacks)
@@ -176,6 +184,17 @@ namespace GameLogic.Cultivation
             }
 
             return spiritPenalty;
+        }
+
+        public bool ResolveStunAtTurnStart()
+        {
+            if (StunTurns <= 0)
+            {
+                return false;
+            }
+
+            StunTurns--;
+            return true;
         }
     }
 }

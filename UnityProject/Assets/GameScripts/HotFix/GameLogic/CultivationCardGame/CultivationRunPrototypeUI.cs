@@ -265,6 +265,17 @@ namespace GameLogic.Cultivation
             Refresh();
         }
 
+        public void ChooseGoldenCorePassive(int passiveIndex)
+        {
+            if (_run == null || _run.Status != CultivationRunStatus.GoldenCorePassiveChoice)
+            {
+                return;
+            }
+
+            _runEngine.ChooseGoldenCorePassive(_run, passiveIndex);
+            Refresh();
+        }
+
         private void Initialize()
         {
             if (_handRoot == null)
@@ -543,6 +554,17 @@ namespace GameLogic.Cultivation
                         var button = CreateButton($"Mystic_{i}_{option.Id}", _choiceRoot, $"秘境：{option.Name}", option.Description);
                         button.onClick.AddListener(() => ChooseMysticEventOption(index));
                         SetLayout(button.gameObject, preferredWidth: 260, preferredHeight: 96);
+                    }
+
+                    break;
+                case CultivationRunStatus.GoldenCorePassiveChoice:
+                    for (var i = 0; i < _run.CurrentGoldenCorePassiveChoices.Count; i++)
+                    {
+                        var index = i;
+                        var passive = _run.CurrentGoldenCorePassiveChoices[i];
+                        var button = CreateButton($"GoldenCorePassive_{i}_{passive.Id}", _choiceRoot, $"金丹被动：{passive.Name}", passive.Description);
+                        button.onClick.AddListener(() => ChooseGoldenCorePassive(index));
+                        SetLayout(button.gameObject, preferredWidth: 280, preferredHeight: 96);
                     }
 
                     break;

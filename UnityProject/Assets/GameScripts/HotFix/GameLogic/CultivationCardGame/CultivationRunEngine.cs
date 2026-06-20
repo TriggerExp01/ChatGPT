@@ -368,9 +368,36 @@ namespace GameLogic.Cultivation
             return option;
         }
 
+        public void ChooseGoldenCorePassive(CultivationRunState state, int passiveIndex)
+        {
+            EnsureGoldenCorePassiveChoiceState(state);
+
+            if (passiveIndex < 0 || passiveIndex >= state.CurrentGoldenCorePassiveChoices.Count)
+            {
+                throw new ArgumentOutOfRangeException(nameof(passiveIndex), "Golden core passive index is outside the current choices.");
+            }
+
+            var passive = state.CurrentGoldenCorePassiveChoices[passiveIndex];
+            state.SelectGoldenCorePassive(passive);
+            StartCurrentBattle(state);
+            state.CurrentBattle.Logs.Add(new BattleLogEntry($"选择金丹被动：{passive.Name}。{passive.Description}"));
+        }
+
         private void EnterCurrentNode(CultivationRunState state)
         {
-            state.TryBreakthroughTo(state.CurrentNode.Realm);
+            var breakthrough = state.TryBreakthroughTo(state.CurrentNode.Realm);
+            if (breakthrough && state.CurrentRealm == CultivationRealm.GoldenCore && state.SelectedGoldenCorePassive == null)
+            {
+                state.CurrentBattle = null;
+                state.CurrentRewards.Clear();
+                state.RestUpgradeChoices.Clear();
+                state.CurrentRouteChoices.Clear();
+                state.CurrentMarketItems.Clear();
+                state.MysticEventChoices.Clear();
+                state.SetGoldenCorePassiveChoices(CultivationSeedData.CreateGoldenCorePassiveChoices());
+                state.Status = CultivationRunStatus.GoldenCorePassiveChoice;
+                return;
+            }
 
             switch (state.CurrentNode.Type)
             {
@@ -427,7 +454,7 @@ namespace GameLogic.Cultivation
             state.CurrentRewards.Clear();
             state.RestUpgradeChoices.Clear();
             state.CurrentRouteChoices.Clear();
-            state.CurrentBattle = _battleEngine.CreateBattle(state.Deck, state.CurrentNode.Enemy, state.PlayerCurrentHp, state.PlayerMaxHp, state.SpiritMax, state.HandLimit);
+            state.CurrentBattle = _battleEngine.CreateBattle(state.Deck, state.CurrentNode.Enemy, state.PlayerCurrentHp, state.PlayerMaxHp, state.SpiritMax, state.HandLimit, state.SelectedGoldenCorePassive);
             state.Status = CultivationRunStatus.InBattle;
         }
 
@@ -617,6 +644,16 @@ namespace GameLogic.Cultivation
             if (state.Status != CultivationRunStatus.Mystic)
             {
                 throw new InvalidOperationException("Run is not in mystic event state.");
+            }
+        }
+
+        private static void EnsureGoldenCorePassiveChoiceState(CultivationRunState state)
+        {
+            EnsureState(state);
+
+            if (state.Status != CultivationRunStatus.GoldenCorePassiveChoice)
+            {
+                throw new InvalidOperationException("Run is not in golden core passive choice state.");
             }
         }
 

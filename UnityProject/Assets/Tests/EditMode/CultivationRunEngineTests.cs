@@ -189,7 +189,7 @@ namespace GameLogic.Tests
         }
 
         [Test]
-        public void BranchingPrototypeFoundationShortRouteCanBreakThroughToGoldenCoreBattle()
+        public void BranchingPrototypeFoundationShortRouteCanBreakThroughToGoldenCorePassiveChoice()
         {
             var engine = new CultivationRunEngine(new BattleEngine(1));
             var run = engine.StartRun(CreateInstantWinDeck(), CultivationSeedData.CreateFirstPrototypeBranchingRoute());
@@ -216,7 +216,7 @@ namespace GameLogic.Tests
             WinCurrentBattle(engine, run);
             engine.SkipReward(run);
 
-            Assert.AreEqual(CultivationRunStatus.InBattle, run.Status);
+            Assert.AreEqual(CultivationRunStatus.GoldenCorePassiveChoice, run.Status);
             Assert.AreEqual("node_golden_core_demonic_cultivator", run.CurrentNode.Id);
             Assert.AreEqual(CultivationRealm.GoldenCore, run.CurrentRealm);
             Assert.AreEqual(2, run.RealmBreakthroughCount);
@@ -224,10 +224,72 @@ namespace GameLogic.Tests
             Assert.AreEqual(120, run.PlayerCurrentHp);
             Assert.AreEqual(5, run.SpiritMax);
             Assert.AreEqual(7, run.HandLimit);
-            Assert.AreEqual(5, run.CurrentBattle.SpiritMax);
-            Assert.AreEqual(7, run.CurrentBattle.HandLimit);
+            Assert.IsNull(run.CurrentBattle);
+            Assert.AreEqual(3, run.CurrentGoldenCorePassiveChoices.Count);
+            Assert.IsTrue(run.NeedsGoldenCorePassiveChoice);
             Assert.AreEqual(2, run.DroppedArtifacts.Count);
             Assert.GreaterOrEqual(run.SpiritStones, 135);
+        }
+
+        [Test]
+        public void ChoosingGoldenCorePassiveStartsEntryBattleAndAppliesPassive()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var run = engine.StartRun(CreateInstantWinDeck(), CultivationSeedData.CreateFirstPrototypeBranchingRoute());
+
+            ReachGoldenCorePassiveChoice(engine, run);
+
+            engine.ChooseGoldenCorePassive(run, 1);
+
+            Assert.AreEqual(CultivationRunStatus.InBattle, run.Status);
+            Assert.AreEqual("node_golden_core_demonic_cultivator", run.CurrentNode.Id);
+            Assert.AreEqual("流水之势", run.SelectedGoldenCorePassive.Name);
+            Assert.AreEqual(0, run.CurrentGoldenCorePassiveChoices.Count);
+            Assert.IsFalse(run.NeedsGoldenCorePassiveChoice);
+            Assert.NotNull(run.CurrentBattle);
+            Assert.AreEqual(5, run.CurrentBattle.SpiritMax);
+            Assert.AreEqual(7, run.CurrentBattle.HandLimit);
+            Assert.AreEqual(1, run.CurrentBattle.ExtraDrawPerTurn);
+            Assert.AreEqual(5, run.CurrentBattle.Hand.Count);
+            StringAssert.Contains("选择金丹被动：流水之势", string.Join("\n", run.CurrentBattle.Logs.Select(log => log.Message)));
+        }
+
+        [Test]
+        public void GoldenCorePassivesApplySwordHeartAndThunderSeedBattleBonuses()
+        {
+            var engine = new BattleEngine(1);
+            var swordBattle = engine.CreateBattle(CreateDefensiveDeck(), CultivationSeedData.StoneDemon, 100, 100, 5, 7, CultivationSeedData.SwordHeartPassive);
+            var thunderBattle = engine.CreateBattle(CreateDefensiveDeck(), CultivationSeedData.StoneDemon, 100, 100, 5, 7, CultivationSeedData.ThunderSeedPassive);
+
+            Assert.AreEqual(2, swordBattle.Player.Sharpness);
+            Assert.AreEqual(998, swordBattle.Player.SharpnessTurns);
+            Assert.AreEqual(1, thunderBattle.SpiritCostReduction);
+            Assert.AreEqual(0, thunderBattle.GetEffectiveSpiritCost(new CardDefinition("one_cost", "one_cost", 1, new CardEffect(CardEffectType.Shield, 1, CardTarget.Self))));
+        }
+
+        [Test]
+        public void StunCardAndEnemyStunIntentSkipNextActionWindow()
+        {
+            var playerStunEnemy = new EnemyDefinition(
+                "stunner",
+                "stunner",
+                50,
+                0,
+                new EnemyIntent(EnemyIntentType.AttackAndStun, 1, 1, "stun"));
+            var stunCard = new CardDefinition("stun_card", "stun_card", 0, new CardEffect(CardEffectType.Stun, 1, duration: 1));
+            var battleEngine = new BattleEngine(1);
+            var enemyStunBattle = battleEngine.CreateBattle(new[] { stunCard, stunCard, stunCard, stunCard, stunCard }, CultivationSeedData.StoneDemon, 100, 100, 3, 5);
+            var playerStunBattle = battleEngine.CreateBattle(CreateDefensiveDeck(), playerStunEnemy, 100, 100, 3, 5);
+
+            battleEngine.PlayCard(enemyStunBattle, enemyStunBattle.Hand[0], enemyStunBattle.Enemies[0]);
+            battleEngine.EndPlayerTurn(enemyStunBattle);
+            Assert.AreEqual(0, enemyStunBattle.Enemies[0].Body.StunTurns);
+            StringAssert.Contains("因眩晕跳过行动", string.Join("\n", enemyStunBattle.Logs.Select(log => log.Message)));
+
+            battleEngine.EndPlayerTurn(playerStunBattle);
+            Assert.AreEqual(0, playerStunBattle.Spirit);
+            Assert.AreEqual(0, playerStunBattle.Hand.Count);
+            StringAssert.Contains("眩晕使本回合无法行动", string.Join("\n", playerStunBattle.Logs.Select(log => log.Message)));
         }
 
         [Test]
@@ -1155,6 +1217,12 @@ namespace GameLogic.Tests
         }
 
         private static void ReachGoldenCoreDemonicCultivator(CultivationRunEngine engine, CultivationRunState run)
+        {
+            ReachGoldenCorePassiveChoice(engine, run);
+            engine.ChooseGoldenCorePassive(run, 0);
+        }
+
+        private static void ReachGoldenCorePassiveChoice(CultivationRunEngine engine, CultivationRunState run)
         {
             ReachFoundationSwordCultivator(engine, run);
             WinCurrentBattle(engine, run);

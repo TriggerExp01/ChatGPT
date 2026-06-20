@@ -30,6 +30,7 @@ namespace GameLogic.Cultivation
             RemovedMarketCards = new List<CardDefinition>();
             MarketUpgradedCards = new List<CardDefinition>();
             SoldMarketCards = new List<CardDefinition>();
+            CurrentGoldenCorePassiveChoices = new List<GoldenCorePassiveDefinition>();
 
             if (Deck.Count == 0)
             {
@@ -120,6 +121,10 @@ namespace GameLogic.Cultivation
 
         public List<CardDefinition> SoldMarketCards { get; }
 
+        public List<GoldenCorePassiveDefinition> CurrentGoldenCorePassiveChoices { get; }
+
+        public GoldenCorePassiveDefinition SelectedGoldenCorePassive { get; private set; }
+
         public CultivationRunNode CurrentNode => Route[CurrentNodeIndex];
 
         public void IncreasePlayerMaxHp(int amount)
@@ -144,6 +149,27 @@ namespace GameLogic.Cultivation
             IncreasePlayerMaxHp(10 * realmDelta);
             PlayerCurrentHp = PlayerMaxHp;
             return true;
+        }
+
+        public bool NeedsGoldenCorePassiveChoice => CurrentRealm >= CultivationRealm.GoldenCore
+                                                    && SelectedGoldenCorePassive == null
+                                                    && CurrentGoldenCorePassiveChoices.Count > 0;
+
+        public void SetGoldenCorePassiveChoices(IEnumerable<GoldenCorePassiveDefinition> choices)
+        {
+            CurrentGoldenCorePassiveChoices.Clear();
+            if (choices == null || SelectedGoldenCorePassive != null)
+            {
+                return;
+            }
+
+            CurrentGoldenCorePassiveChoices.AddRange(choices);
+        }
+
+        public void SelectGoldenCorePassive(GoldenCorePassiveDefinition passive)
+        {
+            SelectedGoldenCorePassive = passive ?? throw new ArgumentNullException(nameof(passive));
+            CurrentGoldenCorePassiveChoices.Clear();
         }
     }
 }

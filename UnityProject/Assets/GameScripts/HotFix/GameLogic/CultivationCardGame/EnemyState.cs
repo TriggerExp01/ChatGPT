@@ -14,7 +14,14 @@ namespace GameLogic.Cultivation
 
         public CombatantState Body { get; }
 
+        public int AttackBonus { get; private set; }
+
         public EnemyIntent CurrentIntent => Definition.IntentLoop[_intentIndex % Definition.IntentLoop.Count];
+
+        public void AddAttackBonus(int amount)
+        {
+            AttackBonus += System.Math.Max(0, amount);
+        }
 
         public void AdvanceIntent()
         {
