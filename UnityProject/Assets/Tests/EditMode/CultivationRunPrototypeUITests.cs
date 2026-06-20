@@ -51,6 +51,21 @@ namespace GameLogic.Tests
         }
 
         [Test]
+        public void MainRunUiServiceReusesAndClosesPrototypeUi()
+        {
+            var first = CultivationRunUIService.OpenMainRunUI(_root.transform);
+            var second = CultivationRunUIService.OpenMainRunUI(_root.transform);
+
+            Assert.AreSame(first, second);
+            Assert.IsTrue(CultivationRunUIService.IsMainRunUIOpen(_root.transform));
+            Assert.NotNull(_root.transform.Find(CultivationRunPrototypeUI.RootName));
+
+            Assert.IsTrue(CultivationRunUIService.CloseMainRunUI(_root.transform));
+            Assert.IsFalse(CultivationRunUIService.IsMainRunUIOpen(_root.transform));
+            Assert.IsNull(_root.transform.Find(CultivationRunPrototypeUI.RootName));
+        }
+
+        [Test]
         public void OpenBuildsResourceAndMapBarsWithReadableStatus()
         {
             var statusText = _root.transform.Find("CultivationRunPrototypeUI/Header/TitleRow/StatusText").GetComponent<UnityEngine.UI.Text>();
