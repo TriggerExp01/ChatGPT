@@ -1,15 +1,36 @@
 # 游戏设计文档 (GDD) — 仙途·天命
 
-> **版本**：v0.2.0 · 设计深入阶段  
-> **最后更新**：2025-06-18  
-> **文档状态**：两个门派卡牌池+通用池+前两层敌人已完成 — 可开始纸面玩测试  
-> 
+> **项目适配说明**：本文档由 `C:/Users/hirusumi/Downloads/仙途天命_完整设计文档.md` 拆分并适配到当前 Unity + TEngine 项目。实现以 `D:/Work/Unity_Project/TEngine_Game` 仓库为准；设计文档统一存放在 `Doc/设计文档`。
+> **拆分日期**：2026-06-20
+
+
+> **版本**：v1.0.0 · 设计完成
+> **最后更新**：2025-06-20
+> **文档状态**：全部设计文档已完成 — 可进入开发阶段
+> **引擎**：Unity 2022.3 LTS + TEngine框架
+>
 > **配套文档**：
-> - `/workspace/卡牌池设计_剑宗.md` — 剑宗28张专属卡牌
-> - `/workspace/卡牌池设计_火云宗.md` — 火云宗27张专属卡牌
-> - `/workspace/卡牌池设计_通用池与法宝.md` — 通用卡牌13张+法宝15件+丹药6颗+秘境12事件
-> - `/workspace/敌人设计_炼气筑基期.md` — 炼气期8敌人+筑基期8敌人(含Boss)
-> - `/workspace/平衡性调优表.xlsx` — 5个工作表的调优数据  
+> - `卡牌池设计_剑宗.md` — 剑宗28张专属卡牌
+> - `卡牌池设计_火云宗.md` — 火云宗27张专属卡牌
+> - `卡牌池设计_药王谷.md` — 药王谷27张专属卡牌
+> - `卡牌池设计_天雷阁.md` — 天雷阁27张专属卡牌
+> - `卡牌池设计_玄黄宗.md` — 玄黄宗27张专属卡牌
+> - `卡牌池设计_魔道.md` — 魔道27张专属卡牌
+> - `卡牌池设计_通用池与法宝.md` — 通用卡牌13张+法宝15件+丹药6颗+秘境12事件
+> - `完整法宝汇总表.md` — 全部27件法宝一览(15通用+12专属)
+> - `敌人设计_炼气筑基期.md` — 炼气期8敌人+筑基期8敌人(含Boss)
+> - `敌人设计_金丹元婴化神期.md` — 金丹期8敌人+元婴期8敌人+化神期8敌人(含全部Boss)
+> - `地图生成算法设计.md` — 程序化地图生成规则/路径算法/节点分配/种子系统
+> - `战斗结算公式.md` — 完整伤害/防御/护盾/状态/概率结算链+结算顺序图
+> - `世界观设定文档.md` — 世界观/门派/NPC/美术/音效/Steam商店页
+> - `UI_UX设计规范.md` — 全部屏幕布局/配色/字体/动画/交互规范
+> - `卡牌描述文本规范.md` — 术语词典/描述结构/标点格式/升级树规范
+> - `美术与音频资源清单.md` — 全部美术/音频资源数量/规格/优先级/命名规范
+> - `Steam成就系统设计.md` — 51个成就/解锁条件/技术实现
+> - `多语言本地化方案.md` — 简中/繁中/英三语方案/翻译策略/字体
+> - `纸面玩测试方案.md` — 可执行的纸面测试脚本+数据记录表
+> - `开发任务清单_Phase1-3.md` — 分阶段开发任务清单(Unity+TEngine版)
+> - `平衡性调优表.xlsx` — 5个工作表的调优数据
 
 ---
 
@@ -833,177 +854,488 @@ Run开始: 基准强度 1.0x（凡品为主的初始牌组）
 
 | 层级 | 技术选择 | 理由 |
 |------|----------|------|
-| **游戏引擎** | Godot 4.x | 开源免费、2D原生支持、轻量级、Steam发布友好 |
-| **编程语言** | GDScript / C# | GDScript快速原型，C#用于性能关键模块 |
-| **数据存储** | JSON + 自定义二进制 | JSON可读可调试；二进制用于发布版存档 |
-| **UI框架** | Godot内置Control节点 | 无需额外框架，Godot UI系统足够 |
+| **游戏引擎** | Unity 2022.3 LTS | 成熟稳定、Steam发布成熟、2D生态完善 |
+| **开发框架** | TEngine | 商业级Unity框架，模块化设计，开箱即用 |
+| **编程语言** | C# | Unity原生语言，性能优秀 |
+| **热更新** | HybridCLR（TEngine集成） | 原生C#热更，支持后续DLC/补丁 |
+| **资源管理** | YooAsset（TEngine集成） | 百万DAU验证，LRU缓存策略 |
+| **配置表** | Luban（TEngine集成） | 支持懒加载/异步/同步，强类型校验 |
+| **异步系统** | UniTask（TEngine集成） | 零GC异步，替代Coroutine |
+| **UI框架** | TEngine UIModule | 纯C#，UIWindow/UIWidget分层，代码生成 |
+| **事件系统** | TEngine GameEvent | 零GC事件分发，SourceGenerator自动生成 |
+| **代码混淆** | Obfuz（TEngine集成） | 防反编译 |
 | **模拟框架** | Python 3 + 独立模拟器 | 脱离引擎运行蒙特卡洛模拟 |
-| **版本控制** | Git | 标准实践 |
+| **版本控制** | Git + Git LFS | 标准实践，LFS管理美术资源 |
 
-**为什么选择Godot而非Unity**：
-- 2D游戏Godot的TileMap和2D节点系统更直观
-- 完全免费无版税——Steam销售无需分成
-- 包体更小——对独立游戏下载转化率有实质影响
-- 开源社区活跃——遇到问题有更多解决路径
+### 9.2 TEngine架构与项目结构
 
-### 9.2 架构设计：引擎-逻辑分离
+TEngine采用分层架构，热更代码与主程序分离：
 
 ```
-┌─────────────────────────────────────────┐
-│              渲染层 (Godot)              │
-│  ┌─────┐ ┌──────┐ ┌──────┐ ┌────────┐  │
-│  │战斗UI│ │地图UI│ │道基UI│ │卡牌收藏│  │
-│  └──┬──┘ └──┬───┘ └──┬───┘ └───┬────┘  │
-│     │       │        │         │        │
-│     └───────┴────────┴─────────┘        │
-│                    │                     │
-│            ┌───────┴───────┐             │
-│            │  ActionBus    │             │
-│            │  (信号总线)   │             │
-│            └───────┬───────┘             │
-└────────────────────┼────────────────────┘
+┌─────────────────────────────────────────────┐
+│        GameLogic (热更业务逻辑) [Dll]         │  ← 业务层
+│   战斗系统/卡牌系统/Roguelite流程/道基树      │
+├─────────────────────────────────────────────┤
+│     GameBase / GameProto (基础框架) [Dll]     │  ← 基础层
+│   修饰器系统/数据模型/配置协议                │
+├─────────────────────────────────────────────┤
+│          TEngine Runtime (核心运行时)          │  ← 框架核心层
+│   资源模块/事件模块/UI模块/配置模块/流程模块   │
+├─────────────────────────────────────────────┤
+│     Main (启动器 + ProcedureModule)           │  ← 启动层
+│   ProcedureLaunch → ... → ProcedureStartGame  │
+├─────────────────────────────────────────────┤
+│  YooAsset / HybridCLR / Luban / UniTask       │  ← 基础设施层
+└─────────────────────────────────────────────┘
+```
+
+**项目目录结构**（基于TEngine规范）：
+
+```
+Assets/
+├── AssetArt/                  # 美术资源（图集自动生成）
+├── AssetRaw/                  # 热更资源
+│   ├── UIRaw/                 # UI图片
+│   │   ├── Atlas/             # 需生成图集的素材
+│   │   └── Raw/               # 不需图集的素材
+│   ├── Audios/                # 音频
+│   ├── Effects/               # 特效
+│   ├── Scenes/                # 场景
+│   └── CardArt/               # 卡牌插画
+├── TEngine/                   # 框架核心（不修改）
+├── GameScripts/               # 程序集目录
+│   ├── Main/                  # 主程序（启动器+流程）
+│   └── HotFix/                # 热更代码
+│       ├── GameBase/          # 基础框架
+│       │   ├── Modifier/      # 修饰器系统
+│       │   ├── Data/          # 数据模型
+│       │   └── Event/         # 游戏事件定义
+│       ├── GameProto/         # 配置协议（Luban生成）
+│       └── GameLogic/         # 业务逻辑
+│           ├── Combat/        # 战斗系统
+│           ├── Card/          # 卡牌系统
+│           ├── Roguelite/     # Roguelite流程
+│           ├── Progression/   # 道基树/进度
+│           ├── UI/            # UI逻辑
+│           │   ├── Window/    # UIWindow
+│           │   └── Widget/    # UIWidget
+│           └── GameApp.cs     # 热更主入口
+├── Configs/                   # Luban配置表源数据
+│   └── GameConfig/
+│       ├── CardData/          # 卡牌配置表
+│       ├── EnemyData/         # 敌人配置表
+│       ├── RelicData/         # 法宝配置表
+│       └── EventData/         # 秘境事件配置表
+└── Scenes/                    # 主场景
+```
+
+### 9.3 核心系统架构设计
+
+#### 引擎-逻辑分离原则
+
+```
+┌─────────────────────────────────────────────┐
+│              UI层 (TEngine UIModule)          │
+│  ┌──────┐ ┌──────┐ ┌──────┐ ┌──────────┐   │
+│  │战斗UI│ │地图UI│ │道基UI│ │卡牌收藏UI│   │
+│  │Window│ │Window│ │Window│ │  Window  │   │
+│  └──┬───┘ └──┬───┘ └──┬───┘ └────┬─────┘   │
+│     └────────┴────────┴───────────┘         │
+│                    │                         │
+│          TEngine GameEvent (事件总线)         │
+│          零GC / SourceGenerator生成           │
+└────────────────────┬────────────────────────┘
+                     │ 事件订阅/发布
+┌────────────────────┴────────────────────────┐
+│           游戏逻辑层 (纯C#，无MonoBehaviour)   │
+│  ┌─────────────┐  ┌──────────────────┐      │
+│  │ CombatEngine│  │ CampaignEngine   │      │
+│  │ (战斗解析器) │  │ (Run流程管理)    │      │
+│  └──────┬──────┘  └────────┬─────────┘      │
+│         │                   │                 │
+│  ┌──────┴──────┐  ┌───────┴──────────┐      │
+│  │ModifierSystem│  │ProgressionSystem │      │
+│  │ (修饰器系统) │  │ (道基/难度/解锁) │      │
+│  └─────────────┘  └──────────────────┘      │
+└──────────────────────────────────────────────┘
                      │
-┌────────────────────┼────────────────────┐
-│              游戏逻辑层 (纯数据)          │
-│            ┌───────┴───────┐             │
-│            │ GameEngine    │             │
-│            │ (核心状态机)  │             │
-│            └───┬───────┬───┘             │
-│    ┌───────────┘       └───────────┐     │
-│  ┌─┴──────────┐   ┌──────────────┐│     │
-│  │CombatEngine│   │CampaignEngine││     │
-│  │(战斗解析器)│   │(战役管理器)  ││     │
-│  └─┬──────────┘   └──────────────┘│     │
-│    │                               │     │
-│  ┌─┴──────────┐   ┌──────────────┐│     │
-│  │ModifierSys │   │ProgressionSys││     │
-│  │(修饰器系统)│   │(进度系统)    ││     │
-│  └────────────┘   └──────────────┘│     │
-└────────────────────────────────────┘     │
-                                          │
-┌─────────────────────────────────────────┐
-│              数据层                      │
-│  ┌──────────┐ ┌──────────┐ ┌─────────┐ │
-│  │Card DB   │ │Enemy DB  │ │Relic DB │ │
-│  │(卡牌数据库│ │(敌人数据)│ │(法宝数据│ │
-│  └──────────┘ └──────────┘ └─────────┘ │
-└─────────────────────────────────────────┘
+┌────────────────────┴────────────────────────┐
+│              数据层 (Luban配置表)              │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐    │
+│  │CardData  │ │EnemyData │ │RelicData │    │
+│  │(卡牌表)  │ │(敌人表)  │ │(法宝表)  │    │
+│  └──────────┘ └──────────┘ └──────────┘    │
+│  支持懒加载/异步加载/同步加载                 │
+└──────────────────────────────────────────────┘
 ```
 
 **核心设计原则**：
-- **GameEngine** 是纯逻辑核心，不依赖Godot节点——可以独立测试
-- **ActionBus** 作为信号总线——渲染层订阅游戏事件，而非逻辑层调用渲染
-- **CombatEngine** 输入（手牌、敌人状态）→输出（ActionTuple数组）→渲染层消费
+- **CombatEngine** 是纯C#类，不继承MonoBehaviour——可以独立单元测试
+- **TEngine GameEvent** 作为事件总线——UI层订阅游戏事件，逻辑层不引用UI
+- **CombatEngine** 输入手牌+敌人状态 → 输出ActionTuple数组 → UI层消费渲染
+- **Luban配置表** 管理所有卡牌/敌人/法宝数据——设计师改配表不改代码
 
-### 9.3 统一修饰器数据模型
+### 9.4 统一修饰器数据模型（C#实现）
 
-```gdscript
-# 修饰器元组 - 游戏中所有效果的基础数据结构
-class Modifier:
-    var stat: String        # "HP" | "LQ" | "SHIELD" | "POWER" | "DEFENSE" | "DRAW" | "HAND_SIZE"
-    var operation: String   # "FLAT_ADD" | "FLAT_SUB" | "PCT_ADD" | "PCT_SUB" | "SET"
-    var value: int          # 使用整数，永不浮点（定点运算）
-    var duration: int       # 0=即时, -1=永久, >0=回合数
-    var target: String      # "SELF" | "ENEMY_SINGLE" | "ENEMY_ALL" | "ALL"
-    var stackable: bool     # 同名修饰器是否可叠加
-    var source_id: String   # 来源卡牌ID（调试用）
-    var tags: Array[String] # ["fire", "dot", "debuff"] 等标签
+```csharp
+// 文件: GameScripts/HotFix/GameBase/Modifier/Modifier.cs
+
+/// <summary>
+/// 修饰器元组 - 游戏中所有效果的基础数据结构
+/// 所有卡牌效果、敌人技能、法宝被动都用这个结构表达
+/// </summary>
+[System.Serializable]
+public class Modifier
+{
+    public StatType stat;          // HP | LQ | SHIELD | POWER | DEFENSE | DRAW | HAND_SIZE
+    public Operation op;           // FLAT_ADD | FLAT_SUB | PCT_ADD | PCT_SUB | SET
+    public int value;              // 使用整数，永不浮点（定点运算）
+    public int duration;           // 0=即时, -1=永久, >0=回合数
+    public TargetType target;      // SELF | ENEMY_SINGLE | ENEMY_ALL | ALL
+    public bool stackable;         // 同名修饰器是否可叠加
+    public string sourceId;        // 来源卡牌ID（调试用）
+    public string[] tags;          // ["fire", "dot", "debuff"] 等
+}
+
+public enum StatType { HP, LQ, SHIELD, POWER, DEFENSE, DRAW, HAND_SIZE }
+public enum Operation { FLAT_ADD, FLAT_SUB, PCT_ADD, PCT_SUB, SET }
+public enum TargetType { SELF, ENEMY_SINGLE, ENEMY_ALL, ALL }
 ```
 
 **修饰器解析器**：
-```gdscript
-# 伪代码 - 修饰器解析顺序
-func resolve_modifiers(base_value: int, modifiers: Array[Modifier]) -> int:
-    var result = base_value
-    
-    # 1. 平坦修正
-    for mod in modifiers.filter(func(m): return m.operation in ["FLAT_ADD", "FLAT_SUB"]):
-        if mod.operation == "FLAT_ADD": result += mod.value
-        else: result -= mod.value
-    
-    # 2. 百分比修正
-    for mod in modifiers.filter(func(m): return m.operation in ["PCT_ADD", "PCT_SUB"]):
-        var pct = (result * mod.value) / 100  # 整数除法
-        if mod.operation == "PCT_ADD": result += pct
-        else: result -= pct
-    
-    # 3. SET覆盖
-    for mod in modifiers.filter(func(m): return m.operation == "SET"):
-        result = mod.value
-    
-    return max(0, result)  # 不低于0
-```
 
-### 9.4 存档系统设计
+```csharp
+// 文件: GameScripts/HotFix/GameBase/Modifier/ModifierResolver.cs
 
-```json
+public static class ModifierResolver
 {
-  "version": "1.0.0",
-  "save_type": "meta_progress",
-  "timestamp": "2025-06-18T12:00:00Z",
-  "meta": {
-    "dao_essence": 245,
-    "dao_tree_unlocked": ["root_1", "root_2", "foundation_1"],
-    "unlocked_sects": ["sword", "fire"],
-    "dao_heart_level": 3,
-    "total_runs": 15,
-    "total_wins": 2,
-    "statistics": {
-      "favorite_card": "card_fire_palm_01",
-      "highest_realm_reached": "yuanying",
-      "total_playtime_minutes": 480
+    /// <summary>
+    /// 修饰器解析顺序: 基础值 → 平坦修正 → 百分比修正 → SET覆盖
+    /// 全程整数运算，不使用浮点
+    /// </summary>
+    public static int Resolve(int baseValue, List<Modifier> modifiers)
+    {
+        int result = baseValue;
+
+        // 1. 平坦修正 (FLAT_ADD / FLAT_SUB)
+        foreach (var mod in modifiers.Where(m =>
+            m.op == Operation.FLAT_ADD || m.op == Operation.FLAT_SUB))
+        {
+            result += mod.op == Operation.FLAT_ADD ? mod.value : -mod.value;
+        }
+
+        // 2. 百分比修正 (PCT_ADD / PCT_SUB) — 整数除法
+        foreach (var mod in modifiers.Where(m =>
+            m.op == Operation.PCT_ADD || m.op == Operation.PCT_SUB))
+        {
+            int pct = result * mod.value / 100;
+            result += mod.op == Operation.PCT_ADD ? pct : -pct;
+        }
+
+        // 3. SET覆盖 (最后执行)
+        foreach (var mod in modifiers.Where(m => m.op == Operation.SET))
+        {
+            result = mod.value;
+        }
+
+        return Math.Max(0, result);  // 不低于0
     }
-  },
-  "current_run": null
 }
 ```
 
-**设计要点**：
-- 跨Run进度和当前Run存档分离
-- 当前Run支持"保存并退出"（战斗中也可保存）
-- 存档文件使用JSON格式（调试友好）+ 发布版可选二进制压缩
-- 存档校验码防止篡改（不影响成就）
+### 9.5 Luban配置表设计
 
-### 9.5 蒙特卡洛模拟框架
+所有游戏数据通过Luban配置表管理，设计师可直接改Excel/JSON配置，无需改代码。
 
-```python
-# 独立Python模拟器 - 脱离游戏引擎运行
-# 文件: tools/balance_simulator.py
+**卡牌配置表** (`Configs/GameConfig/CardData/Card.xlsx`)：
 
-class RunSimulator:
-    def __init__(self, seed, dao_heart_level, sect, ai_strategy):
-        self.rng = random.Random(seed)
-        self.game_state = GameState(dao_heart_level, sect)
-        self.ai = AIStrategy(ai_strategy)
-    
-    def simulate_run(self) -> RunResult:
-        """模拟一次完整Run"""
-        for realm in REALMS:  # 遍历每个境界层
-            for node in self.generate_map(realm):
-                if node.type == "combat":
-                    result = self.simulate_combat(node.enemies)
-                elif node.type == "elite":
-                    result = self.simulate_combat(node.enemies, elite=True)
-                elif node.type == "shop":
-                    self.ai.shop_decisions(self.game_state, node)
-                # ... 其他节点类型
-                
-                if self.game_state.player_hp <= 0:
-                    return RunResult(realm_reached=realm, victory=False)
-        
-        return RunResult(realm_reached="feixian", victory=True)
+| 字段 | 类型 | 说明 | 示例 |
+|------|------|------|------|
+| id | string | 卡牌唯一ID | card_sword_qi_01 |
+| name | string | 卡牌名 | 剑气诀 |
+| rarity | int | 稀有度 0-4 | 0 (凡品) |
+| type | int | 类型 0-3 | 0 (攻击功法) |
+| sect | string | 门派 | sword (剑宗) |
+| cost | int | 灵力消耗 | 1 |
+| element | int | 五行属性 | 4 (金) |
+| modifiers | list,json | 效果修饰器数组 | [{stat:HP,op:FLAT_SUB,value:8,duration:0,target:ENEMY_SINGLE}] |
+| upgrade_tree | list,json | 升级树ID数组 | [upgrade_sword_qi_1A, upgrade_sword_qi_1B] |
+| description | string | 效果描述文本 | 造成8伤害 |
+| is_consumable | bool | 是否消耗 | false |
 
-# 批量模拟
-def batch_simulate(n_runs=10000):
-    results = []
-    for i in range(n_runs):
-        sim = RunSimulator(seed=i, ...)
-        results.append(sim.simulate_run())
-    
-    # 输出分析
-    win_rate = sum(1 for r in results if r.victory) / len(results)
-    print(f"胜率: {win_rate:.1%}")
-    # 更多分析...
+**敌人配置表** (`Configs/GameConfig/EnemyData/Enemy.xlsx`)：
+
+| 字段 | 类型 | 说明 | 示例 |
+|------|------|------|------|
+| id | string | 敌人ID | enemy_stone_golem |
+| name | string | 敌人名 | 石魔 |
+| max_hp | int | 最大HP | 40 |
+| defense | int | 基础防御 | 2 |
+| energy | int | 每回合灵力 | 3 |
+| ai_pattern | list,json | 意图循环 | [{action:ATTACK,value:6},{action:DEFEND,value:5}] |
+| drops | list,json | 掉落表 | [{type:STONE,min:10,max:15},{type:CARD,rarity:0}] |
+| realm | int | 所在境界层 | 0 (炼气期) |
+
+**法宝配置表** (`Configs/GameConfig/RelicData/Relic.xlsx`)：
+
+| 字段 | 类型 | 说明 | 示例 |
+|------|------|------|------|
+| id | string | 法宝ID | relic_storage_bag |
+| name | string | 法宝名 | 储物袋 |
+| rarity | int | 稀有度 | 0 (凡品) |
+| effect_desc | string | 效果描述 | 牌库上限+3 |
+| effect_modifiers | list,json | 效果修饰器 | [{stat:DECK_SIZE,op:FLAT_ADD,value:3,duration:-1,target:SELF}] |
+| source | string | 获取方式 | elite/chest/shop |
+| price | int | 坊市价格 | 30 |
+
+### 9.6 TEngine事件系统设计
+
+使用TEngine的零GC事件系统（GameEvent）做UI与逻辑通信：
+
+```csharp
+// 文件: GameScripts/HotFix/GameBase/Event/GameEvents.cs
+
+/// <summary>
+/// 游戏事件定义 — SourceGenerator自动生成监听代码
+/// UI层订阅这些事件，逻辑层发布这些事件
+/// </summary>
+public static class GameEvents
+{
+    // 战斗事件
+    public const string CombatStart = "CombatStart";
+    public const string TurnStart = "TurnStart";
+    public const string TurnEnd = "TurnEnd";
+    public const string CardPlayed = "CardPlayed";       // 参数: cardId, targetId
+    public const string DamageDealt = "DamageDealt";     // 参数: targetId, amount
+    public const string DamageTaken = "DamageTaken";     // 参数: sourceId, amount
+    public const string ShieldGained = "ShieldGained";   // 参数: targetId, amount
+    public const string ModifierApplied = "ModifierApplied"; // 参数: targetId, modifier
+    public const string EnemyIntentChanged = "EnemyIntentChanged"; // 参数: enemyId, intent
+    public const string CombatEnd = "CombatEnd";         // 参数: victory (bool)
+
+    // Run流程事件
+    public const string MapNodeEntered = "MapNodeEntered";   // 参数: nodeId
+    public const string CardRewardShown = "CardRewardShown"; // 参数: cardIds[]
+    public const string CardAdded = "CardAdded";             // 参数: cardId
+    public const string RealmBreakthrough = "RealmBreakthrough"; // 参数: realmLevel
+    public const string RunEnd = "RunEnd";                   // 参数: victory, realmReached
+
+    // 元进度事件
+    public const string DaoEssenceGained = "DaoEssenceGained"; // 参数: amount
+    public const string DaoTreeUnlocked = "DaoTreeUnlocked";   // 参数: nodeId
+}
+```
+
+**UI层使用示例**：
+
+```csharp
+// 战斗UI窗口 — 订阅事件更新显示
+public class CombatWindow : UIWindow
+{
+    protected override void OnCreate()
+    {
+        // TEngine事件系统自动管理生命周期绑定
+        GameEvent.AddEventListener(GameEvents.DamageDealt, OnDamageDealt);
+        GameEvent.AddEventListener(GameEvents.ShieldGained, OnShieldGained);
+        GameEvent.AddEventListener(GameEvents.EnemyIntentChanged, OnEnemyIntentChanged);
+    }
+
+    private void OnDamageDealt(IEventArgs args)
+    {
+        var data = args as DamageDealtArgs;
+        // 更新HP条、播放伤害数字动画
+        UpdateHPBar(data.targetId, data.amount);
+        PlayDamageNumber(data.targetId, data.amount);
+    }
+}
+```
+
+### 9.7 战斗系统核心设计
+
+```csharp
+// 文件: GameScripts/HotFix/GameLogic/Combat/CombatEngine.cs
+
+/// <summary>
+/// 战斗核心引擎 — 纯C#逻辑，不依赖Unity
+/// 可以独立单元测试，也可以在Python模拟器中复用逻辑
+/// </summary>
+public class CombatEngine
+{
+    private CombatState _state;
+    private ModifierSystem _modifierSystem;
+
+    public CombatEngine(CombatState initialState)
+    {
+        _state = initialState;
+        _modifierSystem = new ModifierSystem();
+    }
+
+    /// <summary>
+    /// 玩家打出一张牌
+    /// 返回执行结果数组（供UI播放动画）
+    /// </summary>
+    public List<ActionResult> PlayCard(string cardId, string targetId)
+    {
+        var card = ConfigSystem.GetCardData(cardId);
+        var results = new List<ActionResult>();
+
+        // 1. 扣除灵力
+        _state.PlayerEnergy -= card.cost;
+        results.Add(ActionResult.EnergyCost(card.cost));
+
+        // 2. 解析卡牌修饰器
+        foreach (var mod in card.modifiers)
+        {
+            var resolved = _modifierSystem.ApplyModifier(mod, _state, targetId);
+            results.AddRange(resolved);
+        }
+
+        // 3. 卡牌进入弃牌堆（或消耗堆）
+        if (card.is_consumable)
+            _state.ConsumedPile.Add(cardId);
+        else
+            _state.DiscardPile.Add(cardId);
+
+        return results;
+    }
+
+    /// <summary>
+    /// 结束玩家回合，执行敌人行动
+    /// </summary>
+    public List<ActionResult> EndPlayerTurn()
+    {
+        var results = new List<ActionResult>();
+
+        // 1. 回合结束效果
+        results.AddRange(ProcessEndOfTurnEffects());
+
+        // 2. 清除护盾
+        _state.PlayerShield = 0;
+
+        // 3. 敌人执行意图
+        foreach (var enemy in _state.Enemies.Where(e => e.IsAlive))
+        {
+            results.AddRange(ExecuteEnemyAction(enemy));
+        }
+
+        // 4. 回合开始效果
+        results.AddRange(ProcessStartOfTurnEffects());
+
+        // 5. 刷新灵力+抽牌
+        _state.PlayerEnergy = _state.MaxEnergy;
+        results.AddRange(DrawCards(_state.HandSize - _state.Hand.Count));
+
+        return results;
+    }
+}
+```
+
+### 9.8 存档系统设计
+
+```csharp
+// 文件: GameScripts/HotFix/GameLogic/Progression/SaveSystem.cs
+
+/// <summary>
+/// 存档分为: 元进度(跨Run) + 当前Run状态
+/// 使用JSON序列化，TEngine资源模块管理存档文件
+/// </summary>
+[System.Serializable]
+public class MetaSaveData
+{
+    public string version = "1.0.0";
+    public int daoEssence;              // 道基精华
+    public List<string> daoTreeUnlocked; // 已解锁道基节点
+    public List<string> unlockedSects;   // 已解锁门派
+    public int daoHeartLevel;            // 道心难度
+    public int totalRuns;
+    public int totalWins;
+    public PlayerStatistics statistics;
+}
+
+[System.Serializable]
+public class RunSaveData
+{
+    public string sectId;               // 当前门派
+    public int currentRealm;            // 当前境界
+    public int playerHP;                // 当前HP
+    public int maxHP;
+    public List<string> deck;           // 牌库
+    public List<string> relics;         // 法宝
+    public List<string> pills;          // 丹药
+    public int spiritStones;            // 灵石
+    public MapState mapState;           // 地图状态
+    public string currentCombatId;      // 当前战斗（如果中途保存）
+}
+```
+
+### 9.9 蒙特卡洛模拟框架
+
+```csharp
+// 文件: GameScripts/HotFix/GameLogic/Balance/RunSimulator.cs
+// 也可用Python独立实现，复用CombatEngine逻辑
+
+public class RunSimulator
+{
+    public RunResult SimulateRun(int seed, int daoHeartLevel, string sectId, AIStrategy ai)
+    {
+        var rng = new System.Random(seed);
+        var state = new GameState(daoHeartLevel, sectId);
+        var combatEngine = new CombatEngine();
+
+        foreach (var realm in Realms.All)
+        {
+            var map = MapGenerator.Generate(realm, rng);
+            foreach (var node in map.Nodes)
+            {
+                var result = ProcessNode(node, state, combatEngine, ai, rng);
+                if (state.PlayerHP <= 0)
+                    return new RunResult(realm, victory: false);
+            }
+        }
+        return new RunResult("Feixian", victory: true);
+    }
+
+    public void BatchSimulate(int nRuns = 10000)
+    {
+        var results = new List<RunResult>();
+        for (int i = 0; i < nRuns; i++)
+        {
+            var sim = new RunSimulator();
+            results.Add(sim.SimulateRun(i, 0, "sword", AIStrategy.Balanced));
+        }
+
+        float winRate = results.Count(r => r.Victory) / (float)nRuns;
+        UnityEngine.Debug.Log($"胜率: {winRate:P1}");
+    }
+}
+```
+
+### 9.10 TEngine流程模块配置
+
+```csharp
+// 文件: GameScripts/HotFix/GameLogic/GameApp.cs
+
+public class GameApp
+{
+    public void OnStart()
+    {
+        // 注册游戏流程
+        ProcedureModule.AddProcedure<ProcedureMainMenu>();    // 主菜单
+        ProcedureModule.AddProcedure<ProcedureSectSelect>();  // 门派选择
+        ProcedureModule.AddProcedure<ProcedureMap>();         // 地图界面
+        ProcedureModule.AddProcedure<ProcedureCombat>();      // 战斗
+        ProcedureModule.AddProcedure<ProcedureShop>();        // 坊市
+        ProcedureModule.AddProcedure<ProcedureMeditation>();  // 闭关
+        ProcedureModule.AddProcedure<ProcedureBreakthrough>();// 境界突破
+        ProcedureModule.AddProcedure<ProcedureRunEnd>();      // Run结束
+
+        // 加载Luban配置表
+        ConfigSystem.LoadAllConfigs(async: true, onComplete: () =>
+        {
+            ProcedureModule.ChangeProcedure<ProcedureMainMenu>();
+        });
+    }
+}
 ```
 
 ---
@@ -1069,7 +1401,7 @@ Phase 3: 完整体验 (3-5个月)
 | 角色 | 人数 | 职责 |
 |------|------|------|
 | **游戏设计师** | 1 | GDD维护、卡牌设计、平衡性、模拟器 |
-| **程序员** | 1-2 | Godot开发、引擎逻辑、工具链 |
+| **程序员** | 1-2 | Unity + TEngine开发、热更新逻辑、工具链 |
 | **2D美术** | 1 | 卡牌插画、UI、角色、场景 |
 | **音效/音乐** | 0.5（外包） | 战斗音效、BGM |
 | **制作人** | 0.5（兼任） | 项目管理、Steam发行 |
@@ -1108,10 +1440,13 @@ Phase 3: 完整体验 (3-5个月)
 > **下一步行动**：
 > 1. [ ] 基于本文档构建 Python 蒙特卡洛模拟器原型
 > 2. [ ] 设计初始80张卡牌的详细数据表（Excel/Google Sheets）
-> 3. [ ] 创建Godot项目并实现战斗系统原型
+> 3. [ ] 基于当前 Unity + TEngine 工程实现战斗系统原型
 > 4. [ ] 进行第一次纸面玩测试（用打印的卡牌和骰子模拟）
 > 5. [ ] 根据玩测试结果调整 [PLACEHOLDER] 数值
 
 ---
 
 *本文档由 GameDesigner Agent 基于玩家需求设计，遵循"从玩家体验出发、用数据验证、以文档落地"的设计方法论。*
+
+
+---

@@ -54,6 +54,7 @@
 4. UI 必须先做参考图和黄金样板，确认后再落 Prefab。
 5. 新增配置时优先走 `Configs/GameConfig` 和 Luban 生成链路。
 6. 新增全局模块时优先通过 `GameModule` 暴露。
+7. 新增阶段交付说明统一放入 `Doc/交付说明/`，不要继续散放在 `Doc/设计文档/` 根目录。
 
 ## TEngine 优先原则
 
