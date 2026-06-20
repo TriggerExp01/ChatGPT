@@ -92,6 +92,22 @@ namespace GameLogic.Tests
         }
 
         [Test]
+        public void SnapshotUsesCurrentBattleHpAfterUsingPill()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var run = engine.StartRun(CreateInstantWinDeck(), CreateSingleBattleRoute(), playerCurrentHp: 70);
+            run.Pills.Add(CultivationSeedData.SmallRestorePillItem);
+            run.CurrentBattle.Player.TakeDamage(20);
+
+            engine.UsePillInBattle(run, 0);
+            var snapshot = CultivationRunPrototypePresenter.CreateSnapshot(run);
+
+            Assert.AreEqual(60, snapshot.PlayerHp);
+            Assert.AreEqual(0, snapshot.PillCount);
+            Assert.AreEqual(100, snapshot.PlayerMaxHp);
+        }
+
+        [Test]
         public void CreateSnapshotCountsRemovedMarketCards()
         {
             var engine = new CultivationRunEngine(new BattleEngine(1));
@@ -219,6 +235,19 @@ namespace GameLogic.Tests
                         new CultivationMarketItem("market_cloud_guard", CultivationSeedData.CloudGuard, 20),
                         new CultivationMarketItem("market_small_restore_pill", CultivationSeedData.SmallRestorePillItem, 15),
                     }),
+            };
+        }
+
+        private static IReadOnlyList<CultivationRunNode> CreateSingleBattleRoute()
+        {
+            return new List<CultivationRunNode>
+            {
+                new CultivationRunNode(
+                    "battle",
+                    "battle",
+                    CultivationRunNodeType.Battle,
+                    new EnemyDefinition("enemy", "enemy", 1, 0, new EnemyIntent(EnemyIntentType.Attack, 1)),
+                    CultivationSeedData.CreateSwordSectRewardPool()),
             };
         }
     }

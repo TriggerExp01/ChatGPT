@@ -71,7 +71,9 @@ namespace GameLogic.Cultivation
 
         private static string BuildRunText(CultivationRunState state)
         {
-            return $"状态：{state.Status}\n节点：{state.CurrentNodeIndex + 1}/{state.Route.Count}\nHP：{state.PlayerCurrentHp}/{state.PlayerMaxHp}\n灵石：{state.SpiritStones}\n牌组：{state.Deck.Count} 张\n丹药：{state.Pills.Count}/{state.PillSlotLimit}\n已拿奖励：{state.ClaimedRewards.Count}\n坊市删牌：{state.RemovedMarketCards.Count}\n坊市售牌：{state.SoldMarketCards.Count}";
+            var playerHp = state.CurrentBattle?.Player.CurrentHp ?? state.PlayerCurrentHp;
+            var playerMaxHp = state.CurrentBattle?.Player.MaxHp ?? state.PlayerMaxHp;
+            return $"状态：{state.Status}\n节点：{state.CurrentNodeIndex + 1}/{state.Route.Count}\nHP：{playerHp}/{playerMaxHp}\n灵石：{state.SpiritStones}\n牌组：{state.Deck.Count} 张\n丹药：{state.Pills.Count}/{state.PillSlotLimit}\n已拿奖励：{state.ClaimedRewards.Count}\n坊市删牌：{state.RemovedMarketCards.Count}\n坊市售牌：{state.SoldMarketCards.Count}";
         }
 
         private static string BuildNodeText(CultivationRunState state)
@@ -267,8 +269,8 @@ namespace GameLogic.Cultivation
                 Status = state.Status,
                 CurrentNodeIndex = state.CurrentNodeIndex,
                 CurrentNodeName = state.CurrentNode.Name,
-                PlayerHp = state.PlayerCurrentHp,
-                PlayerMaxHp = state.PlayerMaxHp,
+                PlayerHp = state.CurrentBattle?.Player.CurrentHp ?? state.PlayerCurrentHp,
+                PlayerMaxHp = state.CurrentBattle?.Player.MaxHp ?? state.PlayerMaxHp,
                 SpiritStones = state.SpiritStones,
                 DeckCount = state.Deck.Count,
                 PillCount = state.Pills.Count,

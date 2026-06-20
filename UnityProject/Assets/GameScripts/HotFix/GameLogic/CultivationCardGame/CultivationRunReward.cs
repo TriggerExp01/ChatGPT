@@ -4,7 +4,7 @@ namespace GameLogic.Cultivation
 {
     public sealed class PillDefinition
     {
-        public PillDefinition(string id, string name, string description)
+        public PillDefinition(string id, string name, string description, int healAmount = 0)
         {
             if (string.IsNullOrWhiteSpace(id))
             {
@@ -19,6 +19,7 @@ namespace GameLogic.Cultivation
             Id = id;
             Name = name;
             Description = description ?? string.Empty;
+            HealAmount = Math.Max(0, healAmount);
         }
 
         public string Id { get; }
@@ -26,6 +27,8 @@ namespace GameLogic.Cultivation
         public string Name { get; }
 
         public string Description { get; }
+
+        public int HealAmount { get; }
     }
 
     public sealed class CultivationRunReward

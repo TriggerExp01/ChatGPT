@@ -119,6 +119,28 @@ namespace GameLogic.Tests
         }
 
         [Test]
+        public void PrototypeUiCanUsePillInNextBattle()
+        {
+            ForceCurrentBattleVictory();
+            _ui.ResolveBattle();
+            _ui.SkipReward();
+            _ui.ChooseRoute(1);
+            _ui.Rest();
+            _ui.ChooseRoute(0);
+            SetRunSpiritStones(20);
+            _ui.BuyMarketItem(2);
+            _ui.LeaveMarket();
+            DamageCurrentBattlePlayer(18);
+
+            _ui.UsePillInBattle(0);
+
+            Assert.AreEqual(CultivationRunStatus.InBattle, _ui.Snapshot.Status);
+            Assert.AreEqual(92, _ui.Snapshot.PlayerHp);
+            Assert.AreEqual(0, _ui.Snapshot.PillCount);
+            StringAssert.Contains("使用 小还丹，恢复 10 HP", GetCurrentBattleLogText());
+        }
+
+        [Test]
         public void PrototypeUiCanRemoveDeckCardInMarket()
         {
             ForceCurrentBattleVictory();
@@ -173,6 +195,22 @@ namespace GameLogic.Tests
             Assert.Greater(_ui.Snapshot.SpiritStones, stonesBefore);
             Assert.AreEqual(deckBefore - 1, _ui.Snapshot.DeckCount);
             Assert.AreEqual(1, _ui.Snapshot.SoldMarketCardCount);
+        }
+
+        private string GetCurrentBattleLogText()
+        {
+            var battleField = typeof(CultivationRunPrototypeUI)
+                .GetField("_run", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            var run = (CultivationRunState)battleField.GetValue(_ui);
+            return string.Join("\n", run.CurrentBattle.Logs.ConvertAll(log => log.Message));
+        }
+
+        private void DamageCurrentBattlePlayer(int amount)
+        {
+            var battleField = typeof(CultivationRunPrototypeUI)
+                .GetField("_run", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            var run = (CultivationRunState)battleField.GetValue(_ui);
+            run.CurrentBattle.Player.TakeDamage(amount);
         }
 
         private void SetRunSpiritStones(int value)

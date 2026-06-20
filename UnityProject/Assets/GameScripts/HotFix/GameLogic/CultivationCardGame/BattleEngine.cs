@@ -774,7 +774,8 @@ namespace GameLogic.Cultivation
         public static PillDefinition SmallRestorePillItem { get; } = new PillDefinition(
             "small_restore_pill",
             "小还丹",
-            "战斗内消耗品：恢复 10 HP。");
+            "战斗内消耗品：恢复 10 HP。",
+            healAmount: 10);
 
         public static IReadOnlyList<CardDefinition> CreateSwordSectStarterDeck()
         {

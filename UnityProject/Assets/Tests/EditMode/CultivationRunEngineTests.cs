@@ -415,6 +415,45 @@ namespace GameLogic.Tests
         }
 
         [Test]
+        public void UsePillInBattleHealsPlayerAndConsumesPill()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var run = engine.StartRun(CreateInstantWinDeck(), CreateTestRoute(), playerCurrentHp: 50);
+            run.Pills.Add(CultivationSeedData.SmallRestorePillItem);
+            run.CurrentBattle.Player.TakeDamage(12);
+
+            engine.UsePillInBattle(run, 0);
+
+            Assert.AreEqual(48, run.CurrentBattle.Player.CurrentHp);
+            Assert.AreEqual(0, run.Pills.Count);
+            Assert.IsTrue(run.CurrentBattle.Logs.Any(log => log.Message.Contains("使用 小还丹，恢复 10 HP")));
+        }
+
+        [Test]
+        public void UsePillInBattleDoesNotOverheal()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var run = engine.StartRun(CreateInstantWinDeck(), CreateTestRoute(), playerCurrentHp: 96);
+            run.Pills.Add(CultivationSeedData.SmallRestorePillItem);
+
+            engine.UsePillInBattle(run, 0);
+
+            Assert.AreEqual(100, run.CurrentBattle.Player.CurrentHp);
+            Assert.AreEqual(0, run.Pills.Count);
+        }
+
+        [Test]
+        public void UsePillInBattleRejectsInvalidStateAndKeepsPill()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var run = engine.StartRun(CreateInstantWinDeck(), CreateMarketRoute(), initialSpiritStones: 20);
+            run.Pills.Add(CultivationSeedData.SmallRestorePillItem);
+
+            Assert.Throws<System.InvalidOperationException>(() => engine.UsePillInBattle(run, 0));
+            Assert.AreEqual(1, run.Pills.Count);
+        }
+
+        [Test]
         public void MarketRejectsPurchaseWithoutEnoughSpiritStones()
         {
             var engine = new CultivationRunEngine(new BattleEngine(1));

@@ -94,6 +94,17 @@ namespace GameLogic.Cultivation
             Refresh();
         }
 
+        public void UsePillInBattle(int pillIndex)
+        {
+            if (_run == null || _run.Status != CultivationRunStatus.InBattle || _run.CurrentBattle == null || _run.CurrentBattle.Outcome != BattleOutcome.InProgress)
+            {
+                return;
+            }
+
+            _runEngine.UsePillInBattle(_run, pillIndex);
+            Refresh();
+        }
+
         public void ResolveBattle()
         {
             if (_run == null || _run.Status != CultivationRunStatus.InBattle || _run.CurrentBattle == null || _run.CurrentBattle.Outcome == BattleOutcome.InProgress)
@@ -446,6 +457,16 @@ namespace GameLogic.Cultivation
             if (_run.Status != CultivationRunStatus.InBattle || _run.CurrentBattle == null)
             {
                 return;
+            }
+
+            for (var i = 0; i < _run.Pills.Count; i++)
+            {
+                var index = i;
+                var pill = _run.Pills[i];
+                var button = CreateButton($"Pill_{i}_{pill.Id}", _handRoot, $"丹药\n{pill.Name}\n{pill.Description}");
+                button.interactable = _run.CurrentBattle.Outcome == BattleOutcome.InProgress && pill.HealAmount > 0;
+                button.onClick.AddListener(() => UsePillInBattle(index));
+                SetLayout(button.gameObject, flexibleWidth: 1, preferredHeight: 130);
             }
 
             for (var i = 0; i < _run.CurrentBattle.Hand.Count; i++)

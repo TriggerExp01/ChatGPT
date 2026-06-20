@@ -135,6 +135,36 @@ namespace GameLogic.Cultivation
             Rest(state);
         }
 
+        public void UsePillInBattle(CultivationRunState state, int pillIndex)
+        {
+            EnsureState(state);
+
+            if (state.Status != CultivationRunStatus.InBattle || state.CurrentBattle == null)
+            {
+                throw new InvalidOperationException("Run is not in battle state.");
+            }
+
+            if (state.CurrentBattle.Outcome != BattleOutcome.InProgress)
+            {
+                throw new InvalidOperationException("Battle is not active.");
+            }
+
+            if (pillIndex < 0 || pillIndex >= state.Pills.Count)
+            {
+                throw new ArgumentOutOfRangeException(nameof(pillIndex), "Pill index is outside the current pill slots.");
+            }
+
+            var pill = state.Pills[pillIndex];
+            if (pill.HealAmount <= 0)
+            {
+                throw new InvalidOperationException("Selected pill does not have a battle effect.");
+            }
+
+            state.CurrentBattle.Player.Heal(pill.HealAmount);
+            state.Pills.RemoveAt(pillIndex);
+            state.CurrentBattle.Logs.Add(new BattleLogEntry($"使用 {pill.Name}，恢复 {pill.HealAmount} HP。"));
+        }
+
         public void BuyMarketItem(CultivationRunState state, int itemIndex)
         {
             EnsureMarketState(state);
