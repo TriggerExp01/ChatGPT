@@ -577,6 +577,12 @@ namespace GameLogic.Cultivation
 
         private int ApplySelfHpLoss(BattleState state, CardDefinition card, int amount, string reason)
         {
+            if (amount > 0 && state.TryConsumePreventSelfHpLossCharge())
+            {
+                state.Logs.Add(new BattleLogEntry($"{card.Name} 触发血魔珠，免疫本次{reason}自伤 {amount} HP。"));
+                return 0;
+            }
+
             var hpLost = state.Player.LoseHpAsCost(amount);
             state.AddSelfHpLostThisTurn(hpLost);
             state.Logs.Add(new BattleLogEntry($"{card.Name} {reason}失去 {hpLost} HP。"));
@@ -885,6 +891,20 @@ namespace GameLogic.Cultivation
                 damage += damage * frenzyPercent / 100;
             }
 
+            var artifactFrenzyPercent = state.Player.GetMissingHpTenthSteps() * state.ArtifactMissingHpDamageBonusPerStepPercent;
+            if (artifactFrenzyPercent > 0)
+            {
+                damage += damage * artifactFrenzyPercent / 100;
+            }
+
+            var lowHpArtifactPercent = state.Player.IsCurrentHpAtOrBelowPercent(20) && state.ArtifactMissingHpDamageBonusPerStepPercent > 0
+                ? 20
+                : 0;
+            if (lowHpArtifactPercent > 0)
+            {
+                damage += damage * lowHpArtifactPercent / 100;
+            }
+
             var multiplier = state.TryConsumeChargedDamageMultiplier();
             var dealt = enemy.Body.TakeDamage(damage * multiplier, state.Player.Sharpness);
             var chargeText = multiplier > 1 ? $" 蓄力 x{multiplier}" : string.Empty;
@@ -897,6 +917,16 @@ namespace GameLogic.Cultivation
             if (frenzyPercent > 0)
             {
                 bonusParts.Add($"癫狂 +{frenzyPercent}%");
+            }
+
+            if (artifactFrenzyPercent > 0)
+            {
+                bonusParts.Add($"天魔心 +{artifactFrenzyPercent}%");
+            }
+
+            if (lowHpArtifactPercent > 0)
+            {
+                bonusParts.Add($"天魔心低血 +{lowHpArtifactPercent}%");
             }
 
             var bonusText = bonusParts.Count > 0 ? $" [{string.Join(", ", bonusParts)}]" : string.Empty;
@@ -3131,6 +3161,20 @@ namespace GameLogic.Cultivation
             ArtifactEffectType.HealAfterVictory,
             3);
 
+        public static ArtifactDefinition BloodDemonOrbArtifact { get; } = new ArtifactDefinition(
+            "blood_demon_orb",
+            "血魔珠",
+            "魔道专属法宝：每场战斗首次失去 HP 时不失去，免疫第一次自伤。",
+            ArtifactEffectType.PreventFirstSelfHpLossEachBattle,
+            1);
+
+        public static ArtifactDefinition HeavenlyDemonHeartArtifact { get; } = new ArtifactDefinition(
+            "heavenly_demon_heart",
+            "天魔心",
+            "魔道专属法宝：每损失 10% 最大 HP，卡牌伤害 +3%；HP 低于 20% 时额外 +20%。",
+            ArtifactEffectType.MissingHpDamageBonus,
+            3);
+
         public static IReadOnlyList<CardDefinition> CreateSwordSectStarterDeck()
         {
             return new List<CardDefinition>
@@ -3501,6 +3545,18 @@ namespace GameLogic.Cultivation
             };
         }
 
+        public static IReadOnlyList<ArtifactDefinition> CreateArtifactRewardPool(CultivationSect sect)
+        {
+            var artifacts = CreatePrototypeArtifactRewardPool().ToList();
+            if (sect == CultivationSect.Demonic)
+            {
+                artifacts.Add(BloodDemonOrbArtifact);
+                artifacts.Add(HeavenlyDemonHeartArtifact);
+            }
+
+            return artifacts;
+        }
+
         public static MysticEventDefinition SpiritSpringMysticEvent { get; } = new MysticEventDefinition(
             "mystic_spirit_spring",
             "灵泉",
@@ -3526,7 +3582,7 @@ namespace GameLogic.Cultivation
         public static IReadOnlyList<CultivationRunNode> CreateFirstPrototypeRoute(CultivationSect sect = CultivationSect.Sword)
         {
             var rewards = CreateRewardPool(sect);
-            var artifactRewards = CreatePrototypeArtifactRewardPool();
+            var artifactRewards = CreateArtifactRewardPool(sect);
             return new List<CultivationRunNode>
             {
                 new CultivationRunNode("node_stone_demon", "山门石魔", CultivationRunNodeType.Battle, StoneDemon, rewards, spiritStoneReward: 15),
@@ -3540,7 +3596,7 @@ namespace GameLogic.Cultivation
         {
             var rewards = CreateRewardPool(sect);
             var marketItems = CreatePrototypeMarketItems();
-            var artifactRewards = CreatePrototypeArtifactRewardPool();
+            var artifactRewards = CreateArtifactRewardPool(sect);
             return new List<CultivationRunNode>
             {
                 new CultivationRunNode(

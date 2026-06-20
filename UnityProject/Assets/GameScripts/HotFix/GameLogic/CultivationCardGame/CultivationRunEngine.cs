@@ -456,7 +456,31 @@ namespace GameLogic.Cultivation
             state.RestUpgradeChoices.Clear();
             state.CurrentRouteChoices.Clear();
             state.CurrentBattle = _battleEngine.CreateBattle(state.Deck, state.CurrentNode.Enemy, state.PlayerCurrentHp, state.PlayerMaxHp, state.SpiritMax, state.HandLimit, state.SelectedGoldenCorePassive);
+            ApplyArtifactBattleEffects(state);
             state.Status = CultivationRunStatus.InBattle;
+        }
+
+        private static void ApplyArtifactBattleEffects(CultivationRunState state)
+        {
+            if (state.CurrentBattle == null)
+            {
+                return;
+            }
+
+            foreach (var artifact in state.Artifacts)
+            {
+                switch (artifact.EffectType)
+                {
+                    case ArtifactEffectType.PreventFirstSelfHpLossEachBattle:
+                        state.CurrentBattle.AddPreventSelfHpLossCharges(artifact.PreventFirstSelfHpLossEachBattleCharges);
+                        state.CurrentBattle.Logs.Add(new BattleLogEntry($"{artifact.Name} 生效：本场战斗前 {artifact.PreventFirstSelfHpLossEachBattleCharges} 次自伤被免疫。"));
+                        break;
+                    case ArtifactEffectType.MissingHpDamageBonus:
+                        state.CurrentBattle.AddArtifactMissingHpDamageBonus(artifact.MissingHpDamageBonusPerStepPercent);
+                        state.CurrentBattle.Logs.Add(new BattleLogEntry($"{artifact.Name} 生效：每损失 10% 最大 HP，卡牌伤害 +{artifact.MissingHpDamageBonusPerStepPercent}%。"));
+                        break;
+                }
+            }
         }
 
         private static string ResolvePillEffect(BattleState battle, PillDefinition pill)

@@ -260,6 +260,74 @@ namespace GameLogic.Tests
         }
 
         [Test]
+        public void DemonicSectArtifactPoolIncludesExclusiveArtifacts()
+        {
+            var commonArtifacts = CultivationSeedData.CreateArtifactRewardPool(CultivationSect.Sword)
+                .Select(artifact => artifact.Id)
+                .ToArray();
+            var demonicArtifacts = CultivationSeedData.CreateArtifactRewardPool(CultivationSect.Demonic)
+                .Select(artifact => artifact.Id)
+                .ToArray();
+
+            CollectionAssert.DoesNotContain(commonArtifacts, CultivationSeedData.BloodDemonOrbArtifact.Id);
+            CollectionAssert.DoesNotContain(commonArtifacts, CultivationSeedData.HeavenlyDemonHeartArtifact.Id);
+            CollectionAssert.Contains(demonicArtifacts, CultivationSeedData.BloodDemonOrbArtifact.Id);
+            CollectionAssert.Contains(demonicArtifacts, CultivationSeedData.HeavenlyDemonHeartArtifact.Id);
+        }
+
+        [Test]
+        public void BloodDemonOrbPreventsFirstSelfHpLossEachBattle()
+        {
+            var battleEngine = new BattleEngine(20260620);
+            var runEngine = new CultivationRunEngine(battleEngine);
+            var state = runEngine.StartRun(
+                CultivationSeedData.CreateDemonicSectStarterDeck(),
+                CreateSingleArtifactChestRoute(CultivationSeedData.BloodDemonOrbArtifact),
+                playerCurrentHp: 70,
+                sect: CultivationSect.Demonic);
+
+            var artifact = runEngine.OpenChest(state);
+            var battle = state.CurrentBattle;
+            var card = CultivationSeedData.BloodSacrificePalm;
+            battle.Hand.Clear();
+            battle.Hand.Add(card);
+            battle.Spirit = 3;
+
+            battleEngine.PlayCard(battle, card, battle.Enemies[0]);
+
+            Assert.AreSame(CultivationSeedData.BloodDemonOrbArtifact, artifact);
+            Assert.AreEqual(70, battle.Player.CurrentHp);
+            Assert.AreEqual(0, battle.PreventSelfHpLossCharges);
+            Assert.IsTrue(battle.Logs.Any(log => log.Message.Contains("血魔珠")));
+        }
+
+        [Test]
+        public void HeavenlyDemonHeartAddsMissingHpDamageBonus()
+        {
+            var battleEngine = new BattleEngine(20260620);
+            var runEngine = new CultivationRunEngine(battleEngine);
+            var state = runEngine.StartRun(
+                new List<CardDefinition> { CultivationSeedData.SwordQi },
+                CreateSingleArtifactChestRoute(CultivationSeedData.HeavenlyDemonHeartArtifact),
+                playerCurrentHp: 10,
+                sect: CultivationSect.Demonic);
+
+            var artifact = runEngine.OpenChest(state);
+            var battle = state.CurrentBattle;
+            var card = CultivationSeedData.SwordQi;
+            battle.Hand.Clear();
+            battle.Hand.Add(card);
+            battle.Spirit = 3;
+
+            battleEngine.PlayCard(battle, card, battle.Enemies[0]);
+
+            Assert.AreSame(CultivationSeedData.HeavenlyDemonHeartArtifact, artifact);
+            Assert.AreEqual(30, battle.Enemies[0].Body.CurrentHp);
+            Assert.AreEqual(3, battle.ArtifactMissingHpDamageBonusPerStepPercent);
+            Assert.IsTrue(battle.Logs.Any(log => log.Message.Contains("天魔心")));
+        }
+
+        [Test]
         public void VictoryMovesRunToRewardState()
         {
             var engine = new CultivationRunEngine(new BattleEngine(1));
@@ -1787,6 +1855,27 @@ namespace GameLogic.Tests
                     CultivationRunNodeType.Battle,
                     new EnemyDefinition("after_chest_enemy", "after_chest_enemy", 1, 0, new EnemyIntent(EnemyIntentType.Attack, 1)),
                     CultivationSeedData.CreateSwordSectRewardPool()),
+            };
+        }
+
+        private static IReadOnlyList<CultivationRunNode> CreateSingleArtifactChestRoute(ArtifactDefinition artifact)
+        {
+            return new List<CultivationRunNode>
+            {
+                new CultivationRunNode(
+                    "artifact_chest",
+                    "artifact_chest",
+                    CultivationRunNodeType.Chest,
+                    null,
+                    null,
+                    nextNodeIndices: new[] { 1 },
+                    artifactRewardPool: new[] { artifact }),
+                new CultivationRunNode(
+                    "after_artifact_chest",
+                    "after_artifact_chest",
+                    CultivationRunNodeType.Battle,
+                    CultivationSeedData.StoneDemon,
+                    CultivationSeedData.CreateDemonicSectRewardPool()),
             };
         }
 

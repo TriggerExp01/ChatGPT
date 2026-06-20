@@ -89,6 +89,10 @@ namespace GameLogic.Cultivation
 
         public int BloodlossRetaliationTurns { get; private set; }
 
+        public int PreventSelfHpLossCharges { get; private set; }
+
+        public int ArtifactMissingHpDamageBonusPerStepPercent { get; private set; }
+
         public int SelfHpLostThisTurn { get; private set; }
 
         public bool PoisonDamageTriggeredThisTurn { get; private set; }
@@ -385,6 +389,27 @@ namespace GameLogic.Cultivation
             {
                 BloodlossRetaliationPercent = 0;
             }
+        }
+
+        public void AddPreventSelfHpLossCharges(int amount)
+        {
+            PreventSelfHpLossCharges += Math.Max(0, amount);
+        }
+
+        public bool TryConsumePreventSelfHpLossCharge()
+        {
+            if (PreventSelfHpLossCharges <= 0)
+            {
+                return false;
+            }
+
+            PreventSelfHpLossCharges--;
+            return true;
+        }
+
+        public void AddArtifactMissingHpDamageBonus(int percentPerMissingHpStep)
+        {
+            ArtifactMissingHpDamageBonusPerStepPercent += Math.Max(0, percentPerMissingHpStep);
         }
 
         public void AddSelfHpLostThisTurn(int amount)

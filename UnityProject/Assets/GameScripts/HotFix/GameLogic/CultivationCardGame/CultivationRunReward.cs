@@ -117,7 +117,9 @@ namespace GameLogic.Cultivation
     public enum ArtifactEffectType
     {
         BonusSpiritStonesOnVictory,
-        HealAfterVictory
+        HealAfterVictory,
+        PreventFirstSelfHpLossEachBattle,
+        MissingHpDamageBonus
     }
 
     public sealed class ArtifactDefinition
@@ -154,6 +156,10 @@ namespace GameLogic.Cultivation
         public int BonusSpiritStonesOnVictory => EffectType == ArtifactEffectType.BonusSpiritStonesOnVictory ? EffectValue : 0;
 
         public int HealAfterVictoryAmount => EffectType == ArtifactEffectType.HealAfterVictory ? EffectValue : 0;
+
+        public int PreventFirstSelfHpLossEachBattleCharges => EffectType == ArtifactEffectType.PreventFirstSelfHpLossEachBattle ? Math.Max(1, EffectValue) : 0;
+
+        public int MissingHpDamageBonusPerStepPercent => EffectType == ArtifactEffectType.MissingHpDamageBonus ? EffectValue : 0;
     }
 
     public sealed class CultivationMarketItem
