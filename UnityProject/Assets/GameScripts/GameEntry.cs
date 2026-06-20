@@ -16,7 +16,7 @@ public class GameEntry : MonoBehaviour
 #if UNITY_EDITOR
         if (useCultivationPrototypeInEditor)
         {
-            CultivationBattlePrototypeUI.Open();
+            CultivationRunPrototypeUI.Open();
             DontDestroyOnLoad(this);
             return;
         }
@@ -37,7 +37,7 @@ public class GameEntry : MonoBehaviour
         var entry = FindObjectOfType<GameEntry>();
         if (entry != null && entry.UseCultivationPrototypeInEditor)
         {
-            CultivationBattlePrototypeUI.Open();
+            CultivationRunPrototypeUI.Open();
         }
     }
 #endif

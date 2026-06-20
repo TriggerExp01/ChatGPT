@@ -37,7 +37,7 @@ public partial class GameApp
     private static void StartGameLogic()
     {
         Log.Warning(
-            "======= Cultivation Phase 7 Run prototype ready: battle/reward/rest/route choice UI =======");
+            "======= Cultivation run UI ready: battle, route, rest, chest, market, mystic =======");
         CultivationRunPrototypeUI.Open();
     }
     

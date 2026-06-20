@@ -34,6 +34,19 @@ namespace GameLogic.Tests
         }
 
         [Test]
+        public void OpenBuildsCompleteRunUiLayout()
+        {
+            Assert.NotNull(_root.transform.Find("CultivationRunPrototypeUI/Header/StageText"));
+            Assert.NotNull(_root.transform.Find("CultivationRunPrototypeUI/Body/RunPanel/RunText"));
+            Assert.NotNull(_root.transform.Find("CultivationRunPrototypeUI/Body/BattlePanel/BattleText"));
+            Assert.NotNull(_root.transform.Find("CultivationRunPrototypeUI/Body/DeckPanel/DeckText"));
+            Assert.NotNull(_root.transform.Find("CultivationRunPrototypeUI/Lower/ChoicesScrollPanel/Viewport/Content"));
+            Assert.NotNull(_root.transform.Find("CultivationRunPrototypeUI/Lower/HandScrollPanel/Viewport/Content"));
+            Assert.NotNull(_root.transform.Find("CultivationRunPrototypeUI/Lower/ActionBar/ResetButton"));
+            Assert.NotNull(_root.transform.Find("CultivationRunPrototypeUI/Lower/ActionBar/EndTurnButton"));
+        }
+
+        [Test]
         public void ResolveRewardAndRouteChoiceCanReachRestNode()
         {
             ForceCurrentBattleVictory();
