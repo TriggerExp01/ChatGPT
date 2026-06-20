@@ -73,7 +73,7 @@ namespace GameLogic.Cultivation
         {
             var playerHp = state.CurrentBattle?.Player.CurrentHp ?? state.PlayerCurrentHp;
             var playerMaxHp = state.CurrentBattle?.Player.MaxHp ?? state.PlayerMaxHp;
-            return $"状态：{state.Status}\n节点：{state.CurrentNodeIndex + 1}/{state.Route.Count}\nHP：{playerHp}/{playerMaxHp}\n灵石：{state.SpiritStones}\n牌组：{state.Deck.Count} 张\n丹药：{state.Pills.Count}/{state.PillSlotLimit}\n法宝：{state.Artifacts.Count}\n精英法宝：{state.DroppedArtifacts.Count}\n已拿奖励：{state.ClaimedRewards.Count}\n坊市删牌：{state.RemovedMarketCards.Count}\n坊市售牌：{state.SoldMarketCards.Count}";
+            return $"状态：{state.Status}\n节点：{state.CurrentNodeIndex + 1}/{state.Route.Count}\nHP：{playerHp}/{playerMaxHp}\n灵石：{state.SpiritStones}\n牌组：{state.Deck.Count} 张\n丹药：{state.Pills.Count}/{state.PillSlotLimit}\n法宝：{state.Artifacts.Count}\n精英法宝：{state.DroppedArtifacts.Count}\n宝箱法宝：{state.ChestArtifacts.Count}\n已拿奖励：{state.ClaimedRewards.Count}\n坊市删牌：{state.RemovedMarketCards.Count}\n坊市售牌：{state.SoldMarketCards.Count}";
         }
 
         private static string BuildNodeText(CultivationRunState state)
@@ -110,6 +110,12 @@ namespace GameLogic.Cultivation
                 builder.Append("移除卡牌：").Append(CultivationRunEngine.MarketCardRemovalCost).Append(" 灵石 / 已移除 ").Append(state.RemovedMarketCards.Count).Append(" 张").AppendLine();
                 builder.Append("升级卡牌：").Append(CultivationRunEngine.MarketCardUpgradeCost).Append(" 灵石 / 已升级 ").Append(state.MarketUpgradedCards.Count).Append(" 张").AppendLine();
                 builder.Append("出售卡牌：半价回收 / 已出售 ").Append(state.SoldMarketCards.Count).Append(" 张").AppendLine();
+            }
+
+            if (state.Status == CultivationRunStatus.Chest)
+            {
+                builder.AppendLine();
+                builder.Append("宝箱法宝池：").Append(state.CurrentNode.ArtifactRewardPool.Count).Append(" 件").AppendLine();
             }
 
             return builder.ToString();
@@ -248,6 +254,8 @@ namespace GameLogic.Cultivation
 
         public int DroppedArtifactCount { get; private set; }
 
+        public int ChestArtifactCount { get; private set; }
+
         public int HandCount { get; private set; }
 
         public int RewardCount { get; private set; }
@@ -290,6 +298,7 @@ namespace GameLogic.Cultivation
                 ArtifactCount = state.Artifacts.Count,
                 PurchasedMarketArtifactCount = state.PurchasedMarketArtifacts.Count,
                 DroppedArtifactCount = state.DroppedArtifacts.Count,
+                ChestArtifactCount = state.ChestArtifacts.Count,
                 HandCount = state.CurrentBattle?.Hand.Count ?? 0,
                 RewardCount = state.CurrentRewards.Count,
                 RestUpgradeChoiceCount = state.RestUpgradeChoices.Count,

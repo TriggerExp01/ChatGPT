@@ -141,6 +141,36 @@ namespace GameLogic.Tests
         }
 
         [Test]
+        public void BuildTextIncludesChestStateAndChestArtifactCount()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var route = new[]
+            {
+                new CultivationRunNode(
+                    "chest",
+                    "chest",
+                    CultivationRunNodeType.Chest,
+                    null,
+                    null,
+                    artifactRewardPool: new[] { CultivationSeedData.SpiritStoneMineArtifact }),
+            };
+            var run = engine.StartRun(CreateInstantWinDeck(), route);
+
+            var text = CultivationRunPrototypePresenter.BuildText(run);
+            var beforeSnapshot = CultivationRunPrototypePresenter.CreateSnapshot(run);
+            engine.OpenChest(run);
+            var afterSnapshot = CultivationRunPrototypePresenter.CreateSnapshot(run);
+            var afterText = CultivationRunPrototypePresenter.BuildText(run);
+
+            Assert.AreEqual(CultivationRunStatus.Chest, beforeSnapshot.Status);
+            StringAssert.Contains("宝箱法宝池：1 件", text.NodeText);
+            StringAssert.Contains("等待操作：Chest", text.BattleText);
+            Assert.AreEqual(1, afterSnapshot.ArtifactCount);
+            Assert.AreEqual(1, afterSnapshot.ChestArtifactCount);
+            StringAssert.Contains("宝箱法宝：1", afterText.RunText);
+        }
+
+        [Test]
         public void SnapshotUsesCurrentBattleHpAfterUsingPill()
         {
             var engine = new CultivationRunEngine(new BattleEngine(1));

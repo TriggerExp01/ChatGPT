@@ -610,6 +610,58 @@ namespace GameLogic.Tests
         }
 
         [Test]
+        public void ChestNodeOpensArtifactAndAdvancesToNextNode()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var run = engine.StartRun(CreateInstantWinDeck(), CreateChestRoute());
+
+            Assert.AreEqual(CultivationRunStatus.Chest, run.Status);
+            Assert.AreEqual("chest", run.CurrentNode.Id);
+
+            var artifact = engine.OpenChest(run);
+
+            Assert.NotNull(artifact);
+            Assert.AreEqual(1, run.Artifacts.Count);
+            Assert.AreEqual(1, run.ChestArtifacts.Count);
+            Assert.AreEqual(artifact.Id, run.Artifacts[0].Id);
+            Assert.AreEqual(artifact.Id, run.ChestArtifacts[0].Id);
+            Assert.AreEqual(CultivationRunStatus.InBattle, run.Status);
+            Assert.AreEqual("after_chest_enemy", run.CurrentNode.Enemy.Id);
+        }
+
+        [Test]
+        public void OpenChestRejectsNonChestState()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var run = engine.StartRun(CreateInstantWinDeck(), CreateTestRoute());
+
+            Assert.Throws<System.InvalidOperationException>(() => engine.OpenChest(run));
+            Assert.AreEqual(0, run.Artifacts.Count);
+            Assert.AreEqual(0, run.ChestArtifacts.Count);
+        }
+
+        [Test]
+        public void OpenChestRejectsMissingArtifactPool()
+        {
+            var route = new[]
+            {
+                new CultivationRunNode(
+                    "empty_chest",
+                    "empty_chest",
+                    CultivationRunNodeType.Chest,
+                    null,
+                    null),
+            };
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var run = engine.StartRun(CreateInstantWinDeck(), route);
+
+            Assert.Throws<System.InvalidOperationException>(() => engine.OpenChest(run));
+            Assert.AreEqual(CultivationRunStatus.Chest, run.Status);
+            Assert.AreEqual(0, run.Artifacts.Count);
+            Assert.AreEqual(0, run.ChestArtifacts.Count);
+        }
+
+        [Test]
         public void MarketBuyingRejuvenationJadeHealsAfterVictory()
         {
             var engine = new CultivationRunEngine(new BattleEngine(1));
@@ -1088,6 +1140,27 @@ namespace GameLogic.Tests
                     "after_market",
                     CultivationRunNodeType.Battle,
                     new EnemyDefinition("after_market_enemy", "after_market_enemy", 1, 0, new EnemyIntent(EnemyIntentType.Attack, 1)),
+                    CultivationSeedData.CreateSwordSectRewardPool()),
+            };
+        }
+
+        private static IReadOnlyList<CultivationRunNode> CreateChestRoute()
+        {
+            return new List<CultivationRunNode>
+            {
+                new CultivationRunNode(
+                    "chest",
+                    "chest",
+                    CultivationRunNodeType.Chest,
+                    null,
+                    null,
+                    nextNodeIndices: new[] { 1 },
+                    artifactRewardPool: new[] { CultivationSeedData.SpiritStoneMineArtifact }),
+                new CultivationRunNode(
+                    "after_chest",
+                    "after_chest",
+                    CultivationRunNodeType.Battle,
+                    new EnemyDefinition("after_chest_enemy", "after_chest_enemy", 1, 0, new EnemyIntent(EnemyIntentType.Attack, 1)),
                     CultivationSeedData.CreateSwordSectRewardPool()),
             };
         }

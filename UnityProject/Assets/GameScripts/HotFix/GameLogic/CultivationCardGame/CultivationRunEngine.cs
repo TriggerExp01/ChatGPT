@@ -336,6 +336,22 @@ namespace GameLogic.Cultivation
             AdvanceToNextNode(state);
         }
 
+        public ArtifactDefinition OpenChest(CultivationRunState state)
+        {
+            EnsureChestState(state);
+
+            var artifact = CreateArtifactReward(state.CurrentNode);
+            if (artifact == null)
+            {
+                throw new InvalidOperationException("Chest node does not have an artifact reward.");
+            }
+
+            state.Artifacts.Add(artifact);
+            state.ChestArtifacts.Add(artifact);
+            AdvanceToNextNode(state);
+            return artifact;
+        }
+
         private void EnterCurrentNode(CultivationRunState state)
         {
             switch (state.CurrentNode.Type)
@@ -360,6 +376,14 @@ namespace GameLogic.Cultivation
                     state.CurrentMarketItems.Clear();
                     state.CurrentMarketItems.AddRange(state.CurrentNode.MarketItems);
                     state.Status = CultivationRunStatus.Market;
+                    break;
+                case CultivationRunNodeType.Chest:
+                    state.CurrentBattle = null;
+                    state.CurrentRewards.Clear();
+                    state.RestUpgradeChoices.Clear();
+                    state.CurrentRouteChoices.Clear();
+                    state.CurrentMarketItems.Clear();
+                    state.Status = CultivationRunStatus.Chest;
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(state.CurrentNode.Type), state.CurrentNode.Type, "Unsupported run node type.");
@@ -434,7 +458,12 @@ namespace GameLogic.Cultivation
 
         private ArtifactDefinition CreateArtifactReward(CultivationRunNode node)
         {
-            if (node.Type != CultivationRunNodeType.Elite || node.ArtifactRewardPool.Count == 0)
+            if (node.Type != CultivationRunNodeType.Elite && node.Type != CultivationRunNodeType.Chest)
+            {
+                return null;
+            }
+
+            if (node.ArtifactRewardPool.Count == 0)
             {
                 return null;
             }
@@ -535,6 +564,16 @@ namespace GameLogic.Cultivation
             if (state.Status != CultivationRunStatus.Market)
             {
                 throw new InvalidOperationException("Run is not in market state.");
+            }
+        }
+
+        private static void EnsureChestState(CultivationRunState state)
+        {
+            EnsureState(state);
+
+            if (state.Status != CultivationRunStatus.Chest)
+            {
+                throw new InvalidOperationException("Run is not in chest state.");
             }
         }
 

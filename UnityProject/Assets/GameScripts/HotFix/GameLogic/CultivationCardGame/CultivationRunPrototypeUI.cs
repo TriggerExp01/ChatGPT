@@ -238,6 +238,17 @@ namespace GameLogic.Cultivation
             Refresh();
         }
 
+        public void OpenChest()
+        {
+            if (_run == null || _run.Status != CultivationRunStatus.Chest)
+            {
+                return;
+            }
+
+            _runEngine.OpenChest(_run);
+            Refresh();
+        }
+
         private void Initialize()
         {
             if (_handRoot == null)
@@ -431,6 +442,12 @@ namespace GameLogic.Cultivation
                     var leave = CreateButton("LeaveMarketButton", _choiceRoot, "离开坊市");
                     leave.onClick.AddListener(LeaveMarket);
                     SetLayout(leave.gameObject, flexibleWidth: 1, preferredHeight: 96);
+                    break;
+                case CultivationRunStatus.Chest:
+                    var openChest = CreateButton("OpenChestButton", _choiceRoot, $"打开宝箱\n获得 1 件法宝\n法宝池 {_run.CurrentNode.ArtifactRewardPool.Count} 件");
+                    openChest.interactable = _run.CurrentNode.ArtifactRewardPool.Count > 0;
+                    openChest.onClick.AddListener(OpenChest);
+                    SetLayout(openChest.gameObject, flexibleWidth: 1, preferredHeight: 96);
                     break;
             }
         }

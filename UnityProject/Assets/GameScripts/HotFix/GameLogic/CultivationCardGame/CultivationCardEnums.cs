@@ -44,6 +44,7 @@ namespace GameLogic.Cultivation
         Elite,
         Rest,
         Market,
+        Chest,
     }
 
     public enum CultivationRunStatus
@@ -52,6 +53,7 @@ namespace GameLogic.Cultivation
         Reward,
         Rest,
         Market,
+        Chest,
         RouteChoice,
         Completed,
         Defeated,

@@ -27,7 +27,7 @@ namespace GameLogic.Cultivation
                 throw new ArgumentException("Run node name is required.", nameof(name));
             }
 
-            if (type != CultivationRunNodeType.Rest && type != CultivationRunNodeType.Market && enemy == null)
+            if (type != CultivationRunNodeType.Rest && type != CultivationRunNodeType.Market && type != CultivationRunNodeType.Chest && enemy == null)
             {
                 throw new ArgumentNullException(nameof(enemy), "Combat run nodes require an enemy.");
             }

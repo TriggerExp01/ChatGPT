@@ -63,7 +63,7 @@ namespace GameLogic.Tests
             _ui.RestAndUpgrade(0, 0);
             Assert.AreEqual(CultivationRunStatus.RouteChoice, _ui.Snapshot.Status);
 
-            _ui.ChooseRoute(1);
+            _ui.ChooseRoute(2);
 
             Assert.AreEqual(CultivationRunStatus.InBattle, _ui.Snapshot.Status);
             Assert.AreEqual("石魔首领", _ui.Snapshot.CurrentNodeName);
@@ -83,7 +83,7 @@ namespace GameLogic.Tests
             _ui.Rest();
             Assert.AreEqual(CultivationRunStatus.RouteChoice, _ui.Snapshot.Status);
 
-            _ui.ChooseRoute(0);
+            _ui.ChooseRoute(1);
             Assert.AreEqual(CultivationRunStatus.Market, _ui.Snapshot.Status);
             Assert.AreEqual("山脚坊市", _ui.Snapshot.CurrentNodeName);
             Assert.Greater(_ui.Snapshot.MarketItemCount, 0);
@@ -99,7 +99,7 @@ namespace GameLogic.Tests
         }
 
         [Test]
-        public void PrototypeUiCanBuyPillWithoutChangingDeck()
+        public void PrototypeUiCanOpenChestAndGainArtifact()
         {
             ForceCurrentBattleVictory();
             _ui.ResolveBattle();
@@ -107,6 +107,27 @@ namespace GameLogic.Tests
             _ui.ChooseRoute(1);
             _ui.Rest();
             _ui.ChooseRoute(0);
+
+            Assert.AreEqual(CultivationRunStatus.Chest, _ui.Snapshot.Status);
+            Assert.AreEqual("遗迹宝箱", _ui.Snapshot.CurrentNodeName);
+
+            _ui.OpenChest();
+
+            Assert.AreEqual(1, _ui.Snapshot.ArtifactCount);
+            Assert.AreEqual(1, _ui.Snapshot.ChestArtifactCount);
+            Assert.AreEqual(CultivationRunStatus.InBattle, _ui.Snapshot.Status);
+            Assert.AreEqual("石魔首领", _ui.Snapshot.CurrentNodeName);
+        }
+
+        [Test]
+        public void PrototypeUiCanBuyPillWithoutChangingDeck()
+        {
+            ForceCurrentBattleVictory();
+            _ui.ResolveBattle();
+            _ui.SkipReward();
+            _ui.ChooseRoute(1);
+            _ui.Rest();
+            _ui.ChooseRoute(1);
             SetRunSpiritStones(20);
 
             var deckBefore = _ui.Snapshot.DeckCount;
@@ -126,7 +147,7 @@ namespace GameLogic.Tests
             _ui.SkipReward();
             _ui.ChooseRoute(1);
             _ui.Rest();
-            _ui.ChooseRoute(0);
+            _ui.ChooseRoute(1);
             SetRunSpiritStones(20);
             _ui.BuyMarketItem(2);
             _ui.LeaveMarket();
@@ -148,7 +169,7 @@ namespace GameLogic.Tests
             _ui.SkipReward();
             _ui.ChooseRoute(1);
             _ui.Rest();
-            _ui.ChooseRoute(0);
+            _ui.ChooseRoute(1);
             SetRunSpiritStones(40);
             _ui.BuyMarketItem(3);
             _ui.LeaveMarket();
@@ -169,7 +190,7 @@ namespace GameLogic.Tests
             _ui.SkipReward();
             _ui.ChooseRoute(1);
             _ui.Rest();
-            _ui.ChooseRoute(0);
+            _ui.ChooseRoute(1);
             SetRunSpiritStones(40);
             _ui.BuyMarketItem(4);
             _ui.LeaveMarket();
@@ -190,7 +211,7 @@ namespace GameLogic.Tests
             _ui.SkipReward();
             _ui.ChooseRoute(1);
             _ui.Rest();
-            _ui.ChooseRoute(0);
+            _ui.ChooseRoute(1);
             SetRunSpiritStones(20);
             _ui.BuyMarketItem(5);
             _ui.LeaveMarket();
@@ -215,7 +236,7 @@ namespace GameLogic.Tests
             _ui.SkipReward();
             _ui.ChooseRoute(1);
             _ui.Rest();
-            _ui.ChooseRoute(0);
+            _ui.ChooseRoute(1);
             SetRunSpiritStones(95);
             _ui.BuyMarketItem(6);
             _ui.LeaveMarket();
@@ -235,7 +256,7 @@ namespace GameLogic.Tests
             _ui.SkipReward();
             _ui.ChooseRoute(1);
             _ui.Rest();
-            _ui.ChooseRoute(0);
+            _ui.ChooseRoute(1);
             SetRunSpiritStones(75);
             SetRunPlayerCurrentHp(50);
             _ui.BuyMarketItem(7);
@@ -255,7 +276,7 @@ namespace GameLogic.Tests
             _ui.SkipReward();
             _ui.ChooseRoute(1);
             _ui.Rest();
-            _ui.ChooseRoute(0);
+            _ui.ChooseRoute(1);
             SetRunSpiritStones(30);
 
             _ui.BuyMarketItem(8);
@@ -279,7 +300,7 @@ namespace GameLogic.Tests
             _ui.SkipReward();
             _ui.ChooseRoute(1);
             _ui.Rest();
-            _ui.ChooseRoute(0);
+            _ui.ChooseRoute(1);
             SetRunSpiritStones(35);
 
             _ui.BuyMarketItem(9);
@@ -305,7 +326,7 @@ namespace GameLogic.Tests
             _ui.SkipReward();
             _ui.ChooseRoute(1);
             _ui.Rest();
-            _ui.ChooseRoute(0);
+            _ui.ChooseRoute(1);
             SetRunSpiritStones(40);
 
             var stonesBefore = _ui.Snapshot.SpiritStones;
@@ -325,7 +346,7 @@ namespace GameLogic.Tests
             _ui.SkipReward();
             _ui.ChooseRoute(1);
             _ui.Rest();
-            _ui.ChooseRoute(0);
+            _ui.ChooseRoute(1);
             SetRunSpiritStones(55);
 
             var stonesBefore = _ui.Snapshot.SpiritStones;
@@ -343,7 +364,7 @@ namespace GameLogic.Tests
             _ui.SkipReward();
             _ui.ChooseRoute(1);
             _ui.Rest();
-            _ui.ChooseRoute(0);
+            _ui.ChooseRoute(1);
 
             var stonesBefore = _ui.Snapshot.SpiritStones;
             var deckBefore = _ui.Snapshot.DeckCount;
@@ -362,7 +383,7 @@ namespace GameLogic.Tests
             _ui.SkipReward();
             _ui.ChooseRoute(1);
             _ui.Rest();
-            _ui.ChooseRoute(1);
+            _ui.ChooseRoute(2);
 
             Assert.AreEqual(CultivationRunNodeType.Elite, GetRun().CurrentNode.Type);
 
