@@ -1,9 +1,10 @@
 namespace GameLogic.Cultivation
 {
-    [Window(UILayer.UI, AssetLocation, fullScreen: true, hideTimeToClose: 0)]
+    [Window(UILayer.UI, true, ResourceLocation, true, 0)]
     public sealed class CultivationRunWindow : UIWindow
     {
         public const string AssetLocation = "CultivationRunWindow";
+        public const string ResourceLocation = "UIWindow/CultivationRunWindow";
 
         private CultivationRunPrototypeUI _prototypeUI;
 

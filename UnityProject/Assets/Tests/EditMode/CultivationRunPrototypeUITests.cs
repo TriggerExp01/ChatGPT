@@ -74,8 +74,20 @@ namespace GameLogic.Tests
 
             Assert.NotNull(attribute);
             Assert.AreEqual((int)UILayer.UI, attribute.WindowLayer);
-            Assert.AreEqual(CultivationRunWindow.AssetLocation, attribute.Location);
+            Assert.IsTrue(attribute.FromResources);
+            Assert.AreEqual(CultivationRunWindow.ResourceLocation, attribute.Location);
             Assert.IsTrue(attribute.FullScreen);
+        }
+
+        [Test]
+        public void RunWindowPrefabAssetCanLoadFromResources()
+        {
+            var prefab = Resources.Load<GameObject>(CultivationRunWindow.ResourceLocation);
+
+            Assert.NotNull(prefab);
+            Assert.AreEqual(CultivationRunWindow.AssetLocation, prefab.name);
+            Assert.NotNull(prefab.GetComponent<Canvas>());
+            Assert.NotNull(prefab.GetComponent<GraphicRaycaster>());
         }
 
         [Test]
