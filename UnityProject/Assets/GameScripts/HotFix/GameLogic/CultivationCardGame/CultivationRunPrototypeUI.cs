@@ -1,7 +1,5 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -12,8 +10,6 @@ namespace GameLogic.Cultivation
     public sealed class CultivationRunPrototypeUI : MonoBehaviour
     {
         public const string RootName = "CultivationRunPrototypeUI";
-
-        private const int MaxLogLines = 8;
 
         private BattleEngine _battleEngine;
         private CultivationRunEngine _runEngine;
@@ -28,7 +24,7 @@ namespace GameLogic.Cultivation
         private Button _endTurnButton;
         private Button _resetButton;
 
-        public RunPrototypeSnapshot Snapshot => RunPrototypeSnapshot.From(_run);
+        public RunPrototypeSnapshot Snapshot => CultivationRunPrototypePresenter.CreateSnapshot(_run);
 
         public static CultivationRunPrototypeUI Open(Transform parent = null)
         {
@@ -268,103 +264,16 @@ namespace GameLogic.Cultivation
                 return;
             }
 
-            _runText.text = BuildRunText();
-            _nodeText.text = BuildNodeText();
-            _battleText.text = BuildBattleText();
-            _deckText.text = BuildDeckText();
-            _logText.text = BuildLogText();
+            var text = CultivationRunPrototypePresenter.BuildText(_run);
+            _runText.text = text.RunText;
+            _nodeText.text = text.NodeText;
+            _battleText.text = text.BattleText;
+            _deckText.text = text.DeckText;
+            _logText.text = text.LogText;
             _endTurnButton.interactable = _run.Status == CultivationRunStatus.InBattle && _run.CurrentBattle != null && _run.CurrentBattle.Outcome == BattleOutcome.InProgress;
 
             RebuildChoices();
             RebuildHand();
-        }
-
-        private string BuildRunText()
-        {
-            return $"状态：{_run.Status}\n节点：{_run.CurrentNodeIndex + 1}/{_run.Route.Count}\nHP：{_run.PlayerCurrentHp}/{_run.PlayerMaxHp}\n牌组：{_run.Deck.Count} 张\n已拿奖励：{_run.ClaimedRewards.Count}";
-        }
-
-        private string BuildNodeText()
-        {
-            var builder = new StringBuilder();
-            builder.Append("当前节点：").Append(_run.CurrentNode.Name).AppendLine();
-            builder.Append("类型：").Append(_run.CurrentNode.Type).AppendLine();
-            if (_run.CurrentNode.Enemy != null)
-            {
-                builder.Append("敌人：").Append(_run.CurrentNode.Enemy.Name).AppendLine();
-            }
-
-            if (_run.Status == CultivationRunStatus.RouteChoice)
-            {
-                builder.AppendLine();
-                builder.AppendLine("可选路线：");
-                for (var i = 0; i < _run.CurrentRouteChoices.Count; i++)
-                {
-                    var choice = _run.CurrentRouteChoices[i];
-                    builder.Append(i + 1).Append(". ").Append(choice.TargetNode.Name).Append(" / ").Append(choice.TargetNode.Type).AppendLine();
-                }
-            }
-
-            return builder.ToString();
-        }
-
-        private string BuildBattleText()
-        {
-            if (_run.Status == CultivationRunStatus.Completed)
-            {
-                return "本轮修行完成。";
-            }
-
-            if (_run.Status == CultivationRunStatus.Defeated)
-            {
-                return "本轮修行失败。";
-            }
-
-            if (_run.Status != CultivationRunStatus.InBattle || _run.CurrentBattle == null)
-            {
-                return $"等待操作：{_run.Status}";
-            }
-
-            var battle = _run.CurrentBattle;
-            var enemy = battle.Enemies.FirstOrDefault();
-            return $"玩家\nHP {battle.Player.CurrentHp}/{battle.Player.MaxHp}  护盾 {battle.Player.Shield}\n灵力 {battle.Spirit}/{battle.SpiritMax}  回合 {battle.TurnNumber}\n\n敌人：{enemy?.Body.Name ?? string.Empty}\nHP {enemy?.Body.CurrentHp ?? 0}/{enemy?.Body.MaxHp ?? 0}  护盾 {enemy?.Body.Shield ?? 0}\n破防 {enemy?.Body.BreakDefenseStacks ?? 0}  灼烧 {enemy?.Body.BurnStacks ?? 0}/{enemy?.Body.BurnTurns ?? 0}\n意图：{enemy?.CurrentIntent.Description ?? string.Empty}\n\n战斗结果：{battle.Outcome}";
-        }
-
-        private string BuildDeckText()
-        {
-            var builder = new StringBuilder();
-            builder.AppendLine("当前牌组：");
-            for (var i = 0; i < _run.Deck.Count; i++)
-            {
-                var card = _run.Deck[i];
-                builder.Append(i + 1).Append(". ").Append(card.Name).Append("  灵力 ").Append(card.SpiritCost);
-                if (card.CanUpgrade)
-                {
-                    builder.Append("  可升级");
-                }
-
-                builder.AppendLine();
-            }
-
-            return builder.ToString();
-        }
-
-        private string BuildLogText()
-        {
-            if (_run.CurrentBattle == null || _run.CurrentBattle.Logs.Count == 0)
-            {
-                return "日志：等待行动...";
-            }
-
-            var logs = _run.CurrentBattle.Logs.Skip(Math.Max(0, _run.CurrentBattle.Logs.Count - MaxLogLines)).ToArray();
-            var builder = new StringBuilder();
-            builder.AppendLine("战斗日志：");
-            foreach (var log in logs)
-            {
-                builder.Append("- ").Append(log.Message).AppendLine();
-            }
-
-            return builder.ToString();
         }
 
         private void RebuildChoices()
@@ -387,7 +296,7 @@ namespace GameLogic.Cultivation
                     {
                         var index = i;
                         var reward = _run.CurrentRewards[i];
-                        var button = CreateButton($"Reward_{i}_{reward.Id}", _choiceRoot, $"奖励\n{reward.Card.Name}\n{FormatCardSummary(reward.Card)}");
+                        var button = CreateButton($"Reward_{i}_{reward.Id}", _choiceRoot, $"奖励\n{reward.Card.Name}\n{CultivationRunPrototypePresenter.FormatCardSummary(reward.Card)}");
                         button.onClick.AddListener(() => ChooseReward(index));
                         SetLayout(button.gameObject, flexibleWidth: 1, preferredHeight: 96);
                     }
@@ -441,36 +350,10 @@ namespace GameLogic.Cultivation
             {
                 var index = i;
                 var card = _run.CurrentBattle.Hand[i];
-                var button = CreateButton($"Card_{i}_{card.Id}", _handRoot, $"{card.Name}\n{FormatCardSummary(card)}");
+                var button = CreateButton($"Card_{i}_{card.Id}", _handRoot, $"{card.Name}\n{CultivationRunPrototypePresenter.FormatCardSummary(card)}");
                 button.interactable = _run.CurrentBattle.Outcome == BattleOutcome.InProgress && _battleEngine.CanPlay(_run.CurrentBattle, card);
                 button.onClick.AddListener(() => PlayCardAt(index));
                 SetLayout(button.gameObject, flexibleWidth: 1, preferredHeight: 130);
-            }
-        }
-
-        private static string FormatCardSummary(CardDefinition card)
-        {
-            return $"灵力 {card.SpiritCost}\n{string.Join("\n", card.Effects.Select(FormatEffect))}";
-        }
-
-        private static string FormatEffect(CardEffect effect)
-        {
-            switch (effect.Type)
-            {
-                case CardEffectType.Damage:
-                    return $"造成 {effect.Value} 伤害";
-                case CardEffectType.Shield:
-                    return $"获得 {effect.Value} 护盾";
-                case CardEffectType.Draw:
-                    return $"抽 {effect.Value} 张牌";
-                case CardEffectType.Heal:
-                    return $"恢复 {effect.Value} HP";
-                case CardEffectType.BreakDefense:
-                    return $"破防 {effect.Value}";
-                case CardEffectType.Burn:
-                    return $"灼烧 {effect.Value} / {effect.Duration} 回合";
-                default:
-                    return effect.Type.ToString();
             }
         }
 
@@ -636,54 +519,6 @@ namespace GameLogic.Cultivation
             {
                 DestroyImmediate(target);
             }
-        }
-    }
-
-    public sealed class RunPrototypeSnapshot
-    {
-        public CultivationRunStatus Status { get; private set; }
-
-        public int CurrentNodeIndex { get; private set; }
-
-        public string CurrentNodeName { get; private set; }
-
-        public int PlayerHp { get; private set; }
-
-        public int PlayerMaxHp { get; private set; }
-
-        public int DeckCount { get; private set; }
-
-        public int HandCount { get; private set; }
-
-        public int RewardCount { get; private set; }
-
-        public int RestUpgradeChoiceCount { get; private set; }
-
-        public int RouteChoiceCount { get; private set; }
-
-        public BattleOutcome BattleOutcome { get; private set; }
-
-        public static RunPrototypeSnapshot From(CultivationRunState state)
-        {
-            if (state == null)
-            {
-                return new RunPrototypeSnapshot();
-            }
-
-            return new RunPrototypeSnapshot
-            {
-                Status = state.Status,
-                CurrentNodeIndex = state.CurrentNodeIndex,
-                CurrentNodeName = state.CurrentNode.Name,
-                PlayerHp = state.PlayerCurrentHp,
-                PlayerMaxHp = state.PlayerMaxHp,
-                DeckCount = state.Deck.Count,
-                HandCount = state.CurrentBattle?.Hand.Count ?? 0,
-                RewardCount = state.CurrentRewards.Count,
-                RestUpgradeChoiceCount = state.RestUpgradeChoices.Count,
-                RouteChoiceCount = state.CurrentRouteChoices.Count,
-                BattleOutcome = state.CurrentBattle?.Outcome ?? BattleOutcome.InProgress,
-            };
         }
     }
 }
