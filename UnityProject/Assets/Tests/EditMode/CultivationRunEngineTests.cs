@@ -447,6 +447,59 @@ namespace GameLogic.Tests
         }
 
         [Test]
+        public void MarketCardUpgradeCostsSpiritStonesAndReplacesSelectedDeckCard()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var run = engine.StartRun(CultivationSeedData.CreateSwordSectStarterDeck(), CreateMarketRoute(), initialSpiritStones: 55);
+            var swordQiIndex = run.Deck.FindIndex(card => card.Id == "sword_qi");
+
+            engine.UpgradeDeckCardAtMarket(run, swordQiIndex, 0);
+
+            Assert.AreEqual(5, run.SpiritStones);
+            Assert.AreEqual("sword_qi_damage_1", run.Deck[swordQiIndex].Id);
+            Assert.AreEqual(1, run.MarketUpgradedCards.Count);
+            Assert.AreEqual("sword_qi_damage_1", run.MarketUpgradedCards[0].Id);
+        }
+
+        [Test]
+        public void MarketCardUpgradeRejectsWithoutEnoughSpiritStones()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var run = engine.StartRun(CultivationSeedData.CreateSwordSectStarterDeck(), CreateMarketRoute(), initialSpiritStones: 49);
+            var swordQiIndex = run.Deck.FindIndex(card => card.Id == "sword_qi");
+
+            Assert.Throws<System.InvalidOperationException>(() => engine.UpgradeDeckCardAtMarket(run, swordQiIndex, 0));
+            Assert.AreEqual(49, run.SpiritStones);
+            Assert.AreEqual("sword_qi", run.Deck[swordQiIndex].Id);
+            Assert.AreEqual(0, run.MarketUpgradedCards.Count);
+        }
+
+        [Test]
+        public void MarketCardUpgradeRejectsNonUpgradeableCard()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var run = engine.StartRun(CreateInstantWinDeck(), CreateMarketRoute(), initialSpiritStones: 55);
+
+            Assert.Throws<System.InvalidOperationException>(() => engine.UpgradeDeckCardAtMarket(run, 0, 0));
+            Assert.AreEqual(55, run.SpiritStones);
+            Assert.AreEqual("instant_win", run.Deck[0].Id);
+            Assert.AreEqual(0, run.MarketUpgradedCards.Count);
+        }
+
+        [Test]
+        public void MarketCardUpgradeRejectsInvalidUpgradeOption()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var run = engine.StartRun(CultivationSeedData.CreateSwordSectStarterDeck(), CreateMarketRoute(), initialSpiritStones: 55);
+            var swordQiIndex = run.Deck.FindIndex(card => card.Id == "sword_qi");
+
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => engine.UpgradeDeckCardAtMarket(run, swordQiIndex, 99));
+            Assert.AreEqual(55, run.SpiritStones);
+            Assert.AreEqual("sword_qi", run.Deck[swordQiIndex].Id);
+            Assert.AreEqual(0, run.MarketUpgradedCards.Count);
+        }
+
+        [Test]
         public void LeavingMarketAdvancesToNextNode()
         {
             var engine = new CultivationRunEngine(new BattleEngine(1));

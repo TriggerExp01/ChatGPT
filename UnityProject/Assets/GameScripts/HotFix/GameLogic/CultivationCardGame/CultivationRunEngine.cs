@@ -8,6 +8,7 @@ namespace GameLogic.Cultivation
     {
         private const int RewardChoiceCount = 3;
         public const int MarketCardRemovalCost = 35;
+        public const int MarketCardUpgradeCost = 50;
 
         private readonly BattleEngine _battleEngine;
         private readonly Random _rewardRandom;
@@ -178,6 +179,21 @@ namespace GameLogic.Cultivation
             state.SpiritStones -= MarketCardRemovalCost;
             state.Deck.RemoveAt(deckIndex);
             state.RemovedMarketCards.Add(removedCard);
+        }
+
+        public void UpgradeDeckCardAtMarket(CultivationRunState state, int deckIndex, int upgradeOptionIndex)
+        {
+            EnsureMarketState(state);
+
+            var upgradedCard = ResolveUpgradedCard(state, deckIndex, upgradeOptionIndex);
+            if (state.SpiritStones < MarketCardUpgradeCost)
+            {
+                throw new InvalidOperationException("Not enough spirit stones to upgrade a deck card.");
+            }
+
+            state.SpiritStones -= MarketCardUpgradeCost;
+            state.Deck[deckIndex] = upgradedCard;
+            state.MarketUpgradedCards.Add(upgradedCard);
         }
 
         public void LeaveMarket(CultivationRunState state)
@@ -371,6 +387,12 @@ namespace GameLogic.Cultivation
 
         private static void UpgradeDeckCard(CultivationRunState state, int deckIndex, int upgradeOptionIndex)
         {
+            state.Deck[deckIndex] = ResolveUpgradedCard(state, deckIndex, upgradeOptionIndex);
+            RefreshRestUpgradeChoices(state);
+        }
+
+        private static CardDefinition ResolveUpgradedCard(CultivationRunState state, int deckIndex, int upgradeOptionIndex)
+        {
             if (deckIndex < 0 || deckIndex >= state.Deck.Count)
             {
                 throw new ArgumentOutOfRangeException(nameof(deckIndex), "Deck index is outside the run deck.");
@@ -387,8 +409,7 @@ namespace GameLogic.Cultivation
                 throw new ArgumentOutOfRangeException(nameof(upgradeOptionIndex), "Upgrade option index is outside the selected card options.");
             }
 
-            state.Deck[deckIndex] = card.UpgradeOptions[upgradeOptionIndex].UpgradedCard;
-            RefreshRestUpgradeChoices(state);
+            return card.UpgradeOptions[upgradeOptionIndex].UpgradedCard;
         }
 
         private static void EnsureState(CultivationRunState state)
