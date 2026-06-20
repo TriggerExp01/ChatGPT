@@ -50,5 +50,32 @@ namespace GameLogic.PlayModeTests
             Assert.NotNull(_root.transform.Find("CultivationRunPrototypeUI/Header/TitleRow/TitleBox/StageText"));
             Assert.NotNull(_root.transform.Find("CultivationRunPrototypeUI/Lower/ActionBar/EndTurnButton"));
         }
+
+        [UnityTest]
+        public IEnumerator FixedSeedAutoPlayCanDriveEarthSectPrototypeRoute()
+        {
+            _root = new GameObject("PlayModeCultivationRunRoot", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
+            _root.GetComponent<Canvas>().renderMode = RenderMode.ScreenSpaceOverlay;
+            var scaler = _root.GetComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920f, 1080f);
+
+            var ui = CultivationRunPrototypeUI.Open(_root.transform);
+            yield return null;
+
+            var report = ui.RunFixedSeedAutoPlay(CultivationSect.Earth);
+            yield return null;
+
+            Assert.IsFalse(report.HitStepLimit, report.Summary);
+            Assert.IsFalse(report.Defeated, report.Summary);
+            Assert.IsTrue(report.Completed, report.Summary);
+            Assert.AreEqual(CultivationSect.Earth, ui.Snapshot.Sect);
+            Assert.AreEqual(CultivationRunStatus.Completed, ui.Snapshot.Status);
+            Assert.GreaterOrEqual(report.BattlesResolved, 5, report.Summary);
+            Assert.GreaterOrEqual(report.CardsPlayed, 10, report.Summary);
+            Assert.GreaterOrEqual(report.RouteChoicesMade, 2, report.Summary);
+            StringAssert.Contains("PASS", report.Summary);
+            Assert.NotNull(_root.transform.Find("CultivationRunPrototypeUI/Lower/ActionBar/EarthSectButton"));
+        }
     }
 }

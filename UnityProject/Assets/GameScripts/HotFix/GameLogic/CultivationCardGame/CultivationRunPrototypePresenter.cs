@@ -438,6 +438,8 @@ namespace GameLogic.Cultivation
                     return "火云宗";
                 case CultivationSect.Thunder:
                     return "天雷阁";
+                case CultivationSect.Earth:
+                    return "玄黄宗";
                 default:
                     return sect.ToString();
             }

@@ -98,5 +98,6 @@ namespace GameLogic.Cultivation
         Sword,
         FireCloud,
         Thunder,
+        Earth,
     }
 }

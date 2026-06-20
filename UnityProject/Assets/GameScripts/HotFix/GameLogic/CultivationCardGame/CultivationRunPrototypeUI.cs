@@ -161,9 +161,9 @@ namespace GameLogic.Cultivation
             Refresh();
         }
 
-        public CultivationRunAutoPlayReport RunFixedSeedAutoPlay(int maxSteps = CultivationRunAutoPlayer.DefaultMaxSteps)
+        public CultivationRunAutoPlayReport RunFixedSeedAutoPlay(CultivationSect sect = CultivationSect.Sword, int maxSteps = CultivationRunAutoPlayer.DefaultMaxSteps)
         {
-            ResetRun(CultivationSect.Sword);
+            ResetRun(sect);
             var report = new CultivationRunAutoPlayer().Run(this, maxSteps);
             Refresh();
             return report;
@@ -532,6 +532,10 @@ namespace GameLogic.Cultivation
             _thunderSectButton = CreateButton("ThunderSectButton", actionBar, "天雷阁开局");
             _thunderSectButton.onClick.AddListener(() => ResetRun(CultivationSect.Thunder));
             SetLayout(_thunderSectButton.gameObject, preferredWidth: 190, preferredHeight: 48);
+
+            var earthSectButton = CreateButton("EarthSectButton", actionBar, "玄黄宗开局");
+            earthSectButton.onClick.AddListener(() => ResetRun(CultivationSect.Earth));
+            SetLayout(earthSectButton.gameObject, preferredWidth: 190, preferredHeight: 48);
 
             _endTurnButton = CreateButton("EndTurnButton", actionBar, "结束回合");
             _endTurnButton.onClick.AddListener(EndTurn);

@@ -1797,6 +1797,340 @@ namespace GameLogic.Cultivation
             new CardEffect(CardEffectType.Shield, 2, CardTarget.Self),
             new CardEffect(CardEffectType.AttackCounter, 4, CardTarget.Self));
 
+        public static CardDefinition RockStrike { get; } = new CardDefinition(
+            "rock_strike",
+            "岩击",
+            1,
+            new[]
+            {
+                new CardUpgradeOption(
+                    "rock_strike_damage_1",
+                    "岩击·重",
+                    "造成 9 伤害，获得 3 护盾。",
+                    new CardDefinition(
+                        "rock_strike_damage_1",
+                        "岩击·重",
+                        1,
+                        new[]
+                        {
+                            new CardUpgradeOption(
+                                "rock_strike_damage_2_break",
+                                "裂岩击",
+                                "造成 12 伤害，施加 1 层破防，获得 3 护盾。",
+                                new CardDefinition("rock_strike_damage_2_break", "裂岩击", 1, new CardEffect(CardEffectType.Damage, 12), new CardEffect(CardEffectType.BreakDefense, 1), new CardEffect(CardEffectType.Shield, 3, CardTarget.Self))),
+                            new CardUpgradeOption(
+                                "rock_strike_damage_2_guard",
+                                "玄岩击",
+                                "造成 10 伤害，获得 7 护盾。",
+                                new CardDefinition("rock_strike_damage_2_guard", "玄岩击", 1, new CardEffect(CardEffectType.Damage, 10), new CardEffect(CardEffectType.Shield, 7, CardTarget.Self))),
+                        },
+                        new CardEffect(CardEffectType.Damage, 9),
+                        new CardEffect(CardEffectType.Shield, 3, CardTarget.Self))),
+                new CardUpgradeOption(
+                    "rock_strike_guard_1",
+                    "岩击·守",
+                    "造成 6 伤害，获得 6 护盾。",
+                    new CardDefinition(
+                        "rock_strike_guard_1",
+                        "岩击·守",
+                        1,
+                        new[]
+                        {
+                            new CardUpgradeOption(
+                                "rock_strike_guard_2_counter",
+                                "守岩反震",
+                                "造成 6 伤害，获得 6 护盾，本回合受到攻击时对攻击者造成 4 伤害。",
+                                new CardDefinition("rock_strike_guard_2_counter", "守岩反震", 1, new CardEffect(CardEffectType.Damage, 6), new CardEffect(CardEffectType.Shield, 6, CardTarget.Self), new CardEffect(CardEffectType.AttackCounter, 4, CardTarget.Self))),
+                            new CardUpgradeOption(
+                                "rock_strike_guard_2_draw",
+                                "流岩击",
+                                "造成 6 伤害，获得 5 护盾，抽 1 张牌。",
+                                new CardDefinition("rock_strike_guard_2_draw", "流岩击", 1, new CardEffect(CardEffectType.Damage, 6), new CardEffect(CardEffectType.Shield, 5, CardTarget.Self), new CardEffect(CardEffectType.Draw, 1, CardTarget.Self))),
+                        },
+                        new CardEffect(CardEffectType.Damage, 6),
+                        new CardEffect(CardEffectType.Shield, 6, CardTarget.Self))),
+            },
+            new CardEffect(CardEffectType.Damage, 6),
+            new CardEffect(CardEffectType.Shield, 3, CardTarget.Self));
+
+        public static CardDefinition EarthSplittingPalm { get; } = new CardDefinition(
+            "earth_splitting_palm",
+            "裂地掌",
+            2,
+            new[]
+            {
+                new CardUpgradeOption(
+                    "earth_splitting_palm_damage_1",
+                    "裂地掌·崩",
+                    "造成 14 伤害，施加 1 层破防。",
+                    new CardDefinition(
+                        "earth_splitting_palm_damage_1",
+                        "裂地掌·崩",
+                        2,
+                        new[]
+                        {
+                            new CardUpgradeOption(
+                                "earth_splitting_palm_damage_2_break",
+                                "崩山掌",
+                                "造成 16 伤害，施加 2 层破防。",
+                                new CardDefinition("earth_splitting_palm_damage_2_break", "崩山掌", 2, new CardEffect(CardEffectType.Damage, 16), new CardEffect(CardEffectType.BreakDefense, 2))),
+                            new CardUpgradeOption(
+                                "earth_splitting_palm_damage_2_cost",
+                                "裂地掌·疾",
+                                "灵力消耗降为 1，造成 13 伤害，施加 1 层破防。",
+                                new CardDefinition("earth_splitting_palm_damage_2_cost", "裂地掌·疾", 1, new CardEffect(CardEffectType.Damage, 13), new CardEffect(CardEffectType.BreakDefense, 1))),
+                        },
+                        new CardEffect(CardEffectType.Damage, 14),
+                        new CardEffect(CardEffectType.BreakDefense, 1))),
+                new CardUpgradeOption(
+                    "earth_splitting_palm_guard_1",
+                    "裂地掌·固",
+                    "造成 10 伤害，施加 1 层破防，获得 6 护盾。",
+                    new CardDefinition(
+                        "earth_splitting_palm_guard_1",
+                        "裂地掌·固",
+                        2,
+                        new[]
+                        {
+                            new CardUpgradeOption(
+                                "earth_splitting_palm_guard_2_heavy",
+                                "镇岳掌",
+                                "造成 12 伤害，施加 1 层破防，获得 10 护盾。",
+                                new CardDefinition("earth_splitting_palm_guard_2_heavy", "镇岳掌", 2, new CardEffect(CardEffectType.Damage, 12), new CardEffect(CardEffectType.BreakDefense, 1), new CardEffect(CardEffectType.Shield, 10, CardTarget.Self))),
+                            new CardUpgradeOption(
+                                "earth_splitting_palm_guard_2_counter",
+                                "震岳掌",
+                                "造成 10 伤害，施加 1 层破防，本回合受到攻击时对攻击者造成 8 伤害。",
+                                new CardDefinition("earth_splitting_palm_guard_2_counter", "震岳掌", 2, new CardEffect(CardEffectType.Damage, 10), new CardEffect(CardEffectType.BreakDefense, 1), new CardEffect(CardEffectType.AttackCounter, 8, CardTarget.Self))),
+                        },
+                        new CardEffect(CardEffectType.Damage, 10),
+                        new CardEffect(CardEffectType.BreakDefense, 1),
+                        new CardEffect(CardEffectType.Shield, 6, CardTarget.Self))),
+            },
+            new CardEffect(CardEffectType.Damage, 10),
+            new CardEffect(CardEffectType.BreakDefense, 1));
+
+        public static CardDefinition RockWall { get; } = new CardDefinition(
+            "rock_wall",
+            "岩壁",
+            1,
+            new[]
+            {
+                new CardUpgradeOption(
+                    "rock_wall_guard_1",
+                    "岩壁·厚",
+                    "获得 12 护盾。",
+                    new CardDefinition(
+                        "rock_wall_guard_1",
+                        "岩壁·厚",
+                        1,
+                        new[]
+                        {
+                            new CardUpgradeOption(
+                                "rock_wall_guard_2_heavy",
+                                "玄岩壁",
+                                "获得 16 护盾。",
+                                new CardDefinition("rock_wall_guard_2_heavy", "玄岩壁", 1, new CardEffect(CardEffectType.Shield, 16, CardTarget.Self))),
+                            new CardUpgradeOption(
+                                "rock_wall_guard_2_draw",
+                                "流转岩壁",
+                                "获得 12 护盾，抽 1 张牌。",
+                                new CardDefinition("rock_wall_guard_2_draw", "流转岩壁", 1, new CardEffect(CardEffectType.Shield, 12, CardTarget.Self), new CardEffect(CardEffectType.Draw, 1, CardTarget.Self))),
+                        },
+                        new CardEffect(CardEffectType.Shield, 12, CardTarget.Self))),
+                new CardUpgradeOption(
+                    "rock_wall_counter_1",
+                    "岩壁·震",
+                    "获得 8 护盾，本回合受到攻击时对攻击者造成 4 伤害。",
+                    new CardDefinition(
+                        "rock_wall_counter_1",
+                        "岩壁·震",
+                        1,
+                        new[]
+                        {
+                            new CardUpgradeOption(
+                                "rock_wall_counter_2_damage",
+                                "震山壁",
+                                "获得 8 护盾，本回合受到攻击时对攻击者造成 8 伤害。",
+                                new CardDefinition("rock_wall_counter_2_damage", "震山壁", 1, new CardEffect(CardEffectType.Shield, 8, CardTarget.Self), new CardEffect(CardEffectType.AttackCounter, 8, CardTarget.Self))),
+                            new CardUpgradeOption(
+                                "rock_wall_counter_2_chance",
+                                "碎岩壁",
+                                "获得 8 护盾，60% 概率在受击时对攻击者造成 10 伤害。",
+                                new CardDefinition("rock_wall_counter_2_chance", "碎岩壁", 1, new CardEffect(CardEffectType.Shield, 8, CardTarget.Self), new CardEffect(CardEffectType.AttackCounter, 10, CardTarget.Self, chancePercent: 60))),
+                        },
+                        new CardEffect(CardEffectType.Shield, 8, CardTarget.Self),
+                        new CardEffect(CardEffectType.AttackCounter, 4, CardTarget.Self))),
+            },
+            new CardEffect(CardEffectType.Shield, 8, CardTarget.Self));
+
+        public static CardDefinition StoneSkinArt { get; } = new CardDefinition(
+            "stone_skin_art",
+            "石皮术",
+            1,
+            new[]
+            {
+                new CardUpgradeOption(
+                    "stone_skin_art_guard_1",
+                    "石皮术·固",
+                    "获得 7 护盾，本回合受到攻击时对攻击者造成 3 伤害。",
+                    new CardDefinition(
+                        "stone_skin_art_guard_1",
+                        "石皮术·固",
+                        1,
+                        new[]
+                        {
+                            new CardUpgradeOption(
+                                "stone_skin_art_guard_2_heavy",
+                                "玄皮术",
+                                "获得 10 护盾，本回合受到攻击时对攻击者造成 3 伤害。",
+                                new CardDefinition("stone_skin_art_guard_2_heavy", "玄皮术", 1, new CardEffect(CardEffectType.Shield, 10, CardTarget.Self), new CardEffect(CardEffectType.AttackCounter, 3, CardTarget.Self))),
+                            new CardUpgradeOption(
+                                "stone_skin_art_guard_2_counter",
+                                "反震石皮",
+                                "获得 7 护盾，本回合受到攻击时对攻击者造成 6 伤害。",
+                                new CardDefinition("stone_skin_art_guard_2_counter", "反震石皮", 1, new CardEffect(CardEffectType.Shield, 7, CardTarget.Self), new CardEffect(CardEffectType.AttackCounter, 6, CardTarget.Self))),
+                        },
+                        new CardEffect(CardEffectType.Shield, 7, CardTarget.Self),
+                        new CardEffect(CardEffectType.AttackCounter, 3, CardTarget.Self))),
+                new CardUpgradeOption(
+                    "stone_skin_art_cycle_1",
+                    "石皮术·转",
+                    "获得 4 护盾，抽 1 张牌。",
+                    new CardDefinition(
+                        "stone_skin_art_cycle_1",
+                        "石皮术·转",
+                        1,
+                        new[]
+                        {
+                            new CardUpgradeOption(
+                                "stone_skin_art_cycle_2_cost",
+                                "轻石皮",
+                                "灵力消耗降为 0，获得 4 护盾，抽 1 张牌。",
+                                new CardDefinition("stone_skin_art_cycle_2_cost", "轻石皮", 0, new CardEffect(CardEffectType.Shield, 4, CardTarget.Self), new CardEffect(CardEffectType.Draw, 1, CardTarget.Self))),
+                            new CardUpgradeOption(
+                                "stone_skin_art_cycle_2_draw",
+                                "流石皮",
+                                "获得 4 护盾，抽 2 张牌。",
+                                new CardDefinition("stone_skin_art_cycle_2_draw", "流石皮", 1, new CardEffect(CardEffectType.Shield, 4, CardTarget.Self), new CardEffect(CardEffectType.Draw, 2, CardTarget.Self))),
+                        },
+                        new CardEffect(CardEffectType.Shield, 4, CardTarget.Self),
+                        new CardEffect(CardEffectType.Draw, 1, CardTarget.Self))),
+            },
+            new CardEffect(CardEffectType.Shield, 4, CardTarget.Self),
+            new CardEffect(CardEffectType.AttackCounter, 3, CardTarget.Self, chancePercent: 50));
+
+        public static CardDefinition EarthEscape { get; } = new CardDefinition(
+            "earth_escape",
+            "岩遁",
+            0,
+            new[]
+            {
+                new CardUpgradeOption(
+                    "earth_escape_draw_1",
+                    "岩遁·行",
+                    "获得 4 护盾，抽 1 张牌。",
+                    new CardDefinition(
+                        "earth_escape_draw_1",
+                        "岩遁·行",
+                        0,
+                        new[]
+                        {
+                            new CardUpgradeOption(
+                                "earth_escape_draw_2_more",
+                                "穿岩遁",
+                                "获得 4 护盾，抽 2 张牌。",
+                                new CardDefinition("earth_escape_draw_2_more", "穿岩遁", 0, new CardEffect(CardEffectType.Shield, 4, CardTarget.Self), new CardEffect(CardEffectType.Draw, 2, CardTarget.Self))),
+                            new CardUpgradeOption(
+                                "earth_escape_draw_2_counter",
+                                "反震岩遁",
+                                "获得 4 护盾，抽 1 张牌，本回合受到攻击时对攻击者造成 3 伤害。",
+                                new CardDefinition("earth_escape_draw_2_counter", "反震岩遁", 0, new CardEffect(CardEffectType.Shield, 4, CardTarget.Self), new CardEffect(CardEffectType.Draw, 1, CardTarget.Self), new CardEffect(CardEffectType.AttackCounter, 3, CardTarget.Self))),
+                        },
+                        new CardEffect(CardEffectType.Shield, 4, CardTarget.Self),
+                        new CardEffect(CardEffectType.Draw, 1, CardTarget.Self))),
+                new CardUpgradeOption(
+                    "earth_escape_guard_1",
+                    "岩遁·守",
+                    "获得 8 护盾。",
+                    new CardDefinition(
+                        "earth_escape_guard_1",
+                        "岩遁·守",
+                        0,
+                        new[]
+                        {
+                            new CardUpgradeOption(
+                                "earth_escape_guard_2_heavy",
+                                "厚土遁",
+                                "获得 11 护盾。",
+                                new CardDefinition("earth_escape_guard_2_heavy", "厚土遁", 0, new CardEffect(CardEffectType.Shield, 11, CardTarget.Self))),
+                            new CardUpgradeOption(
+                                "earth_escape_guard_2_draw",
+                                "流土遁",
+                                "获得 7 护盾，抽 1 张牌。",
+                                new CardDefinition("earth_escape_guard_2_draw", "流土遁", 0, new CardEffect(CardEffectType.Shield, 7, CardTarget.Self), new CardEffect(CardEffectType.Draw, 1, CardTarget.Self))),
+                        },
+                        new CardEffect(CardEffectType.Shield, 8, CardTarget.Self))),
+            },
+            new CardEffect(CardEffectType.Shield, 3, CardTarget.Self),
+            new CardEffect(CardEffectType.Draw, 1, CardTarget.Self));
+
+        public static CardDefinition CounterSlash { get; } = new CardDefinition(
+            "counter_slash",
+            "反击斩",
+            1,
+            new[]
+            {
+                new CardUpgradeOption(
+                    "counter_slash_counter_1",
+                    "反击斩·烈",
+                    "造成 5 伤害，本回合受到攻击时对攻击者造成 8 伤害。",
+                    new CardDefinition(
+                        "counter_slash_counter_1",
+                        "反击斩·烈",
+                        1,
+                        new[]
+                        {
+                            new CardUpgradeOption(
+                                "counter_slash_counter_2_damage",
+                                "震返斩",
+                                "造成 7 伤害，本回合受到攻击时对攻击者造成 10 伤害。",
+                                new CardDefinition("counter_slash_counter_2_damage", "震返斩", 1, new CardEffect(CardEffectType.Damage, 7), new CardEffect(CardEffectType.AttackCounter, 10, CardTarget.Self))),
+                            new CardUpgradeOption(
+                                "counter_slash_counter_2_guard",
+                                "守返斩",
+                                "造成 5 伤害，获得 6 护盾，本回合受到攻击时对攻击者造成 8 伤害。",
+                                new CardDefinition("counter_slash_counter_2_guard", "守返斩", 1, new CardEffect(CardEffectType.Damage, 5), new CardEffect(CardEffectType.Shield, 6, CardTarget.Self), new CardEffect(CardEffectType.AttackCounter, 8, CardTarget.Self))),
+                        },
+                        new CardEffect(CardEffectType.Damage, 5),
+                        new CardEffect(CardEffectType.AttackCounter, 8, CardTarget.Self))),
+                new CardUpgradeOption(
+                    "counter_slash_guard_1",
+                    "反击斩·守",
+                    "获得 6 护盾，本回合受到攻击时对攻击者造成 6 伤害。",
+                    new CardDefinition(
+                        "counter_slash_guard_1",
+                        "反击斩·守",
+                        1,
+                        new[]
+                        {
+                            new CardUpgradeOption(
+                                "counter_slash_guard_2_cost",
+                                "轻身返斩",
+                                "灵力消耗降为 0，获得 5 护盾，本回合受到攻击时对攻击者造成 5 伤害。",
+                                new CardDefinition("counter_slash_guard_2_cost", "轻身返斩", 0, new CardEffect(CardEffectType.Shield, 5, CardTarget.Self), new CardEffect(CardEffectType.AttackCounter, 5, CardTarget.Self))),
+                            new CardUpgradeOption(
+                                "counter_slash_guard_2_heavy",
+                                "厚土返斩",
+                                "获得 9 护盾，本回合受到攻击时对攻击者造成 6 伤害。",
+                                new CardDefinition("counter_slash_guard_2_heavy", "厚土返斩", 1, new CardEffect(CardEffectType.Shield, 9, CardTarget.Self), new CardEffect(CardEffectType.AttackCounter, 6, CardTarget.Self))),
+                        },
+                        new CardEffect(CardEffectType.Shield, 6, CardTarget.Self),
+                        new CardEffect(CardEffectType.AttackCounter, 6, CardTarget.Self))),
+            },
+            new CardEffect(CardEffectType.Damage, 4),
+            new CardEffect(CardEffectType.AttackCounter, 5, CardTarget.Self));
+
         public static PillDefinition SmallRestorePillItem { get; } = new PillDefinition(
             "small_restore_pill",
             "小还丹",
@@ -1890,6 +2224,20 @@ namespace GameLogic.Cultivation
             };
         }
 
+        public static IReadOnlyList<CardDefinition> CreateEarthSectStarterDeck()
+        {
+            return new List<CardDefinition>
+            {
+                RockStrike, RockStrike, RockStrike,
+                EarthSplittingPalm, EarthSplittingPalm,
+                RockWall, RockWall, RockWall,
+                StoneSkinArt,
+                EarthEscape,
+                CounterSlash,
+                HealingPill,
+            };
+        }
+
         public static IReadOnlyList<CardDefinition> CreateStarterDeck(CultivationSect sect)
         {
             switch (sect)
@@ -1900,6 +2248,8 @@ namespace GameLogic.Cultivation
                     return CreateFireCloudSectStarterDeck();
                 case CultivationSect.Thunder:
                     return CreateThunderSectStarterDeck();
+                case CultivationSect.Earth:
+                    return CreateEarthSectStarterDeck();
                 default:
                     throw new ArgumentOutOfRangeException(nameof(sect), sect, "Unsupported cultivation sect.");
             }
@@ -2059,6 +2409,22 @@ namespace GameLogic.Cultivation
             };
         }
 
+        public static IReadOnlyList<CultivationRunReward> CreateEarthSectRewardPool()
+        {
+            return new List<CultivationRunReward>
+            {
+                new CultivationRunReward("reward_rock_strike", RockStrike),
+                new CultivationRunReward("reward_earth_splitting_palm", EarthSplittingPalm),
+                new CultivationRunReward("reward_rock_wall", RockWall),
+                new CultivationRunReward("reward_stone_skin_art", StoneSkinArt),
+                new CultivationRunReward("reward_earth_escape", EarthEscape),
+                new CultivationRunReward("reward_counter_slash", CounterSlash),
+                new CultivationRunReward("reward_guard_qi", GuardQi),
+                new CultivationRunReward("reward_light_body", LightBody),
+                new CultivationRunReward("reward_healing_pill", HealingPill),
+            };
+        }
+
         public static IReadOnlyList<CultivationRunReward> CreateRewardPool(CultivationSect sect)
         {
             switch (sect)
@@ -2069,6 +2435,8 @@ namespace GameLogic.Cultivation
                     return CreateFireCloudSectRewardPool();
                 case CultivationSect.Thunder:
                     return CreateThunderSectRewardPool();
+                case CultivationSect.Earth:
+                    return CreateEarthSectRewardPool();
                 default:
                     throw new ArgumentOutOfRangeException(nameof(sect), sect, "Unsupported cultivation sect.");
             }
