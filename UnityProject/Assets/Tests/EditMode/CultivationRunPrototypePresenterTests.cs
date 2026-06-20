@@ -60,6 +60,7 @@ namespace GameLogic.Tests
             var engine = new CultivationRunEngine(new BattleEngine(1));
             var run = engine.StartRun(sect: CultivationSect.FireCloud);
             var thunderRun = engine.StartRun(sect: CultivationSect.Thunder);
+            var demonicRun = engine.StartRun(sect: CultivationSect.Demonic);
 
             var text = CultivationRunPrototypePresenter.BuildText(run);
             var view = CultivationRunPrototypePresenter.BuildViewModel(run);
@@ -67,6 +68,9 @@ namespace GameLogic.Tests
             var thunderText = CultivationRunPrototypePresenter.BuildText(thunderRun);
             var thunderView = CultivationRunPrototypePresenter.BuildViewModel(thunderRun);
             var thunderSnapshot = CultivationRunPrototypePresenter.CreateSnapshot(thunderRun);
+            var demonicText = CultivationRunPrototypePresenter.BuildText(demonicRun);
+            var demonicView = CultivationRunPrototypePresenter.BuildViewModel(demonicRun);
+            var demonicSnapshot = CultivationRunPrototypePresenter.CreateSnapshot(demonicRun);
 
             Assert.AreEqual(CultivationSect.FireCloud, snapshot.Sect);
             StringAssert.Contains("门派：火云宗", text.RunText);
@@ -74,6 +78,9 @@ namespace GameLogic.Tests
             Assert.AreEqual(CultivationSect.Thunder, thunderSnapshot.Sect);
             StringAssert.Contains("门派：天雷阁", thunderText.RunText);
             StringAssert.Contains("天雷阁", thunderView.PhaseTitle);
+            Assert.AreEqual(CultivationSect.Demonic, demonicSnapshot.Sect);
+            StringAssert.Contains("门派：魔道", demonicText.RunText);
+            StringAssert.Contains("魔道", demonicView.PhaseTitle);
         }
 
         [Test]

@@ -421,12 +421,14 @@ namespace GameLogic.Cultivation
             var enemy = battle.Enemies.FirstOrDefault(item => !item.Body.IsDefeated);
             var incomingAttack = IsIncomingAttack(enemy?.CurrentIntent.Type);
             var missingHp = Math.Max(0, battle.Player.MaxHp - battle.Player.CurrentHp);
+            var currentHp = battle.Player.CurrentHp;
+            var maxHp = battle.Player.MaxHp;
             var enemyPoisonStacks = enemy?.Body.PoisonStacks ?? 0;
             var score = card.SpiritCost == 0 ? 4 : 0;
 
             foreach (var effect in card.Effects)
             {
-                score += ScoreEffect(effect, incomingAttack, missingHp, enemyPoisonStacks);
+                score += ScoreEffect(effect, incomingAttack, missingHp, enemyPoisonStacks, currentHp, maxHp);
             }
 
             score -= battle.GetEffectiveSpiritCost(card) * 2;
@@ -443,13 +445,13 @@ namespace GameLogic.Cultivation
             var score = card.SpiritCost == 0 ? 4 : 0;
             foreach (var effect in card.Effects)
             {
-                score += ScoreEffect(effect, true, 20, 8);
+                score += ScoreEffect(effect, true, 20, 8, 80, 100);
             }
 
             return score - card.SpiritCost;
         }
 
-        private static int ScoreEffect(CardEffect effect, bool incomingAttack, int missingHp, int targetPoisonStacks)
+        private static int ScoreEffect(CardEffect effect, bool incomingAttack, int missingHp, int targetPoisonStacks, int currentHp, int maxHp)
         {
             switch (effect.Type)
             {
@@ -497,6 +499,24 @@ namespace GameLogic.Cultivation
                     return Math.Min(missingHp + 8, effect.Value * Math.Max(1, effect.Duration)) * 2;
                 case CardEffectType.PoisonAttackCounter:
                     return incomingAttack ? effect.Value * Math.Max(1, effect.Duration) * 5 : effect.Value * 2;
+                case CardEffectType.BloodSacrifice:
+                    return ScoreBloodSacrifice(effect.Value, currentHp, maxHp);
+                case CardEffectType.LowHpDamage:
+                    return currentHp * 100 <= maxHp * Math.Max(1, effect.ChancePercent)
+                        ? effect.Value + (effect.SecondaryValue > 0 ? effect.SecondaryValue : effect.Value)
+                        : effect.Value;
+                case CardEffectType.MissingHpDamage:
+                    return effect.Value + Math.Max(0, maxHp - currentHp) * 10 / Math.Max(1, maxHp) * effect.SecondaryValue;
+                case CardEffectType.LowHpShield:
+                    var shield = effect.Value;
+                    if (currentHp * 100 <= maxHp * Math.Max(1, effect.ChancePercent))
+                    {
+                        shield += effect.SecondaryValue;
+                    }
+
+                    return incomingAttack ? shield * 2 : shield;
+                case CardEffectType.BloodGuardHeal:
+                    return incomingAttack ? Math.Min(effect.Value, missingHp + 4) * Math.Max(1, effect.Duration) * 2 : effect.Value;
                 case CardEffectType.SwordMark:
                     return effect.Value * 7;
                 case CardEffectType.Sharpness:
@@ -624,6 +644,23 @@ namespace GameLogic.Cultivation
         private static int AverageChanceValue(int successValue, int fallbackValue, int chancePercent)
         {
             return (successValue * chancePercent + fallbackValue * (100 - chancePercent)) / 100;
+        }
+
+        private static int ScoreBloodSacrifice(int hpCost, int currentHp, int maxHp)
+        {
+            if (hpCost <= 0)
+            {
+                return 0;
+            }
+
+            if (currentHp <= hpCost + 3)
+            {
+                return -80;
+            }
+
+            var missingHpPercent = Math.Max(0, maxHp - currentHp) * 100 / Math.Max(1, maxHp);
+            var dangerPenalty = missingHpPercent >= 55 ? 4 : 1;
+            return -hpCost * dangerPenalty;
         }
     }
 }

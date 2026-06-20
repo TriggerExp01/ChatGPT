@@ -97,6 +97,16 @@ namespace GameLogic.Cultivation
                     return $"生生不息 {effect.Value} HP / {Math.Max(1, effect.Duration)} 回合";
                 case CardEffectType.PoisonAttackCounter:
                     return $"受击施加中毒 {effect.Value} / {Math.Max(1, effect.Duration)} 回合";
+                case CardEffectType.BloodSacrifice:
+                    return $"血祭：失去 {effect.Value} HP";
+                case CardEffectType.LowHpDamage:
+                    return $"造成 {effect.Value} 伤害，HP ≤ {effect.ChancePercent}% 时 +{(effect.SecondaryValue > 0 ? effect.SecondaryValue : effect.Value)} 伤害";
+                case CardEffectType.MissingHpDamage:
+                    return $"造成 {effect.Value} 伤害，每损失 10% HP +{effect.SecondaryValue} 伤害";
+                case CardEffectType.LowHpShield:
+                    return $"获得 {effect.Value} 护盾，HP ≤ {effect.ChancePercent}% 时 +{effect.SecondaryValue} 护盾";
+                case CardEffectType.BloodGuardHeal:
+                    return $"受击后回复 {effect.Value} HP / {Math.Max(1, effect.Duration)} 回合";
                 case CardEffectType.SwordMark:
                     return $"剑气印记 {effect.Value}";
                 case CardEffectType.Sharpness:
@@ -454,6 +464,8 @@ namespace GameLogic.Cultivation
                     return "玄黄宗";
                 case CultivationSect.Medicine:
                     return "药王谷";
+                case CultivationSect.Demonic:
+                    return "魔道";
                 default:
                     return sect.ToString();
             }
@@ -519,7 +531,7 @@ namespace GameLogic.Cultivation
 
             var battle = state.CurrentBattle;
             var enemy = battle.Enemies.FirstOrDefault();
-            return $"玩家\nHP {battle.Player.CurrentHp}/{battle.Player.MaxHp}  护盾 {battle.Player.Shield}\n灵力 {battle.Spirit}/{battle.SpiritMax}  回合 {battle.TurnNumber}\n锋锐 {battle.Player.Sharpness}/{battle.Player.SharpnessTurns}  破防 {battle.Player.BreakDefenseStacks}  灼烧 {battle.Player.BurnStacks}/{battle.Player.BurnTurns}  中毒 {battle.Player.PoisonStacks}  冰冻 {battle.Player.FreezeStacks}/{battle.Player.FreezeTurns}  眩晕 {battle.Player.StunTurns}\n灵力消耗 -{battle.SpiritCostReduction}  额外抽牌 +{battle.ExtraDrawPerTurn}  蓄力 x{battle.ChargedDamageMultiplier}/{battle.ChargedDamageUses}  闪避 {battle.DodgeCharges}  反击 {battle.DodgeCounterDamage}  生生不息 {battle.RegenerationPerTurn}/{battle.RegenerationTurns}  毒瘴 {battle.PoisonCounterStacks}/{battle.PoisonCounterTurns}\n\n敌人：{enemy?.Body.Name ?? string.Empty}\nHP {enemy?.Body.CurrentHp ?? 0}/{enemy?.Body.MaxHp ?? 0}  护盾 {enemy?.Body.Shield ?? 0}\n攻击强化 +{enemy?.AttackBonus ?? 0}  破防 {enemy?.Body.BreakDefenseStacks ?? 0}  灼烧 {enemy?.Body.BurnStacks ?? 0}/{enemy?.Body.BurnTurns ?? 0}  中毒 {enemy?.Body.PoisonStacks ?? 0}  冰冻 {enemy?.Body.FreezeStacks ?? 0}/{enemy?.Body.FreezeTurns ?? 0}  眩晕 {enemy?.Body.StunTurns ?? 0}  剑气印记 {enemy?.Body.SwordMarkStacks ?? 0}\n意图：{enemy?.CurrentIntent.Description ?? string.Empty}\n\n战斗结果：{battle.Outcome}";
+            return $"玩家\nHP {battle.Player.CurrentHp}/{battle.Player.MaxHp}  护盾 {battle.Player.Shield}\n灵力 {battle.Spirit}/{battle.SpiritMax}  回合 {battle.TurnNumber}\n锋锐 {battle.Player.Sharpness}/{battle.Player.SharpnessTurns}  破防 {battle.Player.BreakDefenseStacks}  灼烧 {battle.Player.BurnStacks}/{battle.Player.BurnTurns}  中毒 {battle.Player.PoisonStacks}  冰冻 {battle.Player.FreezeStacks}/{battle.Player.FreezeTurns}  眩晕 {battle.Player.StunTurns}\n灵力消耗 -{battle.SpiritCostReduction}  额外抽牌 +{battle.ExtraDrawPerTurn}  蓄力 x{battle.ChargedDamageMultiplier}/{battle.ChargedDamageUses}  闪避 {battle.DodgeCharges}  反击 {battle.DodgeCounterDamage}  生生不息 {battle.RegenerationPerTurn}/{battle.RegenerationTurns}  毒瘴 {battle.PoisonCounterStacks}/{battle.PoisonCounterTurns}  血护 {battle.BloodGuardHealAmount}/{battle.BloodGuardHealTurns}\n\n敌人：{enemy?.Body.Name ?? string.Empty}\nHP {enemy?.Body.CurrentHp ?? 0}/{enemy?.Body.MaxHp ?? 0}  护盾 {enemy?.Body.Shield ?? 0}\n攻击强化 +{enemy?.AttackBonus ?? 0}  破防 {enemy?.Body.BreakDefenseStacks ?? 0}  灼烧 {enemy?.Body.BurnStacks ?? 0}/{enemy?.Body.BurnTurns ?? 0}  中毒 {enemy?.Body.PoisonStacks ?? 0}  冰冻 {enemy?.Body.FreezeStacks ?? 0}/{enemy?.Body.FreezeTurns ?? 0}  眩晕 {enemy?.Body.StunTurns ?? 0}  剑气印记 {enemy?.Body.SwordMarkStacks ?? 0}\n意图：{enemy?.CurrentIntent.Description ?? string.Empty}\n\n战斗结果：{battle.Outcome}";
         }
 
         private static string BuildDeckText(CultivationRunState state)

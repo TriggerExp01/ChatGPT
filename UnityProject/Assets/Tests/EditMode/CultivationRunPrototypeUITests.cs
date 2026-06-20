@@ -52,6 +52,7 @@ namespace GameLogic.Tests
             Assert.NotNull(_root.transform.Find("CultivationRunPrototypeUI/Lower/ActionBar/SwordSectButton"));
             Assert.NotNull(_root.transform.Find("CultivationRunPrototypeUI/Lower/ActionBar/FireCloudSectButton"));
             Assert.NotNull(_root.transform.Find("CultivationRunPrototypeUI/Lower/ActionBar/ThunderSectButton"));
+            Assert.NotNull(_root.transform.Find("CultivationRunPrototypeUI/Lower/ActionBar/DemonicSectButton"));
             Assert.NotNull(_root.transform.Find("CultivationRunPrototypeUI/Lower/ActionBar/EndTurnButton"));
         }
 
@@ -67,6 +68,9 @@ namespace GameLogic.Tests
             var thunderButton = _root.transform
                 .Find("CultivationRunPrototypeUI/Lower/ActionBar/ThunderSectButton")
                 .GetComponent<Button>();
+            var demonicButton = _root.transform
+                .Find("CultivationRunPrototypeUI/Lower/ActionBar/DemonicSectButton")
+                .GetComponent<Button>();
 
             fireCloudButton.onClick.Invoke();
 
@@ -79,6 +83,12 @@ namespace GameLogic.Tests
             Assert.AreEqual(CultivationSect.Thunder, _ui.Snapshot.Sect);
             StringAssert.Contains("天雷阁", _root.transform.Find("CultivationRunPrototypeUI/Header/TitleRow/TitleBox/StageText").GetComponent<Text>().text);
             StringAssert.Contains(CultivationSeedData.ThunderTalisman.Name, _root.transform.Find("CultivationRunPrototypeUI/Body/DeckPanel/DeckText").GetComponent<Text>().text);
+
+            demonicButton.onClick.Invoke();
+
+            Assert.AreEqual(CultivationSect.Demonic, _ui.Snapshot.Sect);
+            StringAssert.Contains("魔道", _root.transform.Find("CultivationRunPrototypeUI/Header/TitleRow/TitleBox/StageText").GetComponent<Text>().text);
+            StringAssert.Contains(CultivationSeedData.BloodSacrificePalm.Name, _root.transform.Find("CultivationRunPrototypeUI/Body/DeckPanel/DeckText").GetComponent<Text>().text);
 
             swordButton.onClick.Invoke();
 

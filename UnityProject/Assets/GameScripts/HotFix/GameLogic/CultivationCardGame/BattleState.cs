@@ -65,6 +65,10 @@ namespace GameLogic.Cultivation
 
         public int RegenerationTurns { get; private set; }
 
+        public int BloodGuardHealAmount { get; private set; }
+
+        public int BloodGuardHealTurns { get; private set; }
+
         public bool PoisonDamageTriggeredThisTurn { get; private set; }
 
         public int TurnNumber { get; set; }
@@ -196,6 +200,39 @@ namespace GameLogic.Cultivation
             }
 
             return healed;
+        }
+
+        public void AddBloodGuardHeal(int amount, int turns)
+        {
+            BloodGuardHealAmount += Math.Max(0, amount);
+            BloodGuardHealTurns = Math.Max(BloodGuardHealTurns, Math.Max(1, turns));
+        }
+
+        public void ResolveBloodGuardHealDurationAtTurnStart()
+        {
+            if (BloodGuardHealTurns <= 0)
+            {
+                BloodGuardHealAmount = 0;
+                return;
+            }
+
+            BloodGuardHealTurns--;
+            if (BloodGuardHealTurns == 0)
+            {
+                BloodGuardHealAmount = 0;
+            }
+        }
+
+        public int TriggerBloodGuardHeal()
+        {
+            if (BloodGuardHealAmount <= 0 || BloodGuardHealTurns <= 0)
+            {
+                return 0;
+            }
+
+            var before = Player.CurrentHp;
+            Player.Heal(BloodGuardHealAmount);
+            return Player.CurrentHp - before;
         }
 
         public bool TryConsumeDodge()

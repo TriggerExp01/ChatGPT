@@ -119,6 +119,29 @@ namespace GameLogic.Tests
         }
 
         [Test]
+        public void StartRunCanUseDemonicSectStarterDeck()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+
+            var run = engine.StartRun(sect: CultivationSect.Demonic);
+            var deckIds = run.Deck.Select(card => card.Id).ToArray();
+
+            Assert.AreEqual(CultivationSect.Demonic, run.Sect);
+            CollectionAssert.Contains(deckIds, CultivationSeedData.BloodSacrificePalm.Id);
+            CollectionAssert.Contains(deckIds, CultivationSeedData.BloodLeechClaw.Id);
+            CollectionAssert.Contains(deckIds, CultivationSeedData.ShadowStab.Id);
+            CollectionAssert.Contains(deckIds, CultivationSeedData.BloodFleshShield.Id);
+            CollectionAssert.Contains(deckIds, CultivationSeedData.ShadowEscape.Id);
+            CollectionAssert.Contains(deckIds, CultivationSeedData.BloodLeechGuard.Id);
+            CollectionAssert.DoesNotContain(deckIds, CultivationSeedData.SwordQi.Id);
+            CollectionAssert.DoesNotContain(deckIds, CultivationSeedData.BurningPalm.Id);
+            CollectionAssert.DoesNotContain(deckIds, CultivationSeedData.PoisonVineArt.Id);
+            Assert.IsTrue(run.CurrentNode.RewardPool.Any(reward => reward.Card.Id == CultivationSeedData.BloodMist.Id));
+            Assert.IsTrue(run.CurrentNode.RewardPool.Any(reward => reward.Card.Id == CultivationSeedData.BloodFrenzy.Id));
+            Assert.IsTrue(run.CurrentNode.RewardPool.Any(reward => reward.Card.Id == CultivationSeedData.HeavenlyDemonDisintegration.Id));
+        }
+
+        [Test]
         public void FireCloudSectBranchingRouteUsesFireCloudRewardPool()
         {
             var expectedRewardIds = CultivationSeedData.CreateFireCloudSectRewardPool()
@@ -179,6 +202,24 @@ namespace GameLogic.Tests
                 .Select(reward => reward.Id)
                 .ToArray();
             var route = CultivationSeedData.CreateFirstPrototypeBranchingRoute(CultivationSect.Medicine);
+            var battleNodes = route
+                .Where(node => node.Type == CultivationRunNodeType.Battle || node.Type == CultivationRunNodeType.Elite)
+                .ToArray();
+
+            Assert.Greater(battleNodes.Length, 0);
+            foreach (var node in battleNodes)
+            {
+                CollectionAssert.AreEquivalent(expectedRewardIds, node.RewardPool.Select(reward => reward.Id).ToArray());
+            }
+        }
+
+        [Test]
+        public void DemonicSectBranchingRouteUsesDemonicRewardPool()
+        {
+            var expectedRewardIds = CultivationSeedData.CreateDemonicSectRewardPool()
+                .Select(reward => reward.Id)
+                .ToArray();
+            var route = CultivationSeedData.CreateFirstPrototypeBranchingRoute(CultivationSect.Demonic);
             var battleNodes = route
                 .Where(node => node.Type == CultivationRunNodeType.Battle || node.Type == CultivationRunNodeType.Elite)
                 .ToArray();

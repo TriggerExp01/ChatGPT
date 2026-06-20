@@ -100,6 +100,28 @@ namespace GameLogic.Cultivation
             return hpDamage;
         }
 
+        public int LoseHpAsCost(int amount)
+        {
+            var hpLoss = Math.Min(Math.Max(0, amount), Math.Max(0, CurrentHp - 1));
+            CurrentHp -= hpLoss;
+            return hpLoss;
+        }
+
+        public bool IsCurrentHpAtOrBelowPercent(int percent)
+        {
+            if (percent <= 0)
+            {
+                return false;
+            }
+
+            return CurrentHp * 100 <= MaxHp * percent;
+        }
+
+        public int GetMissingHpTenthSteps()
+        {
+            return Math.Max(0, (MaxHp - CurrentHp) * 10 / MaxHp);
+        }
+
         public void AddBreakDefense(int stacks)
         {
             BreakDefenseStacks += Math.Max(0, stacks);

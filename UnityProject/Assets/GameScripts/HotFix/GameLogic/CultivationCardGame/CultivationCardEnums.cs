@@ -20,6 +20,11 @@ namespace GameLogic.Cultivation
         Leech,
         Regeneration,
         PoisonAttackCounter,
+        BloodSacrifice,
+        LowHpDamage,
+        MissingHpDamage,
+        LowHpShield,
+        BloodGuardHeal,
         SwordMark,
         Sharpness,
         Exhaust,
@@ -105,5 +110,6 @@ namespace GameLogic.Cultivation
         Thunder,
         Earth,
         Medicine,
+        Demonic,
     }
 }

@@ -273,6 +273,90 @@ namespace GameLogic.Tests
         }
 
         [Test]
+        public void BloodSacrificeKeepsPlayerAliveAndStillResolvesFollowingDamage()
+        {
+            var engine = new BattleEngine(1);
+            var bloodCard = new CardDefinition(
+                "blood_sacrifice_test",
+                "血祭测试",
+                0,
+                new CardEffect(CardEffectType.BloodSacrifice, 5, CardTarget.Self),
+                new CardEffect(CardEffectType.Damage, 12));
+            var state = CreateOrderedBattleWithPlayerHp(engine, 2, bloodCard);
+            var enemy = state.Enemies[0];
+
+            engine.PlayCard(state, state.Hand[0], enemy);
+
+            Assert.AreEqual(1, state.Player.CurrentHp);
+            Assert.AreEqual(30, enemy.Body.CurrentHp);
+            Assert.AreEqual(BattleOutcome.InProgress, state.Outcome);
+        }
+
+        [Test]
+        public void LowHpDamageAddsBonusWhenPlayerIsAtThreshold()
+        {
+            var engine = new BattleEngine(1);
+            var lowHpCard = new CardDefinition(
+                "low_hp_damage_test",
+                "低血伤害测试",
+                0,
+                new CardEffect(CardEffectType.LowHpDamage, 14, chancePercent: 50, secondaryValue: 14));
+            var highHpState = CreateOrderedBattleWithPlayerHp(engine, 100, lowHpCard);
+            var lowHpState = CreateOrderedBattleWithPlayerHp(engine, 50, lowHpCard);
+
+            engine.PlayCard(highHpState, highHpState.Hand[0], highHpState.Enemies[0]);
+            engine.PlayCard(lowHpState, lowHpState.Hand[0], lowHpState.Enemies[0]);
+
+            Assert.AreEqual(28, highHpState.Enemies[0].Body.CurrentHp);
+            Assert.AreEqual(14, lowHpState.Enemies[0].Body.CurrentHp);
+        }
+
+        [Test]
+        public void MissingHpDamageScalesByLostHpTenthSteps()
+        {
+            var engine = new BattleEngine(1);
+            var state = CreateOrderedBattleWithPlayerHp(engine, 60, CultivationSeedData.BloodFrenzy);
+
+            engine.PlayCard(state, state.Hand[0], state.Enemies[0]);
+
+            Assert.AreEqual(56, state.Player.CurrentHp);
+            Assert.AreEqual(28, state.Enemies[0].Body.CurrentHp);
+        }
+
+        [Test]
+        public void BloodGuardHealRestoresHpAfterEnemyAttack()
+        {
+            var engine = new BattleEngine(1);
+            var state = CreateOrderedBattleWithPlayerHp(engine, 80, CultivationSeedData.BloodLeechGuard);
+
+            engine.PlayCard(state, state.Hand[0], state.Enemies[0]);
+            engine.EndPlayerTurn(state);
+
+            Assert.AreEqual(81, state.Player.CurrentHp);
+            Assert.AreEqual(0, state.BloodGuardHealAmount);
+            Assert.IsTrue(state.Logs.Any(log => log.Message.Contains("噬血护体")));
+        }
+
+        [Test]
+        public void DemonicSectStarterDeckUsesBloodSacrificeLowHpAndLeechCards()
+        {
+            var deck = CultivationSeedData.CreateDemonicSectStarterDeck();
+
+            Assert.AreEqual(12, deck.Count);
+            Assert.AreEqual(3, deck.Count(card => card.Id == "blood_sacrifice_palm"));
+            Assert.AreEqual(2, deck.Count(card => card.Id == "blood_leech_claw"));
+            Assert.AreEqual(2, deck.Count(card => card.Id == "shadow_stab"));
+            Assert.AreEqual(2, deck.Count(card => card.Id == "blood_flesh_shield"));
+            Assert.AreEqual(1, deck.Count(card => card.Id == "shadow_escape"));
+            Assert.AreEqual(1, deck.Count(card => card.Id == "blood_leech_guard"));
+            Assert.AreEqual(1, deck.Count(card => card.Id == "healing_pill"));
+            Assert.IsTrue(deck.Any(card => card.Effects.Any(effect => effect.Type == CardEffectType.BloodSacrifice)));
+            Assert.IsTrue(deck.Any(card => card.Effects.Any(effect => effect.Type == CardEffectType.LowHpDamage)));
+            Assert.IsTrue(deck.Any(card => card.Effects.Any(effect => effect.Type == CardEffectType.Leech)));
+            Assert.IsTrue(deck.Any(card => card.Effects.Any(effect => effect.Type == CardEffectType.BloodGuardHeal)));
+        }
+
+        [Test]
         public void MedicineSectStarterDeckUsesPoisonLeechAndRegenerationCards()
         {
             var deck = CultivationSeedData.CreateMedicineSectStarterDeck();
@@ -1202,6 +1286,20 @@ namespace GameLogic.Tests
                 .ToArray();
             var state = new BattleState(
                 new CombatantState("修士", 100),
+                deck,
+                new[] { new EnemyState(CultivationSeedData.StoneDemon) });
+            engine.StartPlayerTurn(state);
+            return state;
+        }
+
+        private static BattleState CreateOrderedBattleWithPlayerHp(BattleEngine engine, int playerCurrentHp, params CardDefinition[] firstCards)
+        {
+            var deck = firstCards
+                .Concat(CultivationSeedData.CreateSwordSectStarterDeck())
+                .Take(12)
+                .ToArray();
+            var state = new BattleState(
+                new CombatantState("修士", 100, currentHp: playerCurrentHp),
                 deck,
                 new[] { new EnemyState(CultivationSeedData.StoneDemon) });
             engine.StartPlayerTurn(state);

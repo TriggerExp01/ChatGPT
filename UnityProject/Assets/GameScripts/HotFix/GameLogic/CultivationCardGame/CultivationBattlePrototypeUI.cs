@@ -276,6 +276,16 @@ namespace GameLogic.Cultivation
                     return $"生生不息 {effect.Value} HP / {Math.Max(1, effect.Duration)} 回合";
                 case CardEffectType.PoisonAttackCounter:
                     return $"受击施加中毒 {effect.Value} / {Math.Max(1, effect.Duration)} 回合";
+                case CardEffectType.BloodSacrifice:
+                    return $"血祭：失去 {effect.Value} HP";
+                case CardEffectType.LowHpDamage:
+                    return $"造成 {effect.Value} 伤害，HP ≤ {effect.ChancePercent}% 时 +{(effect.SecondaryValue > 0 ? effect.SecondaryValue : effect.Value)} 伤害";
+                case CardEffectType.MissingHpDamage:
+                    return $"造成 {effect.Value} 伤害，每损失 10% HP +{effect.SecondaryValue} 伤害";
+                case CardEffectType.LowHpShield:
+                    return $"获得 {effect.Value} 护盾，HP ≤ {effect.ChancePercent}% 时 +{effect.SecondaryValue} 护盾";
+                case CardEffectType.BloodGuardHeal:
+                    return $"受击后回复 {effect.Value} HP / {Math.Max(1, effect.Duration)} 回合";
                 case CardEffectType.ChanceDamage:
                     return effect.RepeatCount > 1
                         ? $"造成 {effect.FallbackValue} 伤害 × {effect.RepeatCount}，每击 {effect.ChancePercent}% 概率暴击"

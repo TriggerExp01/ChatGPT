@@ -77,6 +77,7 @@ namespace GameLogic.Cultivation
             state.ResetPoisonDamageTriggered();
             state.ClearAttackCounter();
             state.ResolvePoisonCounterDurationAtTurnStart();
+            state.ResolveBloodGuardHealDurationAtTurnStart();
             state.Player.ClearShield();
             state.Player.ResolveSharpnessAtTurnStart();
             state.Spirit = state.SpiritMax;
@@ -301,6 +302,40 @@ namespace GameLogic.Cultivation
                 case CardEffectType.PoisonAttackCounter:
                     state.AddPoisonCounter(effect.Value, Math.Max(1, effect.Duration));
                     state.Logs.Add(new BattleLogEntry($"{card.Name} 本回合受击时施加中毒 {effect.Value} 层。"));
+                    break;
+                case CardEffectType.BloodSacrifice:
+                    var hpLost = state.Player.LoseHpAsCost(effect.Value);
+                    state.Logs.Add(new BattleLogEntry($"{card.Name} 血祭失去 {hpLost} HP。"));
+                    break;
+                case CardEffectType.LowHpDamage:
+                    foreach (var enemy in SelectTargets(state, effect, explicitTarget))
+                    {
+                        DealLowHpDamage(state, card, effect, enemy);
+                    }
+
+                    break;
+                case CardEffectType.MissingHpDamage:
+                    foreach (var enemy in SelectTargets(state, effect, explicitTarget))
+                    {
+                        DealMissingHpDamage(state, card, effect, enemy);
+                    }
+
+                    break;
+                case CardEffectType.LowHpShield:
+                    var lowHpThreshold = effect.ChancePercent > 0 ? effect.ChancePercent : 50;
+                    var lowHpBonusShield = state.Player.IsCurrentHpAtOrBelowPercent(lowHpThreshold)
+                        ? effect.SecondaryValue
+                        : 0;
+                    state.Player.AddShield(effect.Value + lowHpBonusShield);
+                    if (lowHpBonusShield > 0)
+                    {
+                        state.Logs.Add(new BattleLogEntry($"{card.Name} 低血触发，额外获得 {lowHpBonusShield} 护盾。"));
+                    }
+
+                    break;
+                case CardEffectType.BloodGuardHeal:
+                    state.AddBloodGuardHeal(effect.Value, Math.Max(1, effect.Duration));
+                    state.Logs.Add(new BattleLogEntry($"{card.Name} 受击后回复 {effect.Value} HP，持续 {Math.Max(1, effect.Duration)} 回合。"));
                     break;
                 case CardEffectType.SwordMark:
                     foreach (var enemy in SelectTargets(state, effect, explicitTarget))
@@ -675,6 +710,39 @@ namespace GameLogic.Cultivation
             }
         }
 
+        private static void DealLowHpDamage(BattleState state, CardDefinition card, CardEffect effect, EnemyState enemy)
+        {
+            var thresholdPercent = effect.ChancePercent > 0 ? effect.ChancePercent : 50;
+            var damage = effect.Value;
+            if (state.Player.IsCurrentHpAtOrBelowPercent(thresholdPercent))
+            {
+                damage += effect.SecondaryValue > 0 ? effect.SecondaryValue : effect.Value;
+            }
+
+            DealComputedCardDamage(state, card, enemy, damage, $"低血阈值 {thresholdPercent}%");
+        }
+
+        private static void DealMissingHpDamage(BattleState state, CardDefinition card, CardEffect effect, EnemyState enemy)
+        {
+            var steps = state.Player.GetMissingHpTenthSteps();
+            var damage = effect.Value + steps * Math.Max(0, effect.SecondaryValue);
+            DealComputedCardDamage(state, card, enemy, damage, $"损血档位 {steps}");
+        }
+
+        private static void DealComputedCardDamage(BattleState state, CardDefinition card, EnemyState enemy, int damage, string detail)
+        {
+            if (enemy == null || enemy.Body.IsDefeated)
+            {
+                return;
+            }
+
+            var multiplier = state.TryConsumeChargedDamageMultiplier();
+            var dealt = enemy.Body.TakeDamage(Math.Max(0, damage) * multiplier, state.Player.Sharpness);
+            var chargeText = multiplier > 1 ? $" 蓄力 x{multiplier}" : string.Empty;
+            var detailText = string.IsNullOrEmpty(detail) ? string.Empty : $"（{detail}）";
+            state.Logs.Add(new BattleLogEntry($"{card.Name}{chargeText}{detailText} 对 {enemy.Body.Name} 造成 {dealt} 点伤害。"));
+        }
+
         private static IEnumerable<EnemyState> SelectTargets(BattleState state, CardEffect effect, EnemyState explicitTarget)
         {
             if (effect.Target == CardTarget.EnemyAll)
@@ -769,6 +837,7 @@ namespace GameLogic.Cultivation
             var dealt = state.Player.TakeDamage(damage + enemy.AttackBonus);
             ResolveAttackCounter(state, enemy);
             ResolvePoisonCounter(state, enemy);
+            ResolveBloodGuardHeal(state, enemy);
             state.Logs.Add(new BattleLogEntry($"{enemy.Body.Name} 对玩家造成 {dealt} 点伤害。"));
             return true;
         }
@@ -799,6 +868,17 @@ namespace GameLogic.Cultivation
 
             enemy.Body.AddPoison(state.PoisonCounterStacks);
             state.Logs.Add(new BattleLogEntry($"毒瘴反噬使 {enemy.Body.Name} 中毒 {state.PoisonCounterStacks} 层。"));
+        }
+
+        private static void ResolveBloodGuardHeal(BattleState state, EnemyState enemy)
+        {
+            var healed = state.TriggerBloodGuardHeal();
+            if (healed <= 0)
+            {
+                return;
+            }
+
+            state.Logs.Add(new BattleLogEntry($"噬血护体在受到 {enemy.Body.Name} 攻击后回复 {healed} HP。"));
         }
 
         private void DrawToHandLimit(BattleState state)
@@ -2570,6 +2650,152 @@ namespace GameLogic.Cultivation
             new CardEffect(CardEffectType.Regeneration, 4, CardTarget.Self, duration: 4),
             new CardEffect(CardEffectType.Draw, 1, CardTarget.Self));
 
+        public static CardDefinition BloodSacrificePalm { get; } = new CardDefinition(
+            "blood_sacrifice_palm",
+            "血祭掌",
+            1,
+            new[]
+            {
+                new CardUpgradeOption(
+                    "blood_sacrifice_palm_strong_1",
+                    "血祭掌·强",
+                    "失去 3 HP，造成 16 伤害。",
+                    new CardDefinition("blood_sacrifice_palm_strong_1", "血祭掌·强", 1, new CardEffect(CardEffectType.BloodSacrifice, 3, CardTarget.Self), new CardEffect(CardEffectType.Damage, 16))),
+                new CardUpgradeOption(
+                    "blood_sacrifice_palm_leech_1",
+                    "血祭掌·噬",
+                    "失去 3 HP，造成 10 伤害，并恢复伤害的 30%。",
+                    new CardDefinition("blood_sacrifice_palm_leech_1", "血祭掌·噬", 1, new CardEffect(CardEffectType.BloodSacrifice, 3, CardTarget.Self), new CardEffect(CardEffectType.Leech, 10, secondaryValue: 30))),
+            },
+            new CardEffect(CardEffectType.BloodSacrifice, 3, CardTarget.Self),
+            new CardEffect(CardEffectType.Damage, 12));
+
+        public static CardDefinition BloodLeechClaw { get; } = new CardDefinition(
+            "blood_leech_claw",
+            "噬血爪",
+            1,
+            new[]
+            {
+                new CardUpgradeOption(
+                    "blood_leech_claw_strong_1",
+                    "噬血爪·强",
+                    "造成 10 伤害，恢复伤害的 50%。",
+                    new CardDefinition("blood_leech_claw_strong_1", "噬血爪·强", 1, new CardEffect(CardEffectType.Leech, 10, secondaryValue: 50))),
+                new CardUpgradeOption(
+                    "blood_leech_claw_fast_1",
+                    "噬血爪·速",
+                    "灵力消耗降为 0，造成 6 伤害，恢复伤害的 50%。",
+                    new CardDefinition("blood_leech_claw_fast_1", "噬血爪·速", 0, new CardEffect(CardEffectType.Leech, 6, secondaryValue: 50))),
+            },
+            new CardEffect(CardEffectType.Leech, 6, secondaryValue: 50));
+
+        public static CardDefinition ShadowStab { get; } = new CardDefinition(
+            "shadow_stab",
+            "暗影刺",
+            2,
+            new[]
+            {
+                new CardUpgradeOption(
+                    "shadow_stab_strong_1",
+                    "暗影刺·强",
+                    "造成 20 伤害；HP 低于 50% 时额外造成 20 伤害。",
+                    new CardDefinition("shadow_stab_strong_1", "暗影刺·强", 2, new CardEffect(CardEffectType.LowHpDamage, 20, chancePercent: 50, secondaryValue: 20))),
+                new CardUpgradeOption(
+                    "shadow_stab_fast_1",
+                    "暗影刺·速",
+                    "灵力消耗降为 1，造成 12 伤害；HP 低于 50% 时额外造成 12 伤害。",
+                    new CardDefinition("shadow_stab_fast_1", "暗影刺·速", 1, new CardEffect(CardEffectType.LowHpDamage, 12, chancePercent: 50, secondaryValue: 12))),
+            },
+            new CardEffect(CardEffectType.LowHpDamage, 14, chancePercent: 50, secondaryValue: 14));
+
+        public static CardDefinition BloodFleshShield { get; } = new CardDefinition(
+            "blood_flesh_shield",
+            "血肉盾",
+            1,
+            new[]
+            {
+                new CardUpgradeOption(
+                    "blood_flesh_shield_guard_1",
+                    "血肉盾·坚",
+                    "获得 10 护盾；HP 低于 50% 时额外获得 5 护盾。",
+                    new CardDefinition("blood_flesh_shield_guard_1", "血肉盾·坚", 1, new CardEffect(CardEffectType.LowHpShield, 10, CardTarget.Self, chancePercent: 50, secondaryValue: 5))),
+                new CardUpgradeOption(
+                    "blood_flesh_shield_blood_1",
+                    "血肉盾·血",
+                    "失去 2 HP，获得 14 护盾。",
+                    new CardDefinition("blood_flesh_shield_blood_1", "血肉盾·血", 1, new CardEffect(CardEffectType.BloodSacrifice, 2, CardTarget.Self), new CardEffect(CardEffectType.Shield, 14, CardTarget.Self))),
+            },
+            new CardEffect(CardEffectType.LowHpShield, 8, CardTarget.Self, chancePercent: 50, secondaryValue: 4));
+
+        public static CardDefinition ShadowEscape { get; } = new CardDefinition(
+            "shadow_escape",
+            "暗影遁",
+            0,
+            new[]
+            {
+                new CardUpgradeOption(
+                    "shadow_escape_draw_1",
+                    "暗影遁·迅",
+                    "失去 2 HP，抽 3 张牌。",
+                    new CardDefinition("shadow_escape_draw_1", "暗影遁·迅", 0, new CardEffect(CardEffectType.BloodSacrifice, 2, CardTarget.Self), new CardEffect(CardEffectType.Draw, 3, CardTarget.Self))),
+                new CardUpgradeOption(
+                    "shadow_escape_guard_1",
+                    "暗影遁·护",
+                    "失去 2 HP，抽 2 张牌，获得 4 护盾。",
+                    new CardDefinition("shadow_escape_guard_1", "暗影遁·护", 0, new CardEffect(CardEffectType.BloodSacrifice, 2, CardTarget.Self), new CardEffect(CardEffectType.Draw, 2, CardTarget.Self), new CardEffect(CardEffectType.Shield, 4, CardTarget.Self))),
+            },
+            new CardEffect(CardEffectType.BloodSacrifice, 2, CardTarget.Self),
+            new CardEffect(CardEffectType.Draw, 2, CardTarget.Self));
+
+        public static CardDefinition BloodLeechGuard { get; } = new CardDefinition(
+            "blood_leech_guard",
+            "噬血护体",
+            1,
+            new[]
+            {
+                new CardUpgradeOption(
+                    "blood_leech_guard_heal_1",
+                    "噬血护体·愈",
+                    "获得 5 护盾；本回合受击后回复 4 HP。",
+                    new CardDefinition("blood_leech_guard_heal_1", "噬血护体·愈", 1, new CardEffect(CardEffectType.Shield, 5, CardTarget.Self), new CardEffect(CardEffectType.BloodGuardHeal, 4, CardTarget.Self, duration: 1))),
+                new CardUpgradeOption(
+                    "blood_leech_guard_long_1",
+                    "噬血护体·续",
+                    "获得 5 护盾；接下来 2 回合受击后回复 2 HP。",
+                    new CardDefinition("blood_leech_guard_long_1", "噬血护体·续", 1, new CardEffect(CardEffectType.Shield, 5, CardTarget.Self), new CardEffect(CardEffectType.BloodGuardHeal, 2, CardTarget.Self, duration: 2))),
+            },
+            new CardEffect(CardEffectType.Shield, 5, CardTarget.Self),
+            new CardEffect(CardEffectType.BloodGuardHeal, 2, CardTarget.Self, duration: 1));
+
+        public static CardDefinition BloodMist { get; } = new CardDefinition(
+            "blood_mist",
+            "血雾",
+            2,
+            new CardEffect(CardEffectType.BloodSacrifice, 5, CardTarget.Self),
+            new CardEffect(CardEffectType.Damage, 10, CardTarget.EnemyAll));
+
+        public static CardDefinition BloodSacrificeRite { get; } = new CardDefinition(
+            "blood_sacrifice_rite",
+            "血祭大法",
+            2,
+            new CardEffect(CardEffectType.BloodSacrifice, 8, CardTarget.Self),
+            new CardEffect(CardEffectType.Damage, 25));
+
+        public static CardDefinition BloodFrenzy { get; } = new CardDefinition(
+            "blood_frenzy",
+            "血祭狂战",
+            1,
+            new CardEffect(CardEffectType.BloodSacrifice, 4, CardTarget.Self),
+            new CardEffect(CardEffectType.MissingHpDamage, 6, secondaryValue: 2));
+
+        public static CardDefinition HeavenlyDemonDisintegration { get; } = new CardDefinition(
+            "heavenly_demon_disintegration",
+            "天魔解体",
+            0,
+            new CardEffect(CardEffectType.BloodSacrifice, 10, CardTarget.Self),
+            new CardEffect(CardEffectType.ChargeDamage, 2, CardTarget.Self),
+            new CardEffect(CardEffectType.Draw, 1, CardTarget.Self));
+
         public static PillDefinition SmallRestorePillItem { get; } = new PillDefinition(
             "small_restore_pill",
             "小还丹",
@@ -2691,6 +2917,20 @@ namespace GameLogic.Cultivation
             };
         }
 
+        public static IReadOnlyList<CardDefinition> CreateDemonicSectStarterDeck()
+        {
+            return new List<CardDefinition>
+            {
+                BloodSacrificePalm, BloodSacrificePalm, BloodSacrificePalm,
+                BloodLeechClaw, BloodLeechClaw,
+                ShadowStab, ShadowStab,
+                BloodFleshShield, BloodFleshShield,
+                ShadowEscape,
+                BloodLeechGuard,
+                HealingPill,
+            };
+        }
+
         public static IReadOnlyList<CardDefinition> CreateStarterDeck(CultivationSect sect)
         {
             switch (sect)
@@ -2705,6 +2945,8 @@ namespace GameLogic.Cultivation
                     return CreateEarthSectStarterDeck();
                 case CultivationSect.Medicine:
                     return CreateMedicineSectStarterDeck();
+                case CultivationSect.Demonic:
+                    return CreateDemonicSectStarterDeck();
                 default:
                     throw new ArgumentOutOfRangeException(nameof(sect), sect, "Unsupported cultivation sect.");
             }
@@ -2898,6 +3140,24 @@ namespace GameLogic.Cultivation
             };
         }
 
+        public static IReadOnlyList<CultivationRunReward> CreateDemonicSectRewardPool()
+        {
+            return new List<CultivationRunReward>
+            {
+                new CultivationRunReward("reward_blood_sacrifice_palm", BloodSacrificePalm),
+                new CultivationRunReward("reward_blood_leech_claw", BloodLeechClaw),
+                new CultivationRunReward("reward_shadow_stab", ShadowStab),
+                new CultivationRunReward("reward_blood_flesh_shield", BloodFleshShield),
+                new CultivationRunReward("reward_shadow_escape", ShadowEscape),
+                new CultivationRunReward("reward_blood_leech_guard", BloodLeechGuard),
+                new CultivationRunReward("reward_blood_mist", BloodMist),
+                new CultivationRunReward("reward_blood_sacrifice_rite", BloodSacrificeRite),
+                new CultivationRunReward("reward_blood_frenzy", BloodFrenzy),
+                new CultivationRunReward("reward_heavenly_demon_disintegration", HeavenlyDemonDisintegration),
+                new CultivationRunReward("reward_healing_pill", HealingPill),
+            };
+        }
+
         public static IReadOnlyList<CultivationRunReward> CreateRewardPool(CultivationSect sect)
         {
             switch (sect)
@@ -2912,6 +3172,8 @@ namespace GameLogic.Cultivation
                     return CreateEarthSectRewardPool();
                 case CultivationSect.Medicine:
                     return CreateMedicineSectRewardPool();
+                case CultivationSect.Demonic:
+                    return CreateDemonicSectRewardPool();
                 default:
                     throw new ArgumentOutOfRangeException(nameof(sect), sect, "Unsupported cultivation sect.");
             }

@@ -541,6 +541,10 @@ namespace GameLogic.Cultivation
             medicineSectButton.onClick.AddListener(() => ResetRun(CultivationSect.Medicine));
             SetLayout(medicineSectButton.gameObject, preferredWidth: 190, preferredHeight: 48);
 
+            var demonicSectButton = CreateButton("DemonicSectButton", actionBar, "魔道开局");
+            demonicSectButton.onClick.AddListener(() => ResetRun(CultivationSect.Demonic));
+            SetLayout(demonicSectButton.gameObject, preferredWidth: 170, preferredHeight: 48);
+
             _endTurnButton = CreateButton("EndTurnButton", actionBar, "结束回合");
             _endTurnButton.onClick.AddListener(EndTurn);
             SetLayout(_endTurnButton.gameObject, preferredWidth: 170, preferredHeight: 48);
