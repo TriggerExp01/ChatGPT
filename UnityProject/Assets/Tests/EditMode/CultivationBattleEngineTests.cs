@@ -82,6 +82,66 @@ namespace GameLogic.Tests
         }
 
         [Test]
+        public void SwordMarkExplodesWhenReachingThreeStacks()
+        {
+            var engine = new BattleEngine(1);
+            var markCard = new CardDefinition(
+                "mark_test",
+                "剑气印记测试",
+                0,
+                new CardEffect(CardEffectType.SwordMark, 3));
+            var state = CreateOrderedBattle(engine, markCard);
+            var enemy = state.Enemies[0];
+
+            engine.PlayCard(state, state.Hand[0], enemy);
+
+            Assert.AreEqual(30, enemy.Body.CurrentHp);
+            Assert.AreEqual(0, enemy.Body.SwordMarkStacks);
+        }
+
+        [Test]
+        public void SharpnessIgnoresEnemyDefenseForCardDamage()
+        {
+            var engine = new BattleEngine(1);
+            var sharpnessCard = new CardDefinition(
+                "sharpness_test",
+                "锋锐测试",
+                0,
+                new CardEffect(CardEffectType.Sharpness, 3, CardTarget.Self, 2));
+            var strike = new CardDefinition(
+                "strike_test",
+                "攻击测试",
+                0,
+                new CardEffect(CardEffectType.Damage, 8));
+            var state = CreateOrderedBattle(engine, sharpnessCard, strike);
+            var enemy = state.Enemies[0];
+
+            engine.PlayCard(state, state.Hand[0], enemy);
+            engine.PlayCard(state, state.Hand[0], enemy);
+
+            Assert.AreEqual(32, enemy.Body.CurrentHp);
+            Assert.AreEqual(3, state.Player.Sharpness);
+            Assert.AreEqual(2, state.Player.SharpnessTurns);
+        }
+
+        [Test]
+        public void MultiHitDamageAppliesDefensePerHit()
+        {
+            var engine = new BattleEngine(1);
+            var multiHit = new CardDefinition(
+                "multi_hit_test",
+                "多段测试",
+                0,
+                new CardEffect(CardEffectType.Damage, 6, repeatCount: 2));
+            var state = CreateOrderedBattle(engine, multiHit);
+            var enemy = state.Enemies[0];
+
+            engine.PlayCard(state, state.Hand[0], enemy);
+
+            Assert.AreEqual(32, enemy.Body.CurrentHp);
+        }
+
+        [Test]
         public void EnemyIntentActionsAdvanceAfterTurnEnd()
         {
             var engine = new BattleEngine(1);

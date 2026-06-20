@@ -15,6 +15,8 @@ namespace GameLogic.Cultivation
         Heal,
         BreakDefense,
         Burn,
+        SwordMark,
+        Sharpness,
     }
 
     public enum EnemyIntentType

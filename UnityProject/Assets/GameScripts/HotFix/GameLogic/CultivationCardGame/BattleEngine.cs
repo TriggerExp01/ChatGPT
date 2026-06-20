@@ -53,6 +53,7 @@ namespace GameLogic.Cultivation
 
             state.TurnNumber++;
             state.Player.ClearShield();
+            state.Player.ResolveSharpnessAtTurnStart();
             state.Spirit = state.SpiritMax;
 
             var burnDamage = state.Player.ResolveBurnAtTurnStart();
@@ -135,8 +136,7 @@ namespace GameLogic.Cultivation
                 case CardEffectType.Damage:
                     foreach (var enemy in SelectTargets(state, effect, explicitTarget))
                     {
-                        var dealt = enemy.Body.TakeDamage(effect.Value);
-                        state.Logs.Add(new BattleLogEntry($"{card.Name} 对 {enemy.Body.Name} 造成 {dealt} 点伤害。"));
+                        DealCardDamage(state, card, effect, enemy);
                     }
 
                     break;
@@ -163,8 +163,39 @@ namespace GameLogic.Cultivation
                     }
 
                     break;
+                case CardEffectType.SwordMark:
+                    foreach (var enemy in SelectTargets(state, effect, explicitTarget))
+                    {
+                        var explosionDamage = enemy.Body.AddSwordMark(effect.Value);
+                        state.Logs.Add(new BattleLogEntry($"{card.Name} 对 {enemy.Body.Name} 施加 {effect.Value} 层剑气印记。"));
+                        if (explosionDamage > 0)
+                        {
+                            var dealt = enemy.Body.TakeDamage(explosionDamage);
+                            state.Logs.Add(new BattleLogEntry($"{enemy.Body.Name} 的剑气印记引爆，造成 {dealt} 点伤害。"));
+                        }
+                    }
+
+                    break;
+                case CardEffectType.Sharpness:
+                    state.Player.AddSharpness(effect.Value, Math.Max(1, effect.Duration));
+                    state.Logs.Add(new BattleLogEntry($"{card.Name} 获得锋锐 {effect.Value}，持续 {Math.Max(1, effect.Duration)} 回合。"));
+                    break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(effect.Type), effect.Type, "Unsupported card effect type.");
+            }
+        }
+
+        private static void DealCardDamage(BattleState state, CardDefinition card, CardEffect effect, EnemyState enemy)
+        {
+            for (var hit = 0; hit < effect.RepeatCount; hit++)
+            {
+                var dealt = enemy.Body.TakeDamage(effect.Value, state.Player.Sharpness);
+                var hitText = effect.RepeatCount > 1 ? $" 第 {hit + 1}/{effect.RepeatCount} 击" : string.Empty;
+                state.Logs.Add(new BattleLogEntry($"{card.Name}{hitText} 对 {enemy.Body.Name} 造成 {dealt} 点伤害。"));
+                if (enemy.Body.IsDefeated)
+                {
+                    break;
+                }
             }
         }
 
@@ -310,10 +341,10 @@ namespace GameLogic.Cultivation
                                 "造成 11 伤害，并施加 1 层破防。",
                                 new CardDefinition("sword_qi_damage_2_break", "破魂剑气", 1, new CardEffect(CardEffectType.Damage, 11), new CardEffect(CardEffectType.BreakDefense, 1))),
                             new CardUpgradeOption(
-                                "sword_qi_damage_2_draw",
+                                "sword_qi_damage_2_multi",
                                 "连珠剑气",
-                                "伤害提升到 12，并抽 1 张牌。",
-                                new CardDefinition("sword_qi_damage_2_draw", "连珠剑气", 1, new CardEffect(CardEffectType.Damage, 12), new CardEffect(CardEffectType.Draw, 1))),
+                                "造成 6 伤害 2 次。",
+                                new CardDefinition("sword_qi_damage_2_multi", "连珠剑气", 1, new CardEffect(CardEffectType.Damage, 6, repeatCount: 2))),
                         },
                         new CardEffect(CardEffectType.Damage, 11))),
                 new CardUpgradeOption(
@@ -332,10 +363,10 @@ namespace GameLogic.Cultivation
                                 "保持 0 灵力，额外抽 1 张牌。",
                                 new CardDefinition("sword_qi_cost_2_draw", "无影剑气", 0, new CardEffect(CardEffectType.Damage, 8), new CardEffect(CardEffectType.Draw, 1))),
                             new CardUpgradeOption(
-                                "sword_qi_cost_2_break",
+                                "sword_qi_cost_2_sharpness",
                                 "寒光剑气",
-                                "保持 0 灵力，额外施加 1 层破防。",
-                                new CardDefinition("sword_qi_cost_2_break", "寒光剑气", 0, new CardEffect(CardEffectType.Damage, 8), new CardEffect(CardEffectType.BreakDefense, 1))),
+                                "保持 0 灵力，额外获得锋锐 3，持续 2 回合。",
+                                new CardDefinition("sword_qi_cost_2_sharpness", "寒光剑气", 0, new CardEffect(CardEffectType.Damage, 8), new CardEffect(CardEffectType.Sharpness, 3, CardTarget.Self, 2))),
                         },
                         new CardEffect(CardEffectType.Damage, 8))),
             },
@@ -498,8 +529,8 @@ namespace GameLogic.Cultivation
                             new CardUpgradeOption(
                                 "sword_step_draw_2_guard",
                                 "剑意步",
-                                "获得 8 护盾并抽 2 张牌。",
-                                new CardDefinition("sword_step_draw_2_guard", "剑意步", 1, new CardEffect(CardEffectType.Shield, 8, CardTarget.Self), new CardEffect(CardEffectType.Draw, 2, CardTarget.Self))),
+                                "获得 4 护盾、抽 2 张牌，并施加 1 层剑气印记。",
+                                new CardDefinition("sword_step_draw_2_guard", "剑意步", 1, new CardEffect(CardEffectType.Shield, 4, CardTarget.Self), new CardEffect(CardEffectType.Draw, 2, CardTarget.Self), new CardEffect(CardEffectType.SwordMark, 1))),
                         },
                         new CardEffect(CardEffectType.Shield, 4, CardTarget.Self),
                         new CardEffect(CardEffectType.Draw, 2, CardTarget.Self))),

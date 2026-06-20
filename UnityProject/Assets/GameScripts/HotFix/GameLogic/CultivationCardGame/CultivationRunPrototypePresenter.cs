@@ -43,7 +43,9 @@ namespace GameLogic.Cultivation
             switch (effect.Type)
             {
                 case CardEffectType.Damage:
-                    return $"造成 {effect.Value} 伤害";
+                    return effect.RepeatCount > 1
+                        ? $"造成 {effect.Value} 伤害 × {effect.RepeatCount}"
+                        : $"造成 {effect.Value} 伤害";
                 case CardEffectType.Shield:
                     return $"获得 {effect.Value} 护盾";
                 case CardEffectType.Draw:
@@ -54,6 +56,10 @@ namespace GameLogic.Cultivation
                     return $"破防 {effect.Value}";
                 case CardEffectType.Burn:
                     return $"灼烧 {effect.Value} / {effect.Duration} 回合";
+                case CardEffectType.SwordMark:
+                    return $"剑气印记 {effect.Value}";
+                case CardEffectType.Sharpness:
+                    return $"锋锐 {effect.Value} / {effect.Duration} 回合";
                 default:
                     return effect.Type.ToString();
             }
@@ -107,7 +113,7 @@ namespace GameLogic.Cultivation
 
             var battle = state.CurrentBattle;
             var enemy = battle.Enemies.FirstOrDefault();
-            return $"玩家\nHP {battle.Player.CurrentHp}/{battle.Player.MaxHp}  护盾 {battle.Player.Shield}\n灵力 {battle.Spirit}/{battle.SpiritMax}  回合 {battle.TurnNumber}\n\n敌人：{enemy?.Body.Name ?? string.Empty}\nHP {enemy?.Body.CurrentHp ?? 0}/{enemy?.Body.MaxHp ?? 0}  护盾 {enemy?.Body.Shield ?? 0}\n破防 {enemy?.Body.BreakDefenseStacks ?? 0}  灼烧 {enemy?.Body.BurnStacks ?? 0}/{enemy?.Body.BurnTurns ?? 0}\n意图：{enemy?.CurrentIntent.Description ?? string.Empty}\n\n战斗结果：{battle.Outcome}";
+            return $"玩家\nHP {battle.Player.CurrentHp}/{battle.Player.MaxHp}  护盾 {battle.Player.Shield}\n灵力 {battle.Spirit}/{battle.SpiritMax}  回合 {battle.TurnNumber}\n锋锐 {battle.Player.Sharpness}/{battle.Player.SharpnessTurns}\n\n敌人：{enemy?.Body.Name ?? string.Empty}\nHP {enemy?.Body.CurrentHp ?? 0}/{enemy?.Body.MaxHp ?? 0}  护盾 {enemy?.Body.Shield ?? 0}\n破防 {enemy?.Body.BreakDefenseStacks ?? 0}  灼烧 {enemy?.Body.BurnStacks ?? 0}/{enemy?.Body.BurnTurns ?? 0}  剑气印记 {enemy?.Body.SwordMarkStacks ?? 0}\n意图：{enemy?.CurrentIntent.Description ?? string.Empty}\n\n战斗结果：{battle.Outcome}";
         }
 
         private static string BuildDeckText(CultivationRunState state)

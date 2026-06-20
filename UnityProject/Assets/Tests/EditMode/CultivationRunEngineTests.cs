@@ -161,7 +161,7 @@ namespace GameLogic.Tests
             Assert.IsTrue(run.Deck[swordQiIndex].CanUpgrade);
             Assert.AreEqual(2, run.Deck[swordQiIndex].UpgradeOptions.Count);
             Assert.AreEqual("sword_qi_cost_2_draw", run.Deck[swordQiIndex].UpgradeOptions[0].UpgradedCard.Id);
-            Assert.AreEqual("sword_qi_cost_2_break", run.Deck[swordQiIndex].UpgradeOptions[1].UpgradedCard.Id);
+            Assert.AreEqual("sword_qi_cost_2_sharpness", run.Deck[swordQiIndex].UpgradeOptions[1].UpgradedCard.Id);
         }
 
         [Test]
