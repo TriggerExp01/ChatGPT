@@ -11,6 +11,7 @@ namespace GameLogic.Cultivation
             DrawPile = new List<CardDefinition>(drawPile ?? throw new ArgumentNullException(nameof(drawPile)));
             Enemies = new List<EnemyState>(enemies ?? throw new ArgumentNullException(nameof(enemies)));
             DiscardPile = new List<CardDefinition>();
+            ExhaustPile = new List<CardDefinition>();
             Hand = new List<CardDefinition>();
             Logs = new List<BattleLogEntry>();
             SpiritMax = spiritMax;
@@ -23,6 +24,8 @@ namespace GameLogic.Cultivation
         public List<CardDefinition> DrawPile { get; }
 
         public List<CardDefinition> DiscardPile { get; }
+
+        public List<CardDefinition> ExhaustPile { get; }
 
         public List<CardDefinition> Hand { get; }
 

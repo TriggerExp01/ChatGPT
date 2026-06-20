@@ -59,13 +59,15 @@ namespace GameLogic.Tests
                 0,
                 new CardEffect(CardEffectType.Damage, 6, repeatCount: 2),
                 new CardEffect(CardEffectType.SwordMark, 1),
-                new CardEffect(CardEffectType.Sharpness, 3, CardTarget.Self, 2));
+                new CardEffect(CardEffectType.Sharpness, 3, CardTarget.Self, 2),
+                new CardEffect(CardEffectType.Exhaust, 1, CardTarget.Self));
 
             var summary = CultivationRunPrototypePresenter.FormatCardSummary(card);
 
             StringAssert.Contains("造成 6 伤害 × 2", summary);
             StringAssert.Contains("剑气印记 1", summary);
             StringAssert.Contains("锋锐 3 / 2 回合", summary);
+            StringAssert.Contains("消耗", summary);
         }
 
         private static void PlayFirstCard(CultivationRunState run)

@@ -60,6 +60,8 @@ namespace GameLogic.Cultivation
                     return $"剑气印记 {effect.Value}";
                 case CardEffectType.Sharpness:
                     return $"锋锐 {effect.Value} / {effect.Duration} 回合";
+                case CardEffectType.Exhaust:
+                    return "消耗";
                 default:
                     return effect.Type.ToString();
             }

@@ -45,6 +45,7 @@ namespace GameLogic.Cultivation
             {
                 case BattleOutcome.Victory:
                     state.PlayerCurrentHp = state.CurrentBattle.Player.CurrentHp;
+                    RemoveExhaustedCardsFromDeck(state);
                     state.Status = CultivationRunStatus.Reward;
                     state.CurrentRewards.Clear();
                     state.CurrentRewards.AddRange(CreateRewardChoices(state.CurrentNode));
@@ -155,6 +156,28 @@ namespace GameLogic.Cultivation
         private static IReadOnlyList<CultivationRunReward> CreateRewardChoices(CultivationRunNode node)
         {
             return node.RewardPool.Take(RewardChoiceCount).ToArray();
+        }
+
+        private static void RemoveExhaustedCardsFromDeck(CultivationRunState state)
+        {
+            if (state.CurrentBattle.ExhaustPile.Count == 0)
+            {
+                return;
+            }
+
+            foreach (var exhaustedCard in state.CurrentBattle.ExhaustPile)
+            {
+                var deckIndex = state.Deck.FindIndex(card => ReferenceEquals(card, exhaustedCard));
+                if (deckIndex < 0)
+                {
+                    deckIndex = state.Deck.FindIndex(card => card.Id == exhaustedCard.Id);
+                }
+
+                if (deckIndex >= 0)
+                {
+                    state.Deck.RemoveAt(deckIndex);
+                }
+            }
         }
 
         private void AdvanceAfterReward(CultivationRunState state)

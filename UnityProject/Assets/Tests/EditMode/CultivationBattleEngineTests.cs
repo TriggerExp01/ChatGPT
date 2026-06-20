@@ -142,6 +142,25 @@ namespace GameLogic.Tests
         }
 
         [Test]
+        public void ExhaustCardMovesToExhaustPileInsteadOfDiscardPile()
+        {
+            var engine = new BattleEngine(1);
+            var exhaustCard = new CardDefinition(
+                "exhaust_test",
+                "消耗测试",
+                0,
+                new CardEffect(CardEffectType.Damage, 1),
+                new CardEffect(CardEffectType.Exhaust, 1, CardTarget.Self));
+            var state = CreateOrderedBattle(engine, exhaustCard);
+
+            engine.PlayCard(state, state.Hand[0], state.Enemies[0]);
+
+            Assert.AreEqual(0, state.DiscardPile.Count);
+            Assert.AreEqual(1, state.ExhaustPile.Count);
+            Assert.AreEqual("exhaust_test", state.ExhaustPile[0].Id);
+        }
+
+        [Test]
         public void EnemyIntentActionsAdvanceAfterTurnEnd()
         {
             var engine = new BattleEngine(1);

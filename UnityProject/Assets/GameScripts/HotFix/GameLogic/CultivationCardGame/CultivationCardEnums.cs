@@ -17,6 +17,7 @@ namespace GameLogic.Cultivation
         Burn,
         SwordMark,
         Sharpness,
+        Exhaust,
     }
 
     public enum EnemyIntentType

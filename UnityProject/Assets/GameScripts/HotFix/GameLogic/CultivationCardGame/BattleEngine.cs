@@ -93,11 +93,20 @@ namespace GameLogic.Cultivation
 
             state.Spirit -= card.SpiritCost;
             state.Hand.Remove(card);
-            state.DiscardPile.Add(card);
 
             foreach (var effect in card.Effects)
             {
                 ResolveCardEffect(state, card, effect, target);
+            }
+
+            if (card.Effects.Any(effect => effect.Type == CardEffectType.Exhaust))
+            {
+                state.ExhaustPile.Add(card);
+                state.Logs.Add(new BattleLogEntry($"{card.Name} 已消耗，本场战斗不会再进入牌库循环。"));
+            }
+            else
+            {
+                state.DiscardPile.Add(card);
             }
 
             state.Logs.Add(new BattleLogEntry($"打出 {card.Name}，剩余灵力 {state.Spirit}。"));
@@ -179,6 +188,8 @@ namespace GameLogic.Cultivation
                 case CardEffectType.Sharpness:
                     state.Player.AddSharpness(effect.Value, Math.Max(1, effect.Duration));
                     state.Logs.Add(new BattleLogEntry($"{card.Name} 获得锋锐 {effect.Value}，持续 {Math.Max(1, effect.Duration)} 回合。"));
+                    break;
+                case CardEffectType.Exhaust:
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(effect.Type), effect.Type, "Unsupported card effect type.");
@@ -601,7 +612,7 @@ namespace GameLogic.Cultivation
                 new CardUpgradeOption(
                     "healing_pill_heal_1",
                     "大回春丹",
-                    "恢复提升到 10 HP。",
+                    "恢复提升到 10 HP，使用后消耗。",
                     new CardDefinition(
                         "healing_pill_heal_1",
                         "大回春丹",
@@ -619,7 +630,8 @@ namespace GameLogic.Cultivation
                                 "恢复 10 HP，并获得 5 护盾。",
                                 new CardDefinition("healing_pill_heal_2_guard", "回春护脉丹", 1, new CardEffect(CardEffectType.Heal, 10, CardTarget.Self), new CardEffect(CardEffectType.Shield, 5, CardTarget.Self))),
                         },
-                        new CardEffect(CardEffectType.Heal, 10, CardTarget.Self))),
+                        new CardEffect(CardEffectType.Heal, 10, CardTarget.Self),
+                        new CardEffect(CardEffectType.Exhaust, 1, CardTarget.Self))),
                 new CardUpgradeOption(
                     "healing_pill_cycle_1",
                     "回春行气丹",

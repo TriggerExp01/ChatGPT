@@ -60,6 +60,49 @@ namespace GameLogic.Tests
         }
 
         [Test]
+        public void VictoryRemovesExhaustedCardsFromRunDeck()
+        {
+            var exhaustWin = new CardDefinition(
+                "exhaust_win",
+                "exhaust_win",
+                0,
+                new CardEffect(CardEffectType.Damage, 999),
+                new CardEffect(CardEffectType.Exhaust, 1, CardTarget.Self));
+            var deck = new[]
+            {
+                exhaustWin,
+                CultivationSeedData.SwordQi,
+                CultivationSeedData.SwordQi,
+                CultivationSeedData.SwordQi,
+                CultivationSeedData.SwordQi,
+            };
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var run = engine.StartRun(deck, CreateTestRoute());
+
+            var card = run.CurrentBattle.Hand.First(item => item.Id == "exhaust_win");
+            new BattleEngine(1).PlayCard(run.CurrentBattle, card, run.CurrentBattle.Enemies[0]);
+            engine.ResolveBattleResult(run);
+
+            Assert.AreEqual(CultivationRunStatus.Reward, run.Status);
+            Assert.IsFalse(run.Deck.Any(card => card.Id == "exhaust_win"));
+            Assert.AreEqual(4, run.Deck.Count);
+        }
+
+        [Test]
+        public void VictoryKeepsNonExhaustedCardsInRunDeck()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var run = engine.StartRun(CreateInstantWinDeck(), CreateTestRoute());
+
+            PlayFirstCard(run);
+            engine.ResolveBattleResult(run);
+
+            Assert.AreEqual(CultivationRunStatus.Reward, run.Status);
+            Assert.AreEqual(5, run.Deck.Count);
+            Assert.IsTrue(run.Deck.Any(card => card.Id == "instant_win"));
+        }
+
+        [Test]
         public void RunCarriesPlayerHpIntoNextBattle()
         {
             var engine = new CultivationRunEngine(new BattleEngine(1));
