@@ -33,6 +33,23 @@ namespace GameLogic.Cultivation
         private GameObject _actionButtonTemplate;
         private GameObject _messageTextTemplate;
 
+        private static readonly Color ThemeRootInk = new Color(0.026f, 0.032f, 0.030f, 0.99f);
+        private static readonly Color ThemeHeaderInk = new Color(0.070f, 0.088f, 0.082f, 0.98f);
+        private static readonly Color ThemeRunPanelInk = new Color(0.060f, 0.083f, 0.085f, 0.97f);
+        private static readonly Color ThemeBattlePanelInk = new Color(0.115f, 0.070f, 0.055f, 0.97f);
+        private static readonly Color ThemeDeckPanelInk = new Color(0.052f, 0.080f, 0.067f, 0.97f);
+        private static readonly Color ThemeScrollPanelInk = new Color(0.056f, 0.070f, 0.066f, 0.97f);
+        private static readonly Color ThemeViewportInk = new Color(0.018f, 0.024f, 0.024f, 0.72f);
+        private static readonly Color ThemeCardInk = new Color(0.100f, 0.128f, 0.122f, 1f);
+        private static readonly Color ThemeButtonInk = new Color(0.175f, 0.145f, 0.090f, 1f);
+        private static readonly Color ThemeJade = new Color(0.44f, 0.78f, 0.68f, 1f);
+        private static readonly Color ThemeGold = new Color(0.96f, 0.80f, 0.46f, 1f);
+        private static readonly Color ThemePanelOutline = new Color(0.28f, 0.46f, 0.38f, 0.40f);
+        private static readonly Color ThemeGoldOutline = new Color(0.78f, 0.55f, 0.24f, 0.55f);
+        private static readonly Color ThemeShadow = new Color(0f, 0f, 0f, 0.52f);
+        private static readonly Color ThemeTextMain = new Color(0.93f, 0.96f, 0.90f, 1f);
+        private static readonly Color ThemeTextMuted = new Color(0.72f, 0.80f, 0.78f, 1f);
+
         public RunPrototypeSnapshot Snapshot => CultivationRunPrototypePresenter.CreateSnapshot(_run);
 
         public static CultivationRunPrototypeUI Open(Transform parent = null)
@@ -299,20 +316,22 @@ namespace GameLogic.Cultivation
         private void BuildView()
         {
             var background = GetOrAdd<Image>(gameObject);
-            background.color = new Color(0.035f, 0.042f, 0.050f, 0.98f);
+            background.color = ThemeRootInk;
+            ApplyGraphicChrome(gameObject, new Color(0.18f, 0.27f, 0.23f, 0.34f), ThemeShadow, new Vector2(2f, -2f));
 
             var rootLayout = GetOrAdd<VerticalLayoutGroup>(gameObject);
-            rootLayout.padding = new RectOffset(22, 22, 18, 18);
-            rootLayout.spacing = 10;
+            rootLayout.padding = new RectOffset(24, 24, 20, 20);
+            rootLayout.spacing = 12;
             rootLayout.childForceExpandWidth = true;
             rootLayout.childForceExpandHeight = false;
             rootLayout.childControlWidth = true;
             rootLayout.childControlHeight = true;
 
-            var header = CreatePanel("Header", transform, new Color(0.09f, 0.105f, 0.125f, 0.98f));
+            var header = CreatePanel("Header", transform, ThemeHeaderInk);
             var headerLayout = header.GetComponent<VerticalLayoutGroup>();
-            headerLayout.padding = new RectOffset(18, 18, 10, 10);
-            SetLayout(header.gameObject, flexibleWidth: 1, preferredHeight: 166);
+            headerLayout.padding = new RectOffset(20, 20, 12, 12);
+            ApplyGraphicChrome(header.gameObject, ThemeGoldOutline, ThemeShadow, new Vector2(3f, -3f));
+            SetLayout(header.gameObject, flexibleWidth: 1, preferredHeight: 172);
 
             var titleRow = CreateRect("TitleRow", header, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
             var titleRowLayout = GetOrAdd<HorizontalLayoutGroup>(titleRow.gameObject);
@@ -333,15 +352,17 @@ namespace GameLogic.Cultivation
             SetLayout(titleBox.gameObject, flexibleWidth: 1, flexibleHeight: 1);
 
             _titleText = CreateText("Title", titleBox, "仙途·天命", 28, FontStyle.Bold, TextAnchor.MiddleLeft);
-            _titleText.color = new Color(0.96f, 0.86f, 0.56f, 1f);
+            _titleText.color = ThemeGold;
+            ApplyTextChrome(_titleText, new Color(0.82f, 0.58f, 0.22f, 0.45f), new Vector2(1.2f, -1.2f));
             SetLayout(_titleText.gameObject, flexibleWidth: 1, preferredHeight: 30);
 
             _stageText = CreateText("StageText", titleBox, string.Empty, 15, FontStyle.Normal, TextAnchor.MiddleLeft);
-            _stageText.color = new Color(0.58f, 0.78f, 0.72f, 1f);
+            _stageText.color = ThemeJade;
             SetLayout(_stageText.gameObject, flexibleWidth: 1, preferredHeight: 22);
 
             _statusText = CreateText("StatusText", titleRow, string.Empty, 18, FontStyle.Bold, TextAnchor.MiddleRight);
-            _statusText.color = new Color(0.96f, 0.78f, 0.42f, 1f);
+            _statusText.color = ThemeGold;
+            ApplyTextChrome(_statusText, new Color(0.82f, 0.58f, 0.22f, 0.42f), new Vector2(1.2f, -1.2f));
             SetLayout(_statusText.gameObject, preferredWidth: 420, flexibleHeight: 1);
 
             _statsRoot = CreateRowContent("StatsBar", header, "资源", 52);
@@ -356,33 +377,39 @@ namespace GameLogic.Cultivation
             bodyLayout.childControlHeight = true;
             SetLayout(body.gameObject, flexibleWidth: 1, flexibleHeight: 1, preferredHeight: 520);
 
-            var left = CreatePanel("RunPanel", body, new Color(0.085f, 0.105f, 0.13f, 0.96f));
+            var left = CreatePanel("RunPanel", body, ThemeRunPanelInk);
             SetLayout(left.gameObject, preferredWidth: 350, flexibleHeight: 1);
             CreateSectionLabel(left, "运行总览");
             _runText = CreateText("RunText", left, string.Empty, 16, FontStyle.Bold, TextAnchor.UpperLeft);
-            _runText.color = Color.white;
+            _runText.color = ThemeTextMain;
+            ConfigureBodyText(_runText, 11, 15);
             SetLayout(_runText.gameObject, flexibleWidth: 1, preferredHeight: 210);
             CreateSectionLabel(left, "当前节点");
             _nodeText = CreateText("NodeText", left, string.Empty, 15, FontStyle.Normal, TextAnchor.UpperLeft);
-            _nodeText.color = new Color(0.80f, 0.88f, 0.88f, 1f);
+            _nodeText.color = new Color(0.80f, 0.88f, 0.84f, 1f);
+            ConfigureBodyText(_nodeText, 10, 14);
             SetLayout(_nodeText.gameObject, flexibleWidth: 1, flexibleHeight: 1);
 
-            var center = CreatePanel("BattlePanel", body, new Color(0.13f, 0.085f, 0.075f, 0.96f));
+            var center = CreatePanel("BattlePanel", body, ThemeBattlePanelInk);
+            ApplyGraphicChrome(center.gameObject, ThemeGoldOutline, ThemeShadow, new Vector2(3f, -3f));
             SetLayout(center.gameObject, flexibleWidth: 1.45f, flexibleHeight: 1);
             CreateSectionLabel(center, "战斗详情");
             _battleText = CreateText("BattleText", center, string.Empty, 18, FontStyle.Bold, TextAnchor.UpperLeft);
-            _battleText.color = Color.white;
+            _battleText.color = ThemeTextMain;
+            ConfigureBodyText(_battleText, 12, 17);
             SetLayout(_battleText.gameObject, flexibleWidth: 1, flexibleHeight: 1);
 
-            var right = CreatePanel("DeckPanel", body, new Color(0.07f, 0.095f, 0.085f, 0.96f));
+            var right = CreatePanel("DeckPanel", body, ThemeDeckPanelInk);
             SetLayout(right.gameObject, preferredWidth: 420, flexibleHeight: 1);
             CreateSectionLabel(right, "牌组 / 行囊");
             _deckText = CreateText("DeckText", right, string.Empty, 15, FontStyle.Normal, TextAnchor.UpperLeft);
-            _deckText.color = new Color(0.84f, 0.88f, 0.90f, 1f);
+            _deckText.color = new Color(0.84f, 0.89f, 0.86f, 1f);
+            ConfigureBodyText(_deckText, 10, 14);
             SetLayout(_deckText.gameObject, flexibleWidth: 1, flexibleHeight: 1);
             CreateSectionLabel(right, "日志");
             _logText = CreateText("LogText", right, string.Empty, 14, FontStyle.Normal, TextAnchor.UpperLeft);
-            _logText.color = new Color(0.72f, 0.78f, 0.82f, 1f);
+            _logText.color = ThemeTextMuted;
+            ConfigureBodyText(_logText, 10, 13);
             SetLayout(_logText.gameObject, flexibleWidth: 1, preferredHeight: 170);
 
             var lower = CreateRect("Lower", transform, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
@@ -449,7 +476,7 @@ namespace GameLogic.Cultivation
 
             foreach (var stat in view.Stats)
             {
-                var card = CreateInfoCardItem($"Stat_{stat.Label}", _statsRoot, stat.Label, stat.Value, stat.Note, new Color(0.12f, 0.15f, 0.18f, 1f), new Color(0.96f, 0.86f, 0.56f, 1f));
+                var card = CreateInfoCardItem($"Stat_{stat.Label}", _statsRoot, stat.Label, stat.Value, stat.Note, ThemeCardInk, ThemeGold);
                 SetLayout(card.gameObject, preferredWidth: 156, preferredHeight: 44);
             }
         }
@@ -781,6 +808,8 @@ namespace GameLogic.Cultivation
             var rect = CreateRect(name, parent, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
             var image = GetOrAdd<Image>(rect.gameObject);
             image.color = color;
+            GetOrAdd<CanvasGroup>(rect.gameObject).alpha = 1f;
+            ApplyGraphicChrome(rect.gameObject, ThemePanelOutline, ThemeShadow, new Vector2(2.5f, -2.5f));
             var layout = GetOrAdd<VerticalLayoutGroup>(rect.gameObject);
             layout.padding = new RectOffset(16, 16, 14, 14);
             layout.spacing = 10;
@@ -803,7 +832,8 @@ namespace GameLogic.Cultivation
             SetLayout(row.gameObject, flexibleWidth: 1, preferredHeight: height);
 
             var labelText = CreateText($"{label}Label", row, label, 14, FontStyle.Bold, TextAnchor.MiddleLeft);
-            labelText.color = new Color(0.58f, 0.78f, 0.72f, 1f);
+            labelText.color = ThemeJade;
+            ApplyTextChrome(labelText, new Color(0.20f, 0.54f, 0.43f, 0.42f), new Vector2(1f, -1f));
             SetLayout(labelText.gameObject, preferredWidth: 58, flexibleHeight: 1);
             return row;
         }
@@ -813,8 +843,10 @@ namespace GameLogic.Cultivation
             var rect = CreateRect(name, parent, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
             var image = GetOrAdd<Image>(rect.gameObject);
             image.color = backgroundColor;
+            GetOrAdd<CanvasGroup>(rect.gameObject).alpha = 1f;
+            ApplyGraphicChrome(rect.gameObject, ThemeGoldOutline, ThemeShadow, new Vector2(2f, -2f));
             var layout = GetOrAdd<VerticalLayoutGroup>(rect.gameObject);
-            layout.padding = new RectOffset(8, 8, 3, 3);
+            layout.padding = new RectOffset(10, 10, 4, 4);
             layout.spacing = 1;
             layout.childForceExpandWidth = true;
             layout.childForceExpandHeight = false;
@@ -822,7 +854,7 @@ namespace GameLogic.Cultivation
             layout.childControlHeight = true;
 
             var titleText = CreateText("Title", rect, title, 11, FontStyle.Bold, TextAnchor.MiddleLeft);
-            titleText.color = new Color(0.62f, 0.72f, 0.74f, 1f);
+            titleText.color = ThemeJade;
             SetLayout(titleText.gameObject, flexibleWidth: 1, preferredHeight: 12);
 
             var valueText = CreateText("Value", rect, value, 14, FontStyle.Bold, TextAnchor.MiddleLeft);
@@ -833,7 +865,7 @@ namespace GameLogic.Cultivation
             SetLayout(valueText.gameObject, flexibleWidth: 1, preferredHeight: 16);
 
             var noteText = CreateText("Note", rect, note, 10, FontStyle.Normal, TextAnchor.MiddleLeft);
-            noteText.color = new Color(0.66f, 0.70f, 0.72f, 1f);
+            noteText.color = ThemeTextMuted;
             noteText.resizeTextForBestFit = true;
             noteText.resizeTextMinSize = 8;
             noteText.resizeTextMaxSize = 10;
@@ -844,13 +876,14 @@ namespace GameLogic.Cultivation
         private static void CreateSectionLabel(Transform parent, string label)
         {
             var text = CreateText($"{label}Label", parent, label, 14, FontStyle.Bold, TextAnchor.MiddleLeft);
-            text.color = new Color(0.58f, 0.78f, 0.72f, 1f);
+            text.color = ThemeJade;
+            ApplyTextChrome(text, new Color(0.20f, 0.54f, 0.43f, 0.42f), new Vector2(1f, -1f));
             SetLayout(text.gameObject, flexibleWidth: 1, preferredHeight: 22);
         }
 
         private static RectTransform CreateScrollContent(string name, Transform parent, string label, float height)
         {
-            var wrapper = CreatePanel($"{name}Panel", parent, new Color(0.075f, 0.085f, 0.098f, 0.97f));
+            var wrapper = CreatePanel($"{name}Panel", parent, ThemeScrollPanelInk);
             var wrapperLayout = wrapper.GetComponent<VerticalLayoutGroup>();
             wrapperLayout.padding = new RectOffset(14, 14, 8, 8);
             wrapperLayout.spacing = 6;
@@ -860,7 +893,7 @@ namespace GameLogic.Cultivation
 
             var viewport = CreateRect("Viewport", wrapper, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
             var viewportImage = GetOrAdd<Image>(viewport.gameObject);
-            viewportImage.color = new Color(0.025f, 0.03f, 0.036f, 0.70f);
+            viewportImage.color = ThemeViewportInk;
             var mask = GetOrAdd<Mask>(viewport.gameObject);
             mask.showMaskGraphic = false;
             SetLayout(viewport.gameObject, flexibleWidth: 1, flexibleHeight: 1);
@@ -900,7 +933,18 @@ namespace GameLogic.Cultivation
             text.alignment = anchor;
             text.horizontalOverflow = HorizontalWrapMode.Wrap;
             text.verticalOverflow = VerticalWrapMode.Overflow;
+            text.lineSpacing = 1.08f;
+            ApplyTextChrome(text, ThemeShadow, new Vector2(1f, -1f));
             return text;
+        }
+
+        private static void ConfigureBodyText(Text text, int minSize, int maxSize)
+        {
+            text.resizeTextForBestFit = true;
+            text.resizeTextMinSize = minSize;
+            text.resizeTextMaxSize = maxSize;
+            text.verticalOverflow = VerticalWrapMode.Truncate;
+            text.lineSpacing = 1.03f;
         }
 
         private static Button CreateButton(string name, Transform parent, string label)
@@ -912,13 +956,18 @@ namespace GameLogic.Cultivation
         {
             var rect = CreateRect(name, parent, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
             var image = GetOrAdd<Image>(rect.gameObject);
-            image.color = new Color(0.17f, 0.20f, 0.23f, 1f);
+            image.color = ThemeButtonInk;
+            GetOrAdd<CanvasGroup>(rect.gameObject).alpha = 1f;
+            ApplyGraphicChrome(rect.gameObject, ThemeGoldOutline, ThemeShadow, new Vector2(2f, -2f));
             var button = GetOrAdd<Button>(rect.gameObject);
+            button.targetGraphic = image;
             var colors = button.colors;
             colors.normalColor = image.color;
-            colors.highlightedColor = new Color(0.27f, 0.33f, 0.36f, 1f);
-            colors.pressedColor = new Color(0.10f, 0.13f, 0.15f, 1f);
-            colors.disabledColor = new Color(0.09f, 0.10f, 0.11f, 0.75f);
+            colors.highlightedColor = new Color(0.32f, 0.27f, 0.16f, 1f);
+            colors.pressedColor = new Color(0.10f, 0.08f, 0.05f, 1f);
+            colors.selectedColor = new Color(0.25f, 0.22f, 0.14f, 1f);
+            colors.disabledColor = new Color(0.075f, 0.078f, 0.074f, 0.76f);
+            colors.fadeDuration = 0.08f;
             button.colors = colors;
 
             var layout = GetOrAdd<VerticalLayoutGroup>(rect.gameObject);
@@ -930,7 +979,7 @@ namespace GameLogic.Cultivation
             layout.childControlHeight = true;
 
             var text = CreateText("Label", rect, label, 15, FontStyle.Bold, TextAnchor.MiddleCenter);
-            text.color = Color.white;
+            text.color = ThemeTextMain;
             text.raycastTarget = false;
             text.resizeTextForBestFit = true;
             text.resizeTextMinSize = 10;
@@ -938,13 +987,34 @@ namespace GameLogic.Cultivation
             SetLayout(text.gameObject, flexibleWidth: 1, preferredHeight: 34);
 
             var detailText = CreateText("Detail", rect, detail, 12, FontStyle.Normal, TextAnchor.UpperCenter);
-            detailText.color = new Color(0.78f, 0.84f, 0.86f, 1f);
+            detailText.color = new Color(0.82f, 0.86f, 0.80f, 1f);
             detailText.raycastTarget = false;
             detailText.resizeTextForBestFit = true;
             detailText.resizeTextMinSize = 8;
             detailText.resizeTextMaxSize = 12;
             SetLayout(detailText.gameObject, flexibleWidth: 1, flexibleHeight: 1);
             return button;
+        }
+
+        private static void ApplyGraphicChrome(GameObject target, Color outlineColor, Color shadowColor, Vector2 shadowDistance)
+        {
+            var outline = GetOrAddExact<Outline>(target);
+            outline.effectColor = outlineColor;
+            outline.effectDistance = new Vector2(1.25f, -1.25f);
+            outline.useGraphicAlpha = true;
+
+            var shadow = GetOrAddExact<Shadow>(target);
+            shadow.effectColor = shadowColor;
+            shadow.effectDistance = shadowDistance;
+            shadow.useGraphicAlpha = true;
+        }
+
+        private static void ApplyTextChrome(Text text, Color shadowColor, Vector2 shadowDistance)
+        {
+            var shadow = GetOrAddExact<Shadow>(text.gameObject);
+            shadow.effectColor = shadowColor;
+            shadow.effectDistance = shadowDistance;
+            shadow.useGraphicAlpha = true;
         }
 
         private static RectTransform CreateRect(string name, Transform parent, Vector2 anchorMin, Vector2 anchorMax, Vector2 offsetMin, Vector2 offsetMax)
@@ -972,7 +1042,21 @@ namespace GameLogic.Cultivation
 
         private static T GetOrAdd<T>(GameObject target) where T : Component
         {
-            return target.GetComponent<T>() ?? target.AddComponent<T>();
+            var component = target.GetComponent<T>();
+            return component != null ? component : target.AddComponent<T>();
+        }
+
+        private static T GetOrAddExact<T>(GameObject target) where T : Component
+        {
+            foreach (var component in target.GetComponents<T>())
+            {
+                if (component.GetType() == typeof(T))
+                {
+                    return component;
+                }
+            }
+
+            return target.AddComponent<T>();
         }
 
         private static void SetStretch(RectTransform rect)

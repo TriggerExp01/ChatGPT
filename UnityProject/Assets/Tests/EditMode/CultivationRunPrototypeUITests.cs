@@ -163,6 +163,64 @@ namespace GameLogic.Tests
         }
 
         [Test]
+        public void RunWindowPrefabCarriesCultivationVisualTheme()
+        {
+            var prefab = Resources.Load<GameObject>(CultivationRunWindow.ResourceLocation);
+
+            var shell = prefab.transform.Find(CultivationRunPrototypeUI.RootName);
+            var header = shell.Find("Header");
+            var battlePanel = shell.Find("Body/BattlePanel");
+            var actionTemplate = prefab.transform.Find("PrefabAnchors/UIItemTemplates/ActionButtonTemplate");
+            var infoTemplate = prefab.transform.Find("PrefabAnchors/UIItemTemplates/InfoCardTemplate");
+            var title = shell.Find("Header/TitleRow/TitleBox/Title").GetComponent<Text>();
+            var runText = shell.Find("Body/RunPanel/RunText").GetComponent<Text>();
+
+            AssertColorApproximately(new Color(0.026f, 0.032f, 0.030f, 0.99f), shell.GetComponent<Image>().color);
+            AssertColorApproximately(new Color(0.070f, 0.088f, 0.082f, 0.98f), header.GetComponent<Image>().color);
+            AssertColorApproximately(new Color(0.115f, 0.070f, 0.055f, 0.97f), battlePanel.GetComponent<Image>().color);
+            AssertColorApproximately(new Color(0.175f, 0.145f, 0.090f, 1f), actionTemplate.GetComponent<Image>().color);
+            AssertColorApproximately(new Color(0.100f, 0.128f, 0.122f, 1f), infoTemplate.GetComponent<Image>().color);
+            AssertColorApproximately(new Color(0.96f, 0.80f, 0.46f, 1f), title.color);
+            Assert.NotNull(header.GetComponent<CanvasGroup>());
+            Assert.NotNull(header.GetComponent<Outline>());
+            Assert.NotNull(header.GetComponent<Shadow>());
+            Assert.NotNull(title.GetComponent<Shadow>());
+            Assert.NotNull(actionTemplate.GetComponent<Outline>());
+            Assert.NotNull(actionTemplate.GetComponent<Shadow>());
+            Assert.IsTrue(runText.resizeTextForBestFit);
+            Assert.AreEqual(VerticalWrapMode.Truncate, runText.verticalOverflow);
+        }
+
+        [Test]
+        public void RuntimeGeneratedUiAppliesCultivationVisualTheme()
+        {
+            var shell = _root.transform.Find(CultivationRunPrototypeUI.RootName);
+            var header = shell.Find("Header");
+            var battlePanel = shell.Find("Body/BattlePanel");
+            var endTurnButton = shell.Find("Lower/ActionBar/EndTurnButton");
+            var firstStat = FindFirstChildWithPrefix(shell.Find("Header/StatsBar"), "Stat_");
+            var title = shell.Find("Header/TitleRow/TitleBox/Title").GetComponent<Text>();
+            var runText = shell.Find("Body/RunPanel/RunText").GetComponent<Text>();
+            var battleText = shell.Find("Body/BattlePanel/BattleText").GetComponent<Text>();
+
+            AssertColorApproximately(new Color(0.026f, 0.032f, 0.030f, 0.99f), shell.GetComponent<Image>().color);
+            AssertColorApproximately(new Color(0.070f, 0.088f, 0.082f, 0.98f), header.GetComponent<Image>().color);
+            AssertColorApproximately(new Color(0.115f, 0.070f, 0.055f, 0.97f), battlePanel.GetComponent<Image>().color);
+            AssertColorApproximately(new Color(0.175f, 0.145f, 0.090f, 1f), endTurnButton.GetComponent<Image>().color);
+            AssertColorApproximately(new Color(0.100f, 0.128f, 0.122f, 1f), firstStat.GetComponent<Image>().color);
+            AssertColorApproximately(new Color(0.96f, 0.80f, 0.46f, 1f), title.color);
+            Assert.NotNull(header.GetComponent<Outline>());
+            Assert.NotNull(battlePanel.GetComponent<Shadow>());
+            Assert.NotNull(endTurnButton.GetComponent<CanvasGroup>());
+            Assert.NotNull(firstStat.GetComponent<Outline>());
+            Assert.NotNull(title.GetComponent<Shadow>());
+            Assert.IsTrue(runText.resizeTextForBestFit);
+            Assert.AreEqual(VerticalWrapMode.Truncate, runText.verticalOverflow);
+            Assert.IsTrue(battleText.resizeTextForBestFit);
+            Assert.AreEqual(VerticalWrapMode.Truncate, battleText.verticalOverflow);
+        }
+
+        [Test]
         public void RunWindowResourceLoaderCreatesWindowCompatiblePanel()
         {
             var loader = new CultivationRunWindowResourceLoader(null);
@@ -810,6 +868,14 @@ namespace GameLogic.Tests
             }
 
             return null;
+        }
+
+        private static void AssertColorApproximately(Color expected, Color actual, float tolerance = 0.002f)
+        {
+            Assert.That(actual.r, Is.EqualTo(expected.r).Within(tolerance));
+            Assert.That(actual.g, Is.EqualTo(expected.g).Within(tolerance));
+            Assert.That(actual.b, Is.EqualTo(expected.b).Within(tolerance));
+            Assert.That(actual.a, Is.EqualTo(expected.a).Within(tolerance));
         }
     }
 }
