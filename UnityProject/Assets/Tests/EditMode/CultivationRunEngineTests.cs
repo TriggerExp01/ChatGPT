@@ -144,7 +144,7 @@ namespace GameLogic.Tests
         }
 
         [Test]
-        public void UpgradedCardIsRemovedFromRestChoicesUntilSecondLayerExists()
+        public void FirstLayerUpgradeKeepsSecondLayerChoices()
         {
             var route = CreateRouteWithRest();
             var engine = new CultivationRunEngine(new BattleEngine(1));
@@ -158,7 +158,39 @@ namespace GameLogic.Tests
             engine.RestAndUpgrade(run, swordQiIndex, 1);
 
             Assert.AreEqual("sword_qi_cost_1", run.Deck[swordQiIndex].Id);
+            Assert.IsTrue(run.Deck[swordQiIndex].CanUpgrade);
+            Assert.AreEqual(2, run.Deck[swordQiIndex].UpgradeOptions.Count);
+            Assert.AreEqual("sword_qi_cost_2_draw", run.Deck[swordQiIndex].UpgradeOptions[0].UpgradedCard.Id);
+            Assert.AreEqual("sword_qi_cost_2_break", run.Deck[swordQiIndex].UpgradeOptions[1].UpgradedCard.Id);
+        }
+
+        [Test]
+        public void SecondLayerUpgradeCanBeChosenAtLaterRestNode()
+        {
+            var route = CreateTwoRestRoute();
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var run = engine.StartRun(CultivationSeedData.CreateSwordSectStarterDeck(), route);
+
+            run.CurrentBattle.Outcome = BattleOutcome.Victory;
+            engine.ResolveBattleResult(run);
+            engine.SkipReward(run);
+            var swordQiIndex = run.Deck.FindIndex(card => card.Id == "sword_qi");
+
+            engine.RestAndUpgrade(run, swordQiIndex, 1);
+            run.CurrentBattle.Outcome = BattleOutcome.Victory;
+            engine.ResolveBattleResult(run);
+            engine.SkipReward(run);
+
+            Assert.AreEqual(CultivationRunStatus.Rest, run.Status);
+            Assert.AreEqual("sword_qi_cost_1", run.Deck[swordQiIndex].Id);
+            Assert.IsTrue(run.RestUpgradeChoices.Any(choice => choice.DeckIndex == swordQiIndex));
+
+            engine.RestAndUpgrade(run, swordQiIndex, 0);
+
+            Assert.AreEqual("sword_qi_cost_2_draw", run.Deck[swordQiIndex].Id);
             Assert.IsFalse(run.Deck[swordQiIndex].CanUpgrade);
+            Assert.AreEqual(CultivationRunStatus.InBattle, run.Status);
+            Assert.AreEqual("after_second_rest_enemy", run.CurrentNode.Enemy.Id);
         }
 
         [Test]
@@ -351,6 +383,46 @@ namespace GameLogic.Tests
                     "after_rest",
                     CultivationRunNodeType.Elite,
                     new EnemyDefinition("after_rest_enemy", "after_rest_enemy", 1, 0, new EnemyIntent(EnemyIntentType.Attack, 1)),
+                rewards),
+            };
+        }
+
+        private static IReadOnlyList<CultivationRunNode> CreateTwoRestRoute()
+        {
+            var rewards = CultivationSeedData.CreateSwordSectRewardPool();
+            return new List<CultivationRunNode>
+            {
+                new CultivationRunNode(
+                    "before_first_rest",
+                    "before_first_rest",
+                    CultivationRunNodeType.Battle,
+                    new EnemyDefinition("before_first_rest_enemy", "before_first_rest_enemy", 1, 0, new EnemyIntent(EnemyIntentType.Attack, 1)),
+                    rewards),
+                new CultivationRunNode(
+                    "first_rest",
+                    "first_rest",
+                    CultivationRunNodeType.Rest,
+                    null,
+                    null,
+                    restHealAmount: 30),
+                new CultivationRunNode(
+                    "before_second_rest",
+                    "before_second_rest",
+                    CultivationRunNodeType.Battle,
+                    new EnemyDefinition("before_second_rest_enemy", "before_second_rest_enemy", 1, 0, new EnemyIntent(EnemyIntentType.Attack, 1)),
+                    rewards),
+                new CultivationRunNode(
+                    "second_rest",
+                    "second_rest",
+                    CultivationRunNodeType.Rest,
+                    null,
+                    null,
+                    restHealAmount: 30),
+                new CultivationRunNode(
+                    "after_second_rest",
+                    "after_second_rest",
+                    CultivationRunNodeType.Elite,
+                    new EnemyDefinition("after_second_rest_enemy", "after_second_rest_enemy", 1, 0, new EnemyIntent(EnemyIntentType.Attack, 1)),
                     rewards),
             };
         }
