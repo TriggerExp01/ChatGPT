@@ -249,6 +249,17 @@ namespace GameLogic.Cultivation
             Refresh();
         }
 
+        public void ChooseMysticEventOption(int optionIndex)
+        {
+            if (_run == null || _run.Status != CultivationRunStatus.Mystic)
+            {
+                return;
+            }
+
+            _runEngine.ChooseMysticEventOption(_run, optionIndex);
+            Refresh();
+        }
+
         private void Initialize()
         {
             if (_handRoot == null)
@@ -448,6 +459,17 @@ namespace GameLogic.Cultivation
                     openChest.interactable = _run.CurrentNode.ArtifactRewardPool.Count > 0;
                     openChest.onClick.AddListener(OpenChest);
                     SetLayout(openChest.gameObject, flexibleWidth: 1, preferredHeight: 96);
+                    break;
+                case CultivationRunStatus.Mystic:
+                    for (var i = 0; i < _run.MysticEventChoices.Count; i++)
+                    {
+                        var index = i;
+                        var option = _run.MysticEventChoices[i];
+                        var button = CreateButton($"Mystic_{i}_{option.Id}", _choiceRoot, $"秘境\n{option.Name}\n{option.Description}");
+                        button.onClick.AddListener(() => ChooseMysticEventOption(index));
+                        SetLayout(button.gameObject, flexibleWidth: 1, preferredHeight: 96);
+                    }
+
                     break;
             }
         }

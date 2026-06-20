@@ -171,6 +171,43 @@ namespace GameLogic.Tests
         }
 
         [Test]
+        public void BuildTextIncludesMysticStateAndResolvedChoiceCount()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var route = new[]
+            {
+                new CultivationRunNode(
+                    "mystic",
+                    "mystic",
+                    CultivationRunNodeType.Mystic,
+                    null,
+                    null,
+                    nextNodeIndices: new[] { 1 },
+                    mysticEvent: CultivationSeedData.SpiritSpringMysticEvent),
+                new CultivationRunNode(
+                    "after_mystic",
+                    "after_mystic",
+                    CultivationRunNodeType.Battle,
+                    new EnemyDefinition("after_mystic_enemy", "after_mystic_enemy", 1, 0, new EnemyIntent(EnemyIntentType.Attack, 1)),
+                    CultivationSeedData.CreateSwordSectRewardPool()),
+            };
+            var run = engine.StartRun(CreateInstantWinDeck(), route);
+
+            var text = CultivationRunPrototypePresenter.BuildText(run);
+            var beforeSnapshot = CultivationRunPrototypePresenter.CreateSnapshot(run);
+            engine.ChooseMysticEventOption(run, 1);
+            var afterSnapshot = CultivationRunPrototypePresenter.CreateSnapshot(run);
+
+            Assert.AreEqual(CultivationRunStatus.Mystic, beforeSnapshot.Status);
+            Assert.AreEqual(3, beforeSnapshot.MysticEventChoiceCount);
+            StringAssert.Contains("Mystic event:", text.NodeText);
+            StringAssert.Contains(CultivationSeedData.SpiritSpringMysticEvent.Name, text.NodeText);
+            Assert.AreEqual(1, afterSnapshot.PillCount);
+            Assert.AreEqual(1, afterSnapshot.ResolvedMysticEventCount);
+            Assert.AreEqual(CultivationRunStatus.InBattle, afterSnapshot.Status);
+        }
+
+        [Test]
         public void SnapshotUsesCurrentBattleHpAfterUsingPill()
         {
             var engine = new CultivationRunEngine(new BattleEngine(1));

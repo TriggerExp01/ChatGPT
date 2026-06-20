@@ -45,6 +45,7 @@ namespace GameLogic.Cultivation
         Rest,
         Market,
         Chest,
+        Mystic,
     }
 
     public enum CultivationRunStatus
@@ -54,6 +55,7 @@ namespace GameLogic.Cultivation
         Rest,
         Market,
         Chest,
+        Mystic,
         RouteChoice,
         Completed,
         Defeated,

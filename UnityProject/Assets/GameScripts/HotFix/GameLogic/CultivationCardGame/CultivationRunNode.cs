@@ -15,7 +15,8 @@ namespace GameLogic.Cultivation
             IEnumerable<int> nextNodeIndices = null,
             int spiritStoneReward = 0,
             IEnumerable<CultivationMarketItem> marketItems = null,
-            IEnumerable<ArtifactDefinition> artifactRewardPool = null)
+            IEnumerable<ArtifactDefinition> artifactRewardPool = null,
+            MysticEventDefinition mysticEvent = null)
         {
             if (string.IsNullOrWhiteSpace(id))
             {
@@ -27,7 +28,7 @@ namespace GameLogic.Cultivation
                 throw new ArgumentException("Run node name is required.", nameof(name));
             }
 
-            if (type != CultivationRunNodeType.Rest && type != CultivationRunNodeType.Market && type != CultivationRunNodeType.Chest && enemy == null)
+            if (type != CultivationRunNodeType.Rest && type != CultivationRunNodeType.Market && type != CultivationRunNodeType.Chest && type != CultivationRunNodeType.Mystic && enemy == null)
             {
                 throw new ArgumentNullException(nameof(enemy), "Combat run nodes require an enemy.");
             }
@@ -39,6 +40,7 @@ namespace GameLogic.Cultivation
             RewardPool = new List<CultivationRunReward>(rewardPool ?? Array.Empty<CultivationRunReward>()).AsReadOnly();
             MarketItems = new List<CultivationMarketItem>(marketItems ?? Array.Empty<CultivationMarketItem>()).AsReadOnly();
             ArtifactRewardPool = new List<ArtifactDefinition>(artifactRewardPool ?? Array.Empty<ArtifactDefinition>()).AsReadOnly();
+            MysticEvent = mysticEvent;
             RestHealAmount = Math.Max(0, restHealAmount);
             SpiritStoneReward = Math.Max(0, spiritStoneReward);
 
@@ -67,6 +69,8 @@ namespace GameLogic.Cultivation
         public IReadOnlyList<CultivationMarketItem> MarketItems { get; }
 
         public IReadOnlyList<ArtifactDefinition> ArtifactRewardPool { get; }
+
+        public MysticEventDefinition MysticEvent { get; }
 
         public int RestHealAmount { get; }
 

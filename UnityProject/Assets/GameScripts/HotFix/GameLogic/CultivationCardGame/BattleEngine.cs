@@ -907,6 +907,28 @@ namespace GameLogic.Cultivation
             };
         }
 
+        public static MysticEventDefinition SpiritSpringMysticEvent { get; } = new MysticEventDefinition(
+            "mystic_spirit_spring",
+            "灵泉",
+            "一眼灵气充沛的泉水，可以短暂休整，也可以收集泉水获得丹药。",
+            new MysticEventOption(
+                "drink_spirit_spring",
+                "饮用灵泉",
+                "恢复 30 HP。",
+                MysticEventEffectType.Heal,
+                30),
+            new MysticEventOption(
+                "collect_small_restore_pill",
+                "收集泉水",
+                "获得 1 颗小还丹。",
+                MysticEventEffectType.GainPill,
+                pillReward: SmallRestorePillItem),
+            new MysticEventOption(
+                "leave_spirit_spring",
+                "离开",
+                "不冒险，直接离开。",
+                MysticEventEffectType.Leave));
+
         public static IReadOnlyList<CultivationRunNode> CreateFirstPrototypeRoute()
         {
             var rewards = CreateSwordSectRewardPool();
@@ -950,14 +972,14 @@ namespace GameLogic.Cultivation
                     null,
                     null,
                     restHealAmount: 30,
-                    nextNodeIndices: new[] { 3, 4, 5 }),
+                    nextNodeIndices: new[] { 3, 4, 5, 6 }),
                 new CultivationRunNode(
                     "node_artifact_chest",
                     "遗迹宝箱",
                     CultivationRunNodeType.Chest,
                     null,
                     null,
-                    nextNodeIndices: new[] { 5 },
+                    nextNodeIndices: new[] { 6 },
                     artifactRewardPool: artifactRewards),
                 new CultivationRunNode(
                     "node_market",
@@ -965,8 +987,16 @@ namespace GameLogic.Cultivation
                     CultivationRunNodeType.Market,
                     null,
                     null,
-                    nextNodeIndices: new[] { 5 },
+                    nextNodeIndices: new[] { 6 },
                     marketItems: marketItems),
+                new CultivationRunNode(
+                    "node_spirit_spring",
+                    "灵泉秘境",
+                    CultivationRunNodeType.Mystic,
+                    null,
+                    null,
+                    nextNodeIndices: new[] { 6 },
+                    mysticEvent: SpiritSpringMysticEvent),
                 new CultivationRunNode(
                     "node_stone_demon_leader",
                     "石魔首领",

@@ -170,4 +170,97 @@ namespace GameLogic.Cultivation
 
         public bool IsArtifact => Artifact != null;
     }
+
+    public enum MysticEventEffectType
+    {
+        GainSpiritStones,
+        Heal,
+        GainCard,
+        GainPill,
+        GainArtifact,
+        Leave,
+    }
+
+    public sealed class MysticEventOption
+    {
+        public MysticEventOption(
+            string id,
+            string name,
+            string description,
+            MysticEventEffectType effectType,
+            int effectValue = 0,
+            CardDefinition cardReward = null,
+            PillDefinition pillReward = null,
+            ArtifactDefinition artifactReward = null)
+        {
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                throw new ArgumentException("Mystic event option id is required.", nameof(id));
+            }
+
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                throw new ArgumentException("Mystic event option name is required.", nameof(name));
+            }
+
+            Id = id;
+            Name = name;
+            Description = description ?? string.Empty;
+            EffectType = effectType;
+            EffectValue = Math.Max(0, effectValue);
+            CardReward = cardReward;
+            PillReward = pillReward;
+            ArtifactReward = artifactReward;
+        }
+
+        public string Id { get; }
+
+        public string Name { get; }
+
+        public string Description { get; }
+
+        public MysticEventEffectType EffectType { get; }
+
+        public int EffectValue { get; }
+
+        public CardDefinition CardReward { get; }
+
+        public PillDefinition PillReward { get; }
+
+        public ArtifactDefinition ArtifactReward { get; }
+    }
+
+    public sealed class MysticEventDefinition
+    {
+        public MysticEventDefinition(string id, string name, string description, params MysticEventOption[] options)
+        {
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                throw new ArgumentException("Mystic event id is required.", nameof(id));
+            }
+
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                throw new ArgumentException("Mystic event name is required.", nameof(name));
+            }
+
+            if (options == null || options.Length == 0)
+            {
+                throw new ArgumentException("Mystic event requires at least one option.", nameof(options));
+            }
+
+            Id = id;
+            Name = name;
+            Description = description ?? string.Empty;
+            Options = Array.AsReadOnly(options);
+        }
+
+        public string Id { get; }
+
+        public string Name { get; }
+
+        public string Description { get; }
+
+        public System.Collections.ObjectModel.ReadOnlyCollection<MysticEventOption> Options { get; }
+    }
 }

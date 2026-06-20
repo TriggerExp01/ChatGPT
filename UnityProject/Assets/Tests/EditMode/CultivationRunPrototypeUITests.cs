@@ -63,7 +63,7 @@ namespace GameLogic.Tests
             _ui.RestAndUpgrade(0, 0);
             Assert.AreEqual(CultivationRunStatus.RouteChoice, _ui.Snapshot.Status);
 
-            _ui.ChooseRoute(2);
+            _ui.ChooseRoute(3);
 
             Assert.AreEqual(CultivationRunStatus.InBattle, _ui.Snapshot.Status);
             Assert.AreEqual("石魔首领", _ui.Snapshot.CurrentNodeName);
@@ -117,6 +117,27 @@ namespace GameLogic.Tests
             Assert.AreEqual(1, _ui.Snapshot.ChestArtifactCount);
             Assert.AreEqual(CultivationRunStatus.InBattle, _ui.Snapshot.Status);
             Assert.AreEqual("石魔首领", _ui.Snapshot.CurrentNodeName);
+        }
+
+        [Test]
+        public void PrototypeUiCanResolveMysticEventAndGainPill()
+        {
+            ForceCurrentBattleVictory();
+            _ui.ResolveBattle();
+            _ui.SkipReward();
+            _ui.ChooseRoute(1);
+            _ui.Rest();
+            _ui.ChooseRoute(2);
+
+            Assert.AreEqual(CultivationRunStatus.Mystic, _ui.Snapshot.Status);
+            Assert.AreEqual(3, _ui.Snapshot.MysticEventChoiceCount);
+
+            _ui.ChooseMysticEventOption(1);
+
+            Assert.AreEqual(1, _ui.Snapshot.PillCount);
+            Assert.AreEqual(1, _ui.Snapshot.ResolvedMysticEventCount);
+            Assert.AreEqual(CultivationRunStatus.InBattle, _ui.Snapshot.Status);
+            Assert.AreEqual("node_stone_demon_leader", GetRun().CurrentNode.Id);
         }
 
         [Test]
@@ -383,7 +404,7 @@ namespace GameLogic.Tests
             _ui.SkipReward();
             _ui.ChooseRoute(1);
             _ui.Rest();
-            _ui.ChooseRoute(2);
+            _ui.ChooseRoute(3);
 
             Assert.AreEqual(CultivationRunNodeType.Elite, GetRun().CurrentNode.Type);
 

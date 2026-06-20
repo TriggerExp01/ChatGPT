@@ -352,6 +352,22 @@ namespace GameLogic.Cultivation
             return artifact;
         }
 
+        public MysticEventOption ChooseMysticEventOption(CultivationRunState state, int optionIndex)
+        {
+            EnsureMysticState(state);
+
+            if (optionIndex < 0 || optionIndex >= state.MysticEventChoices.Count)
+            {
+                throw new ArgumentOutOfRangeException(nameof(optionIndex), "Mystic event option index is outside the current event choices.");
+            }
+
+            var option = state.MysticEventChoices[optionIndex];
+            ResolveMysticEventOption(state, option);
+            state.ResolvedMysticEventOptions.Add(option);
+            AdvanceToNextNode(state);
+            return option;
+        }
+
         private void EnterCurrentNode(CultivationRunState state)
         {
             switch (state.CurrentNode.Type)
@@ -384,6 +400,20 @@ namespace GameLogic.Cultivation
                     state.CurrentRouteChoices.Clear();
                     state.CurrentMarketItems.Clear();
                     state.Status = CultivationRunStatus.Chest;
+                    break;
+                case CultivationRunNodeType.Mystic:
+                    state.CurrentBattle = null;
+                    state.CurrentRewards.Clear();
+                    state.RestUpgradeChoices.Clear();
+                    state.CurrentRouteChoices.Clear();
+                    state.CurrentMarketItems.Clear();
+                    state.MysticEventChoices.Clear();
+                    if (state.CurrentNode.MysticEvent != null)
+                    {
+                        state.MysticEventChoices.AddRange(state.CurrentNode.MysticEvent.Options);
+                    }
+
+                    state.Status = CultivationRunStatus.Mystic;
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(state.CurrentNode.Type), state.CurrentNode.Type, "Unsupported run node type.");
@@ -517,6 +547,7 @@ namespace GameLogic.Cultivation
             state.RestUpgradeChoices.Clear();
             state.CurrentRouteChoices.Clear();
             state.CurrentMarketItems.Clear();
+            state.MysticEventChoices.Clear();
             state.CurrentBattle = null;
 
             var nextNodeIndices = ResolveNextNodeIndices(state);
@@ -574,6 +605,62 @@ namespace GameLogic.Cultivation
             if (state.Status != CultivationRunStatus.Chest)
             {
                 throw new InvalidOperationException("Run is not in chest state.");
+            }
+        }
+
+        private static void EnsureMysticState(CultivationRunState state)
+        {
+            EnsureState(state);
+
+            if (state.Status != CultivationRunStatus.Mystic)
+            {
+                throw new InvalidOperationException("Run is not in mystic event state.");
+            }
+        }
+
+        private static void ResolveMysticEventOption(CultivationRunState state, MysticEventOption option)
+        {
+            switch (option.EffectType)
+            {
+                case MysticEventEffectType.GainSpiritStones:
+                    state.SpiritStones += option.EffectValue;
+                    break;
+                case MysticEventEffectType.Heal:
+                    state.PlayerCurrentHp = Math.Min(state.PlayerMaxHp, state.PlayerCurrentHp + option.EffectValue);
+                    break;
+                case MysticEventEffectType.GainCard:
+                    if (option.CardReward == null)
+                    {
+                        throw new InvalidOperationException("Mystic event card option does not have a card reward.");
+                    }
+
+                    state.Deck.Add(option.CardReward);
+                    break;
+                case MysticEventEffectType.GainPill:
+                    if (option.PillReward == null)
+                    {
+                        throw new InvalidOperationException("Mystic event pill option does not have a pill reward.");
+                    }
+
+                    if (state.Pills.Count >= state.PillSlotLimit)
+                    {
+                        throw new InvalidOperationException("Pill slots are full.");
+                    }
+
+                    state.Pills.Add(option.PillReward);
+                    break;
+                case MysticEventEffectType.GainArtifact:
+                    if (option.ArtifactReward == null)
+                    {
+                        throw new InvalidOperationException("Mystic event artifact option does not have an artifact reward.");
+                    }
+
+                    state.Artifacts.Add(option.ArtifactReward);
+                    break;
+                case MysticEventEffectType.Leave:
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(option.EffectType), option.EffectType, "Unsupported mystic event effect type.");
             }
         }
 

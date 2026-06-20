@@ -21,6 +21,8 @@ namespace GameLogic.Cultivation
             PurchasedMarketArtifacts = new List<ArtifactDefinition>();
             DroppedArtifacts = new List<ArtifactDefinition>();
             ChestArtifacts = new List<ArtifactDefinition>();
+            MysticEventChoices = new List<MysticEventOption>();
+            ResolvedMysticEventOptions = new List<MysticEventOption>();
             Pills = new List<PillDefinition>();
             PurchasedMarketPills = new List<PillDefinition>();
             RemovedMarketCards = new List<CardDefinition>();
@@ -88,6 +90,10 @@ namespace GameLogic.Cultivation
         public List<ArtifactDefinition> DroppedArtifacts { get; }
 
         public List<ArtifactDefinition> ChestArtifacts { get; }
+
+        public List<MysticEventOption> MysticEventChoices { get; }
+
+        public List<MysticEventOption> ResolvedMysticEventOptions { get; }
 
         public int PillSlotLimit { get; }
 

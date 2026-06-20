@@ -662,6 +662,50 @@ namespace GameLogic.Tests
         }
 
         [Test]
+        public void MysticEventHealOptionRestoresHpAndAdvances()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var run = engine.StartRun(CreateInstantWinDeck(), CreateMysticRoute(), playerCurrentHp: 50);
+
+            Assert.AreEqual(CultivationRunStatus.Mystic, run.Status);
+            Assert.AreEqual(3, run.MysticEventChoices.Count);
+
+            var option = engine.ChooseMysticEventOption(run, 0);
+
+            Assert.AreEqual("drink_spirit_spring", option.Id);
+            Assert.AreEqual(80, run.PlayerCurrentHp);
+            Assert.AreEqual(1, run.ResolvedMysticEventOptions.Count);
+            Assert.AreEqual(CultivationRunStatus.InBattle, run.Status);
+            Assert.AreEqual("after_mystic_enemy", run.CurrentNode.Enemy.Id);
+            Assert.AreEqual(0, run.MysticEventChoices.Count);
+        }
+
+        [Test]
+        public void MysticEventPillOptionAddsPillAndAdvances()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var run = engine.StartRun(CreateInstantWinDeck(), CreateMysticRoute());
+
+            var option = engine.ChooseMysticEventOption(run, 1);
+
+            Assert.AreEqual("collect_small_restore_pill", option.Id);
+            Assert.AreEqual(1, run.Pills.Count);
+            Assert.AreEqual("small_restore_pill", run.Pills[0].Id);
+            Assert.AreEqual(1, run.ResolvedMysticEventOptions.Count);
+            Assert.AreEqual(CultivationRunStatus.InBattle, run.Status);
+        }
+
+        [Test]
+        public void ChooseMysticEventOptionRejectsNonMysticState()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var run = engine.StartRun(CreateInstantWinDeck(), CreateTestRoute());
+
+            Assert.Throws<System.InvalidOperationException>(() => engine.ChooseMysticEventOption(run, 0));
+            Assert.AreEqual(0, run.ResolvedMysticEventOptions.Count);
+        }
+
+        [Test]
         public void MarketBuyingRejuvenationJadeHealsAfterVictory()
         {
             var engine = new CultivationRunEngine(new BattleEngine(1));
@@ -1161,6 +1205,27 @@ namespace GameLogic.Tests
                     "after_chest",
                     CultivationRunNodeType.Battle,
                     new EnemyDefinition("after_chest_enemy", "after_chest_enemy", 1, 0, new EnemyIntent(EnemyIntentType.Attack, 1)),
+                    CultivationSeedData.CreateSwordSectRewardPool()),
+            };
+        }
+
+        private static IReadOnlyList<CultivationRunNode> CreateMysticRoute()
+        {
+            return new List<CultivationRunNode>
+            {
+                new CultivationRunNode(
+                    "mystic",
+                    "mystic",
+                    CultivationRunNodeType.Mystic,
+                    null,
+                    null,
+                    nextNodeIndices: new[] { 1 },
+                    mysticEvent: CultivationSeedData.SpiritSpringMysticEvent),
+                new CultivationRunNode(
+                    "after_mystic",
+                    "after_mystic",
+                    CultivationRunNodeType.Battle,
+                    new EnemyDefinition("after_mystic_enemy", "after_mystic_enemy", 1, 0, new EnemyIntent(EnemyIntentType.Attack, 1)),
                     CultivationSeedData.CreateSwordSectRewardPool()),
             };
         }

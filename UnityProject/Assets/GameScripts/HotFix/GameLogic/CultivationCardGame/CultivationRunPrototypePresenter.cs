@@ -118,6 +118,25 @@ namespace GameLogic.Cultivation
                 builder.Append("宝箱法宝池：").Append(state.CurrentNode.ArtifactRewardPool.Count).Append(" 件").AppendLine();
             }
 
+            if (state.Status == CultivationRunStatus.Mystic)
+            {
+                builder.AppendLine();
+                if (state.CurrentNode.MysticEvent == null)
+                {
+                    builder.AppendLine("Mystic event: none");
+                }
+                else
+                {
+                    builder.Append("Mystic event: ").Append(state.CurrentNode.MysticEvent.Name).AppendLine();
+                    builder.AppendLine(state.CurrentNode.MysticEvent.Description);
+                    for (var i = 0; i < state.MysticEventChoices.Count; i++)
+                    {
+                        var option = state.MysticEventChoices[i];
+                        builder.Append(i + 1).Append(". ").Append(option.Name).Append(" / ").Append(option.Description).AppendLine();
+                    }
+                }
+            }
+
             return builder.ToString();
         }
 
@@ -256,6 +275,10 @@ namespace GameLogic.Cultivation
 
         public int ChestArtifactCount { get; private set; }
 
+        public int MysticEventChoiceCount { get; private set; }
+
+        public int ResolvedMysticEventCount { get; private set; }
+
         public int HandCount { get; private set; }
 
         public int RewardCount { get; private set; }
@@ -299,6 +322,8 @@ namespace GameLogic.Cultivation
                 PurchasedMarketArtifactCount = state.PurchasedMarketArtifacts.Count,
                 DroppedArtifactCount = state.DroppedArtifacts.Count,
                 ChestArtifactCount = state.ChestArtifacts.Count,
+                MysticEventChoiceCount = state.MysticEventChoices.Count,
+                ResolvedMysticEventCount = state.ResolvedMysticEventOptions.Count,
                 HandCount = state.CurrentBattle?.Hand.Count ?? 0,
                 RewardCount = state.CurrentRewards.Count,
                 RestUpgradeChoiceCount = state.RestUpgradeChoices.Count,
