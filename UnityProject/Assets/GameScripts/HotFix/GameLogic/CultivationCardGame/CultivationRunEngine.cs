@@ -9,10 +9,12 @@ namespace GameLogic.Cultivation
         private const int RewardChoiceCount = 3;
 
         private readonly BattleEngine _battleEngine;
+        private readonly Random _rewardRandom;
 
-        public CultivationRunEngine(BattleEngine battleEngine = null)
+        public CultivationRunEngine(BattleEngine battleEngine = null, int rewardSeed = 0)
         {
             _battleEngine = battleEngine ?? new BattleEngine(20260620);
+            _rewardRandom = new Random(rewardSeed);
         }
 
         public CultivationRunState StartRun(IEnumerable<CardDefinition> deck = null, IEnumerable<CultivationRunNode> route = null, int playerMaxHp = 100, int? playerCurrentHp = null)
@@ -153,9 +155,17 @@ namespace GameLogic.Cultivation
             state.Status = CultivationRunStatus.InBattle;
         }
 
-        private static IReadOnlyList<CultivationRunReward> CreateRewardChoices(CultivationRunNode node)
+        private IReadOnlyList<CultivationRunReward> CreateRewardChoices(CultivationRunNode node)
         {
-            return node.RewardPool.Take(RewardChoiceCount).ToArray();
+            var rewards = node.RewardPool.ToList();
+            var choiceCount = Math.Min(RewardChoiceCount, rewards.Count);
+            for (var i = 0; i < choiceCount; i++)
+            {
+                var selectedIndex = _rewardRandom.Next(i, rewards.Count);
+                (rewards[i], rewards[selectedIndex]) = (rewards[selectedIndex], rewards[i]);
+            }
+
+            return rewards.Take(choiceCount).ToArray();
         }
 
         private static void RemoveExhaustedCardsFromDeck(CultivationRunState state)

@@ -35,13 +35,28 @@ namespace GameLogic.Tests
 
             Assert.AreEqual(CultivationRunStatus.Reward, run.Status);
             Assert.AreEqual(3, run.CurrentRewards.Count);
-            Assert.AreEqual("reward_flying_sword", run.CurrentRewards[0].Id);
+            Assert.AreEqual(3, run.CurrentRewards.Select(reward => reward.Id).Distinct().Count());
+            Assert.IsTrue(run.CurrentRewards.All(reward => run.CurrentNode.RewardPool.Contains(reward)));
+        }
+
+        [Test]
+        public void RewardChoicesUseSeededRandomSelection()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1), rewardSeed: 3);
+            var run = engine.StartRun(CreateInstantWinDeck(), CreateTestRoute());
+
+            PlayFirstCard(run);
+            engine.ResolveBattleResult(run);
+
+            CollectionAssert.AreEqual(
+                new[] { "reward_small_restore_pill", "reward_thrust", "reward_sevenfold_sword_qi" },
+                run.CurrentRewards.Select(reward => reward.Id).ToArray());
         }
 
         [Test]
         public void ChoosingRewardAddsCardAndStartsNextNode()
         {
-            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var engine = new CultivationRunEngine(new BattleEngine(1), rewardSeed: 3);
             var run = engine.StartRun(CreateInstantWinDeck(), CreateTestRoute());
 
             PlayFirstCard(run);
@@ -53,7 +68,7 @@ namespace GameLogic.Tests
             Assert.AreEqual(CultivationRunStatus.InBattle, run.Status);
             Assert.AreEqual(1, run.CurrentNodeIndex);
             Assert.AreEqual(deckCountBeforeReward + 1, run.Deck.Count);
-            Assert.AreEqual("cloud_guard", run.Deck.Last().Id);
+            Assert.AreEqual("thrust", run.Deck.Last().Id);
             Assert.AreEqual(1, run.ClaimedRewards.Count);
             Assert.NotNull(run.CurrentBattle);
             Assert.AreEqual("test_enemy_2", run.CurrentNode.Enemy.Id);
