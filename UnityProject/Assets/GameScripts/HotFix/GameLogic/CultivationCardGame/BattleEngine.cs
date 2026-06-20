@@ -818,6 +818,13 @@ namespace GameLogic.Cultivation
             ArtifactEffectType.BonusSpiritStonesOnVictory,
             5);
 
+        public static ArtifactDefinition RejuvenationJadeArtifact { get; } = new ArtifactDefinition(
+            "rejuvenation_jade",
+            "回春玉佩",
+            "法宝：每场战斗结束后恢复 3 HP。",
+            ArtifactEffectType.HealAfterVictory,
+            3);
+
         public static IReadOnlyList<CardDefinition> CreateSwordSectStarterDeck()
         {
             return new List<CardDefinition>
@@ -887,6 +894,7 @@ namespace GameLogic.Cultivation
                 new CultivationMarketItem("market_breakthrough_pill", BreakthroughPillItem, 90),
                 new CultivationMarketItem("market_foundation_pill", FoundationPillItem, 70),
                 new CultivationMarketItem("market_spirit_stone_mine", SpiritStoneMineArtifact, 25),
+                new CultivationMarketItem("market_rejuvenation_jade", RejuvenationJadeArtifact, 30),
             };
         }
 

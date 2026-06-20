@@ -50,6 +50,19 @@ namespace GameLogic.Cultivation
             {
                 case BattleOutcome.Victory:
                     state.PlayerCurrentHp = state.CurrentBattle.Player.CurrentHp;
+                    var artifactHeal = GetHealAfterVictory(state);
+                    if (artifactHeal > 0)
+                    {
+                        var hpBeforeHeal = state.CurrentBattle.Player.CurrentHp;
+                        state.CurrentBattle.Player.Heal(artifactHeal);
+                        var healed = state.CurrentBattle.Player.CurrentHp - hpBeforeHeal;
+                        state.PlayerCurrentHp = state.CurrentBattle.Player.CurrentHp;
+                        if (healed > 0)
+                        {
+                            state.CurrentBattle.Logs.Add(new BattleLogEntry($"法宝恢复 {healed} HP。"));
+                        }
+                    }
+
                     var baseSpiritStoneReward = state.CurrentNode.SpiritStoneReward;
                     var artifactSpiritStoneReward = GetBonusSpiritStonesOnVictory(state);
                     var totalSpiritStoneReward = baseSpiritStoneReward + artifactSpiritStoneReward;
@@ -411,6 +424,11 @@ namespace GameLogic.Cultivation
         private static int GetBonusSpiritStonesOnVictory(CultivationRunState state)
         {
             return state.Artifacts.Sum(artifact => artifact.BonusSpiritStonesOnVictory);
+        }
+
+        private static int GetHealAfterVictory(CultivationRunState state)
+        {
+            return state.Artifacts.Sum(artifact => artifact.HealAfterVictoryAmount);
         }
 
         private static void RemoveExhaustedCardsFromDeck(CultivationRunState state)

@@ -77,7 +77,8 @@ namespace GameLogic.Cultivation
 
     public enum ArtifactEffectType
     {
-        BonusSpiritStonesOnVictory
+        BonusSpiritStonesOnVictory,
+        HealAfterVictory
     }
 
     public sealed class ArtifactDefinition
@@ -112,6 +113,8 @@ namespace GameLogic.Cultivation
         public int EffectValue { get; }
 
         public int BonusSpiritStonesOnVictory => EffectType == ArtifactEffectType.BonusSpiritStonesOnVictory ? EffectValue : 0;
+
+        public int HealAfterVictoryAmount => EffectType == ArtifactEffectType.HealAfterVictory ? EffectValue : 0;
     }
 
     public sealed class CultivationMarketItem

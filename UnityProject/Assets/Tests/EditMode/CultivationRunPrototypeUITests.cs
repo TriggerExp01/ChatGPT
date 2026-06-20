@@ -272,6 +272,32 @@ namespace GameLogic.Tests
         }
 
         [Test]
+        public void PrototypeUiCanBuyRejuvenationJadeAndHealAfterBattle()
+        {
+            ForceCurrentBattleVictory();
+            _ui.ResolveBattle();
+            _ui.SkipReward();
+            _ui.ChooseRoute(1);
+            _ui.Rest();
+            _ui.ChooseRoute(0);
+            SetRunSpiritStones(35);
+
+            _ui.BuyMarketItem(9);
+
+            Assert.AreEqual(1, _ui.Snapshot.ArtifactCount);
+            Assert.AreEqual(1, _ui.Snapshot.PurchasedMarketArtifactCount);
+            Assert.AreEqual(5, _ui.Snapshot.SpiritStones);
+
+            _ui.LeaveMarket();
+            DamageCurrentBattlePlayer(30);
+            ForceCurrentBattleVictory();
+            _ui.ResolveBattle();
+
+            Assert.AreEqual(73, _ui.Snapshot.PlayerHp);
+            StringAssert.Contains("法宝恢复 3 HP", GetCurrentBattleLogText());
+        }
+
+        [Test]
         public void PrototypeUiCanRemoveDeckCardInMarket()
         {
             ForceCurrentBattleVictory();
