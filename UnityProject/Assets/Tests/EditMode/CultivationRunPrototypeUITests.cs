@@ -88,6 +88,33 @@ namespace GameLogic.Tests
             Assert.AreEqual(CultivationRunWindow.AssetLocation, prefab.name);
             Assert.NotNull(prefab.GetComponent<Canvas>());
             Assert.NotNull(prefab.GetComponent<GraphicRaycaster>());
+            Assert.NotNull(prefab.transform.Find(CultivationRunPrototypeUI.RootName));
+            Assert.NotNull(prefab.transform.Find($"{CultivationRunPrototypeUI.RootName}/Header"));
+            Assert.NotNull(prefab.transform.Find($"{CultivationRunPrototypeUI.RootName}/Body"));
+            Assert.NotNull(prefab.transform.Find($"{CultivationRunPrototypeUI.RootName}/Lower"));
+            Assert.NotNull(prefab.transform.Find($"{CultivationRunPrototypeUI.RootName}/Lower/ActionBar"));
+            Assert.NotNull(prefab.transform.Find("PrefabAnchors"));
+        }
+
+        [Test]
+        public void PrototypeUiReusesPrefabAnchors()
+        {
+            var prefab = Resources.Load<GameObject>(CultivationRunWindow.ResourceLocation);
+            var instance = Object.Instantiate(prefab, _root.transform);
+            var shell = instance.transform.Find(CultivationRunPrototypeUI.RootName);
+            var headerAnchor = shell.Find("Header");
+            var bodyAnchor = shell.Find("Body");
+            var lowerAnchor = shell.Find("Lower");
+
+            var ui = CultivationRunPrototypeUI.Open(instance.transform);
+
+            Assert.NotNull(ui);
+            Assert.AreSame(shell.gameObject, ui.gameObject);
+            Assert.AreSame(headerAnchor.gameObject, ui.transform.Find("Header").gameObject);
+            Assert.AreSame(bodyAnchor.gameObject, ui.transform.Find("Body").gameObject);
+            Assert.AreSame(lowerAnchor.gameObject, ui.transform.Find("Lower").gameObject);
+            Assert.NotNull(ui.transform.Find("Header/TitleRow/TitleBox/Title"));
+            Assert.NotNull(ui.transform.Find("Lower/ActionBar/ResetButton"));
         }
 
         [Test]

@@ -36,6 +36,7 @@ namespace GameLogic.Cultivation
         {
             var uiParent = parent != null ? parent : ResolveParent();
             var old = uiParent.Find(RootName);
+            RectTransform root;
             if (old != null)
             {
                 var existing = old.GetComponent<CultivationRunPrototypeUI>();
@@ -45,11 +46,15 @@ namespace GameLogic.Cultivation
                     return existing;
                 }
 
-                DestroyObject(old.gameObject);
+                root = old as RectTransform ?? old.gameObject.AddComponent<RectTransform>();
+                SetStretch(root);
+            }
+            else
+            {
+                root = CreateRect(RootName, uiParent, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
             }
 
             EnsureEventSystem();
-            var root = CreateRect(RootName, uiParent, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
             var view = root.gameObject.AddComponent<CultivationRunPrototypeUI>();
             view.Initialize();
             return view;
@@ -721,9 +726,9 @@ namespace GameLogic.Cultivation
         private static RectTransform CreatePanel(string name, Transform parent, Color color)
         {
             var rect = CreateRect(name, parent, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
-            var image = rect.gameObject.AddComponent<Image>();
+            var image = GetOrAdd<Image>(rect.gameObject);
             image.color = color;
-            var layout = rect.gameObject.AddComponent<VerticalLayoutGroup>();
+            var layout = GetOrAdd<VerticalLayoutGroup>(rect.gameObject);
             layout.padding = new RectOffset(16, 16, 14, 14);
             layout.spacing = 10;
             layout.childForceExpandWidth = true;
@@ -736,7 +741,7 @@ namespace GameLogic.Cultivation
         private static RectTransform CreateRowContent(string name, Transform parent, string label, float height)
         {
             var row = CreateRect(name, parent, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
-            var rowLayout = row.gameObject.AddComponent<HorizontalLayoutGroup>();
+            var rowLayout = GetOrAdd<HorizontalLayoutGroup>(row.gameObject);
             rowLayout.spacing = 10;
             rowLayout.childForceExpandWidth = false;
             rowLayout.childForceExpandHeight = true;
@@ -753,9 +758,9 @@ namespace GameLogic.Cultivation
         private static RectTransform CreateInfoCard(string name, Transform parent, string title, string value, string note, Color backgroundColor, Color valueColor)
         {
             var rect = CreateRect(name, parent, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
-            var image = rect.gameObject.AddComponent<Image>();
+            var image = GetOrAdd<Image>(rect.gameObject);
             image.color = backgroundColor;
-            var layout = rect.gameObject.AddComponent<VerticalLayoutGroup>();
+            var layout = GetOrAdd<VerticalLayoutGroup>(rect.gameObject);
             layout.padding = new RectOffset(8, 8, 3, 3);
             layout.spacing = 1;
             layout.childForceExpandWidth = true;
@@ -801,26 +806,26 @@ namespace GameLogic.Cultivation
             CreateSectionLabel(wrapper, label);
 
             var viewport = CreateRect("Viewport", wrapper, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
-            var viewportImage = viewport.gameObject.AddComponent<Image>();
+            var viewportImage = GetOrAdd<Image>(viewport.gameObject);
             viewportImage.color = new Color(0.025f, 0.03f, 0.036f, 0.70f);
-            var mask = viewport.gameObject.AddComponent<Mask>();
+            var mask = GetOrAdd<Mask>(viewport.gameObject);
             mask.showMaskGraphic = false;
             SetLayout(viewport.gameObject, flexibleWidth: 1, flexibleHeight: 1);
 
             var content = CreateRect("Content", viewport, new Vector2(0f, 0f), new Vector2(0f, 1f), Vector2.zero, Vector2.zero);
             content.pivot = new Vector2(0f, 0.5f);
-            var contentLayout = content.gameObject.AddComponent<HorizontalLayoutGroup>();
+            var contentLayout = GetOrAdd<HorizontalLayoutGroup>(content.gameObject);
             contentLayout.padding = new RectOffset(8, 8, 8, 8);
             contentLayout.spacing = 10;
             contentLayout.childForceExpandWidth = false;
             contentLayout.childForceExpandHeight = true;
             contentLayout.childControlWidth = true;
             contentLayout.childControlHeight = true;
-            var fitter = content.gameObject.AddComponent<ContentSizeFitter>();
+            var fitter = GetOrAdd<ContentSizeFitter>(content.gameObject);
             fitter.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
             fitter.verticalFit = ContentSizeFitter.FitMode.Unconstrained;
 
-            var scroll = wrapper.gameObject.AddComponent<ScrollRect>();
+            var scroll = GetOrAdd<ScrollRect>(wrapper.gameObject);
             scroll.horizontal = true;
             scroll.vertical = false;
             scroll.viewport = viewport;
@@ -834,7 +839,7 @@ namespace GameLogic.Cultivation
         private static Text CreateText(string name, Transform parent, string value, int fontSize, FontStyle style, TextAnchor anchor)
         {
             var rect = CreateRect(name, parent, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
-            var text = rect.gameObject.AddComponent<Text>();
+            var text = GetOrAdd<Text>(rect.gameObject);
             text.text = value;
             text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             text.fontSize = fontSize;
@@ -853,9 +858,9 @@ namespace GameLogic.Cultivation
         private static Button CreateButton(string name, Transform parent, string label, string detail)
         {
             var rect = CreateRect(name, parent, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
-            var image = rect.gameObject.AddComponent<Image>();
+            var image = GetOrAdd<Image>(rect.gameObject);
             image.color = new Color(0.17f, 0.20f, 0.23f, 1f);
-            var button = rect.gameObject.AddComponent<Button>();
+            var button = GetOrAdd<Button>(rect.gameObject);
             var colors = button.colors;
             colors.normalColor = image.color;
             colors.highlightedColor = new Color(0.27f, 0.33f, 0.36f, 1f);
@@ -863,7 +868,7 @@ namespace GameLogic.Cultivation
             colors.disabledColor = new Color(0.09f, 0.10f, 0.11f, 0.75f);
             button.colors = colors;
 
-            var layout = rect.gameObject.AddComponent<VerticalLayoutGroup>();
+            var layout = GetOrAdd<VerticalLayoutGroup>(rect.gameObject);
             layout.padding = new RectOffset(10, 10, 8, 8);
             layout.spacing = 4;
             layout.childForceExpandWidth = true;
@@ -891,15 +896,30 @@ namespace GameLogic.Cultivation
 
         private static RectTransform CreateRect(string name, Transform parent, Vector2 anchorMin, Vector2 anchorMax, Vector2 offsetMin, Vector2 offsetMax)
         {
-            var go = new GameObject(name, typeof(RectTransform));
-            var rect = go.GetComponent<RectTransform>();
-            rect.SetParent(parent, false);
+            var existing = parent != null ? parent.Find(name) : null;
+            RectTransform rect;
+            if (existing != null)
+            {
+                rect = existing as RectTransform ?? existing.gameObject.AddComponent<RectTransform>();
+            }
+            else
+            {
+                var go = new GameObject(name, typeof(RectTransform));
+                rect = go.GetComponent<RectTransform>();
+                rect.SetParent(parent, false);
+            }
+
             rect.anchorMin = anchorMin;
             rect.anchorMax = anchorMax;
             rect.offsetMin = offsetMin;
             rect.offsetMax = offsetMax;
             rect.localScale = Vector3.one;
             return rect;
+        }
+
+        private static T GetOrAdd<T>(GameObject target) where T : Component
+        {
+            return target.GetComponent<T>() ?? target.AddComponent<T>();
         }
 
         private static void SetStretch(RectTransform rect)
