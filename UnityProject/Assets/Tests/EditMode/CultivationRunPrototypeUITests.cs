@@ -106,6 +106,12 @@ namespace GameLogic.Tests
             Assert.NotNull(prefab.transform.Find($"{CultivationRunPrototypeUI.RootName}/Lower/ActionBar/ResetButton/Label"));
             Assert.NotNull(prefab.transform.Find($"{CultivationRunPrototypeUI.RootName}/Lower/ActionBar/EndTurnButton/Label"));
             Assert.NotNull(prefab.transform.Find("PrefabAnchors"));
+            Assert.NotNull(prefab.transform.Find("PrefabAnchors/UIItemTemplates/InfoCardTemplate"));
+            Assert.NotNull(prefab.transform.Find("PrefabAnchors/UIItemTemplates/ActionButtonTemplate"));
+            Assert.NotNull(prefab.transform.Find("PrefabAnchors/UIItemTemplates/MessageTextTemplate"));
+            Assert.IsFalse(prefab.transform.Find("PrefabAnchors/UIItemTemplates/InfoCardTemplate").gameObject.activeSelf);
+            Assert.IsFalse(prefab.transform.Find("PrefabAnchors/UIItemTemplates/ActionButtonTemplate").gameObject.activeSelf);
+            Assert.IsFalse(prefab.transform.Find("PrefabAnchors/UIItemTemplates/MessageTextTemplate").gameObject.activeSelf);
         }
 
         [Test]
@@ -135,6 +141,25 @@ namespace GameLogic.Tests
             Assert.AreSame(resetButtonAnchor.gameObject, ui.transform.Find("Lower/ActionBar/ResetButton").gameObject);
             Assert.NotNull(ui.transform.Find("Header/TitleRow/TitleBox/Title"));
             Assert.NotNull(ui.transform.Find("Lower/ActionBar/ResetButton"));
+        }
+
+        [Test]
+        public void PrototypeUiClonesDynamicItemsFromPrefabTemplates()
+        {
+            var prefab = Resources.Load<GameObject>(CultivationRunWindow.ResourceLocation);
+            var instance = Object.Instantiate(prefab, _root.transform);
+
+            var ui = CultivationRunPrototypeUI.Open(instance.transform);
+
+            Assert.NotNull(ui);
+            Assert.NotNull(ui.transform.Find("Header/StatsBar/Stat_境界").GetComponent<CanvasGroup>());
+            Assert.NotNull(ui.transform.Find("Header/MapBar/MapNode_0_node_stone_demon").GetComponent<CanvasGroup>());
+            var handContent = ui.transform.Find("Lower/HandScrollPanel/Viewport/Content");
+            var firstCard = FindFirstChildWithPrefix(handContent, "Card_");
+            Assert.NotNull(firstCard);
+            Assert.NotNull(firstCard.GetComponent<CanvasGroup>());
+            Assert.NotNull(firstCard.Find("Label"));
+            Assert.NotNull(firstCard.Find("Detail"));
         }
 
         [Test]
@@ -771,6 +796,20 @@ namespace GameLogic.Tests
             var battleField = typeof(CultivationRunPrototypeUI)
                 .GetField("_run", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
             return (CultivationRunState)battleField.GetValue(_ui);
+        }
+
+        private static Transform FindFirstChildWithPrefix(Transform parent, string prefix)
+        {
+            for (var i = 0; i < parent.childCount; i++)
+            {
+                var child = parent.GetChild(i);
+                if (child.name.StartsWith(prefix, System.StringComparison.Ordinal))
+                {
+                    return child;
+                }
+            }
+
+            return null;
         }
     }
 }

@@ -29,6 +29,9 @@ namespace GameLogic.Cultivation
         private Text _statusText;
         private Button _endTurnButton;
         private Button _resetButton;
+        private GameObject _infoCardTemplate;
+        private GameObject _actionButtonTemplate;
+        private GameObject _messageTextTemplate;
 
         public RunPrototypeSnapshot Snapshot => CultivationRunPrototypePresenter.CreateSnapshot(_run);
 
@@ -289,6 +292,8 @@ namespace GameLogic.Cultivation
             {
                 BuildView();
             }
+
+            BindTemplates();
         }
 
         private void BuildView()
@@ -409,6 +414,8 @@ namespace GameLogic.Cultivation
             _endTurnButton = CreateButton("EndTurnButton", actionBar, "结束回合");
             _endTurnButton.onClick.AddListener(EndTurn);
             SetLayout(_endTurnButton.gameObject, preferredWidth: 170, preferredHeight: 48);
+
+            BindTemplates();
         }
 
         private void Refresh()
@@ -442,7 +449,7 @@ namespace GameLogic.Cultivation
 
             foreach (var stat in view.Stats)
             {
-                var card = CreateInfoCard($"Stat_{stat.Label}", _statsRoot, stat.Label, stat.Value, stat.Note, new Color(0.12f, 0.15f, 0.18f, 1f), new Color(0.96f, 0.86f, 0.56f, 1f));
+                var card = CreateInfoCardItem($"Stat_{stat.Label}", _statsRoot, stat.Label, stat.Value, stat.Note, new Color(0.12f, 0.15f, 0.18f, 1f), new Color(0.96f, 0.86f, 0.56f, 1f));
                 SetLayout(card.gameObject, preferredWidth: 156, preferredHeight: 44);
             }
         }
@@ -461,7 +468,7 @@ namespace GameLogic.Cultivation
                             ? new Color(0.10f, 0.16f, 0.18f, 1f)
                             : new Color(0.075f, 0.085f, 0.098f, 1f);
                 var note = $"{node.RealmName} / {node.TypeName}";
-                var card = CreateInfoCard($"MapNode_{node.Index}_{node.Id}", _mapRoot, $"{node.Index + 1}. {node.Name}", node.IsCurrent ? "当前" : node.IsChoice ? "可选" : node.IsPast ? "已走过" : "未探索", note, color, Color.white);
+                var card = CreateInfoCardItem($"MapNode_{node.Index}_{node.Id}", _mapRoot, $"{node.Index + 1}. {node.Name}", node.IsCurrent ? "当前" : node.IsChoice ? "可选" : node.IsPast ? "已走过" : "未探索", note, color, Color.white);
                 SetLayout(card.gameObject, preferredWidth: 176, preferredHeight: 44);
             }
         }
@@ -476,7 +483,7 @@ namespace GameLogic.Cultivation
                     if (_run.CurrentBattle != null && _run.CurrentBattle.Outcome != BattleOutcome.InProgress)
                     {
                         var resolveLabel = _run.CurrentBattle.Outcome == BattleOutcome.Victory ? "结算胜利" : "结算失败";
-                        var resolve = CreateButton("ResolveBattleButton", _choiceRoot, resolveLabel, "进入奖励或失败结算");
+                        var resolve = CreateActionButton("ResolveBattleButton", _choiceRoot, resolveLabel, "进入奖励或失败结算");
                         resolve.onClick.AddListener(ResolveBattle);
                         SetLayout(resolve.gameObject, preferredWidth: 220, preferredHeight: 96);
                     }
@@ -487,17 +494,17 @@ namespace GameLogic.Cultivation
                     {
                         var index = i;
                         var reward = _run.CurrentRewards[i];
-                        var button = CreateButton($"Reward_{i}_{reward.Id}", _choiceRoot, $"奖励：{reward.Card.Name}", CultivationRunPrototypePresenter.FormatCardSummary(reward.Card));
+                        var button = CreateActionButton($"Reward_{i}_{reward.Id}", _choiceRoot, $"奖励：{reward.Card.Name}", CultivationRunPrototypePresenter.FormatCardSummary(reward.Card));
                         button.onClick.AddListener(() => ChooseReward(index));
                         SetLayout(button.gameObject, preferredWidth: 240, preferredHeight: 96);
                     }
 
-                    var skip = CreateButton("SkipRewardButton", _choiceRoot, "跳过奖励", "保持牌组精简");
+                    var skip = CreateActionButton("SkipRewardButton", _choiceRoot, "跳过奖励", "保持牌组精简");
                     skip.onClick.AddListener(SkipReward);
                     SetLayout(skip.gameObject, preferredWidth: 180, preferredHeight: 96);
                     break;
                 case CultivationRunStatus.Rest:
-                    var restOnly = CreateButton("RestOnlyButton", _choiceRoot, "闭关恢复", $"+{_run.CurrentNode.RestHealAmount} HP");
+                    var restOnly = CreateActionButton("RestOnlyButton", _choiceRoot, "闭关恢复", $"+{_run.CurrentNode.RestHealAmount} HP");
                     restOnly.onClick.AddListener(Rest);
                     SetLayout(restOnly.gameObject, preferredWidth: 220, preferredHeight: 96);
                     foreach (var choice in _run.RestUpgradeChoices)
@@ -507,7 +514,7 @@ namespace GameLogic.Cultivation
                             var optionIndex = i;
                             var option = choice.SourceCard.UpgradeOptions[i];
                             var deckIndex = choice.DeckIndex;
-                            var button = CreateButton($"Upgrade_{deckIndex}_{optionIndex}", _choiceRoot, $"{choice.SourceCard.Name} → {option.UpgradedCard.Name}", option.Description);
+                            var button = CreateActionButton($"Upgrade_{deckIndex}_{optionIndex}", _choiceRoot, $"{choice.SourceCard.Name} → {option.UpgradedCard.Name}", option.Description);
                             button.onClick.AddListener(() => RestAndUpgrade(deckIndex, optionIndex));
                             SetLayout(button.gameObject, preferredWidth: 260, preferredHeight: 96);
                         }
@@ -519,7 +526,7 @@ namespace GameLogic.Cultivation
                     {
                         var index = i;
                         var choice = _run.CurrentRouteChoices[i];
-                        var button = CreateButton($"Route_{i}_{choice.TargetNode.Id}", _choiceRoot, $"前往：{choice.TargetNode.Name}", $"{CultivationRunPrototypePresenter.FormatRealmName(choice.TargetNode.Realm)} / {CultivationRunPrototypePresenter.FormatNodeTypeName(choice.TargetNode.Type)}");
+                        var button = CreateActionButton($"Route_{i}_{choice.TargetNode.Id}", _choiceRoot, $"前往：{choice.TargetNode.Name}", $"{CultivationRunPrototypePresenter.FormatRealmName(choice.TargetNode.Realm)} / {CultivationRunPrototypePresenter.FormatNodeTypeName(choice.TargetNode.Type)}");
                         button.onClick.AddListener(() => ChooseRoute(index));
                         SetLayout(button.gameObject, preferredWidth: 240, preferredHeight: 96);
                     }
@@ -535,18 +542,18 @@ namespace GameLogic.Cultivation
                             : item.IsPill
                                 ? item.Pill.Description
                                 : item.Artifact.Description;
-                        var button = CreateButton($"Market_{i}_{item.Id}", _choiceRoot, $"购买：{CultivationRunPrototypePresenter.FormatMarketItemName(item)}", $"{item.Price} 灵石\n{detail}");
+                        var button = CreateActionButton($"Market_{i}_{item.Id}", _choiceRoot, $"购买：{CultivationRunPrototypePresenter.FormatMarketItemName(item)}", $"{item.Price} 灵石\n{detail}");
                         button.interactable = _run.SpiritStones >= item.Price && (!item.IsPill || _run.Pills.Count < _run.PillSlotLimit);
                         button.onClick.AddListener(() => BuyMarketItem(index));
                         SetLayout(button.gameObject, preferredWidth: 260, preferredHeight: 96);
                     }
 
-                    var leave = CreateButton("LeaveMarketButton", _choiceRoot, "离开坊市", "进入下个节点");
+                    var leave = CreateActionButton("LeaveMarketButton", _choiceRoot, "离开坊市", "进入下个节点");
                     leave.onClick.AddListener(LeaveMarket);
                     SetLayout(leave.gameObject, preferredWidth: 180, preferredHeight: 96);
                     break;
                 case CultivationRunStatus.Chest:
-                    var openChest = CreateButton("OpenChestButton", _choiceRoot, "打开宝箱", $"获得 1 件法宝\n法宝池 {_run.CurrentNode.ArtifactRewardPool.Count} 件");
+                    var openChest = CreateActionButton("OpenChestButton", _choiceRoot, "打开宝箱", $"获得 1 件法宝\n法宝池 {_run.CurrentNode.ArtifactRewardPool.Count} 件");
                     openChest.interactable = _run.CurrentNode.ArtifactRewardPool.Count > 0;
                     openChest.onClick.AddListener(OpenChest);
                     SetLayout(openChest.gameObject, preferredWidth: 260, preferredHeight: 96);
@@ -556,7 +563,7 @@ namespace GameLogic.Cultivation
                     {
                         var index = i;
                         var option = _run.MysticEventChoices[i];
-                        var button = CreateButton($"Mystic_{i}_{option.Id}", _choiceRoot, $"秘境：{option.Name}", option.Description);
+                        var button = CreateActionButton($"Mystic_{i}_{option.Id}", _choiceRoot, $"秘境：{option.Name}", option.Description);
                         button.onClick.AddListener(() => ChooseMysticEventOption(index));
                         SetLayout(button.gameObject, preferredWidth: 260, preferredHeight: 96);
                     }
@@ -567,7 +574,7 @@ namespace GameLogic.Cultivation
                     {
                         var index = i;
                         var passive = _run.CurrentGoldenCorePassiveChoices[i];
-                        var button = CreateButton($"GoldenCorePassive_{i}_{passive.Id}", _choiceRoot, $"金丹被动：{passive.Name}", passive.Description);
+                        var button = CreateActionButton($"GoldenCorePassive_{i}_{passive.Id}", _choiceRoot, $"金丹被动：{passive.Name}", passive.Description);
                         button.onClick.AddListener(() => ChooseGoldenCorePassive(index));
                         SetLayout(button.gameObject, preferredWidth: 280, preferredHeight: 96);
                     }
@@ -586,13 +593,13 @@ namespace GameLogic.Cultivation
                 {
                     var index = i;
                     var card = _run.Deck[i];
-                    var button = CreateButton($"RemoveDeck_{i}_{card.Id}", _handRoot, $"移除：{card.Name}", $"{CultivationRunEngine.MarketCardRemovalCost} 灵石");
+                    var button = CreateActionButton($"RemoveDeck_{i}_{card.Id}", _handRoot, $"移除：{card.Name}", $"{CultivationRunEngine.MarketCardRemovalCost} 灵石");
                     button.interactable = _run.Deck.Count > 1 && _run.SpiritStones >= CultivationRunEngine.MarketCardRemovalCost;
                     button.onClick.AddListener(() => RemoveDeckCardAtMarket(index));
                     SetLayout(button.gameObject, preferredWidth: 220, preferredHeight: 130);
 
                     var sellValue = _runEngine.GetMarketSellValue(_run, index);
-                    var sellButton = CreateButton($"SellDeck_{i}_{card.Id}", _handRoot, $"出售：{card.Name}", $"+{sellValue} 灵石");
+                    var sellButton = CreateActionButton($"SellDeck_{i}_{card.Id}", _handRoot, $"出售：{card.Name}", $"+{sellValue} 灵石");
                     sellButton.interactable = _run.Deck.Count > 1;
                     sellButton.onClick.AddListener(() => SellDeckCardAtMarket(index));
                     SetLayout(sellButton.gameObject, preferredWidth: 220, preferredHeight: 130);
@@ -601,7 +608,7 @@ namespace GameLogic.Cultivation
                     {
                         var selectedOptionIndex = optionIndex;
                         var option = card.UpgradeOptions[optionIndex];
-                        var upgradeButton = CreateButton($"MarketUpgrade_{i}_{optionIndex}_{option.Id}", _handRoot, $"升级：{card.Name}", $"→ {option.UpgradedCard.Name}\n{CultivationRunEngine.MarketCardUpgradeCost} 灵石");
+                        var upgradeButton = CreateActionButton($"MarketUpgrade_{i}_{optionIndex}_{option.Id}", _handRoot, $"升级：{card.Name}", $"→ {option.UpgradedCard.Name}\n{CultivationRunEngine.MarketCardUpgradeCost} 灵石");
                         upgradeButton.interactable = _run.SpiritStones >= CultivationRunEngine.MarketCardUpgradeCost;
                         upgradeButton.onClick.AddListener(() => UpgradeDeckCardAtMarket(index, selectedOptionIndex));
                         SetLayout(upgradeButton.gameObject, preferredWidth: 260, preferredHeight: 130);
@@ -617,7 +624,7 @@ namespace GameLogic.Cultivation
                 {
                     var index = i;
                     var pill = _run.Pills[i];
-                    var button = CreateButton($"RunPill_{i}_{pill.Id}", _handRoot, $"丹药：{pill.Name}", pill.Description);
+                    var button = CreateActionButton($"RunPill_{i}_{pill.Id}", _handRoot, $"丹药：{pill.Name}", pill.Description);
                     button.interactable = pill.IsRunEffect;
                     button.onClick.AddListener(() => UsePillInRun(index));
                     SetLayout(button.gameObject, preferredWidth: 240, preferredHeight: 130);
@@ -625,7 +632,7 @@ namespace GameLogic.Cultivation
 
                 if (!string.IsNullOrEmpty(_lastRunPillMessage))
                 {
-                    var message = CreateText("RunPillMessage", _handRoot, _lastRunPillMessage, 15, FontStyle.Bold, TextAnchor.MiddleCenter);
+                    var message = CreateMessageText("RunPillMessage", _handRoot, _lastRunPillMessage, 15, FontStyle.Bold, TextAnchor.MiddleCenter);
                     message.color = new Color(0.95f, 0.89f, 0.72f, 1f);
                     SetLayout(message.gameObject, preferredWidth: 300, preferredHeight: 130);
                 }
@@ -637,7 +644,7 @@ namespace GameLogic.Cultivation
             {
                 var index = i;
                 var pill = _run.Pills[i];
-                var button = CreateButton($"Pill_{i}_{pill.Id}", _handRoot, $"丹药：{pill.Name}", pill.Description);
+                var button = CreateActionButton($"Pill_{i}_{pill.Id}", _handRoot, $"丹药：{pill.Name}", pill.Description);
                 button.interactable = _run.CurrentBattle.Outcome == BattleOutcome.InProgress && pill.EffectValue > 0 && pill.IsBattleEffect;
                 button.onClick.AddListener(() => UsePillInBattle(index));
                 SetLayout(button.gameObject, preferredWidth: 240, preferredHeight: 130);
@@ -648,7 +655,7 @@ namespace GameLogic.Cultivation
                 var index = i;
                 var card = _run.CurrentBattle.Hand[i];
                 var costText = FormatBattleCardCost(_run.CurrentBattle, card);
-                var button = CreateButton($"Card_{i}_{card.Id}", _handRoot, card.Name, $"{costText}\n{string.Join("\n", card.Effects.Select(CultivationRunPrototypePresenter.FormatEffect))}");
+                var button = CreateActionButton($"Card_{i}_{card.Id}", _handRoot, card.Name, $"{costText}\n{string.Join("\n", card.Effects.Select(CultivationRunPrototypePresenter.FormatEffect))}");
                 button.interactable = _run.CurrentBattle.Outcome == BattleOutcome.InProgress && _battleEngine.CanPlay(_run.CurrentBattle, card);
                 button.onClick.AddListener(() => PlayCardAt(index));
                 SetLayout(button.gameObject, preferredWidth: 240, preferredHeight: 130);
@@ -721,6 +728,52 @@ namespace GameLogic.Cultivation
             {
                 Object.DontDestroyOnLoad(eventSystem);
             }
+        }
+
+        private void BindTemplates()
+        {
+            var templateRoot = transform.parent != null
+                ? transform.parent.Find("PrefabAnchors/UIItemTemplates")
+                : null;
+            _infoCardTemplate = FindTemplate(templateRoot, "InfoCardTemplate");
+            _actionButtonTemplate = FindTemplate(templateRoot, "ActionButtonTemplate");
+            _messageTextTemplate = FindTemplate(templateRoot, "MessageTextTemplate");
+        }
+
+        private static GameObject FindTemplate(Transform templateRoot, string templateName)
+        {
+            var template = templateRoot != null ? templateRoot.Find(templateName) : null;
+            return template != null ? template.gameObject : null;
+        }
+
+        private RectTransform CreateInfoCardItem(string name, Transform parent, string title, string value, string note, Color backgroundColor, Color valueColor)
+        {
+            InstantiateTemplate(_infoCardTemplate, parent, name);
+            return CreateInfoCard(name, parent, title, value, note, backgroundColor, valueColor);
+        }
+
+        private Button CreateActionButton(string name, Transform parent, string label, string detail)
+        {
+            InstantiateTemplate(_actionButtonTemplate, parent, name);
+            return CreateButton(name, parent, label, detail);
+        }
+
+        private Text CreateMessageText(string name, Transform parent, string value, int fontSize, FontStyle style, TextAnchor anchor)
+        {
+            InstantiateTemplate(_messageTextTemplate, parent, name);
+            return CreateText(name, parent, value, fontSize, style, anchor);
+        }
+
+        private static void InstantiateTemplate(GameObject template, Transform parent, string name)
+        {
+            if (template == null || parent == null || parent.Find(name) != null)
+            {
+                return;
+            }
+
+            var instance = Instantiate(template, parent, false);
+            instance.name = name;
+            instance.SetActive(true);
         }
 
         private static RectTransform CreatePanel(string name, Transform parent, Color color)
