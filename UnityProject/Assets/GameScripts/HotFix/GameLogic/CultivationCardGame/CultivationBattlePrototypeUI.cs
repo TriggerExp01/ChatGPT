@@ -284,7 +284,11 @@ namespace GameLogic.Cultivation
             var scaler = fallback.GetComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             scaler.referenceResolution = new Vector2(1920, 1080);
-            Object.DontDestroyOnLoad(fallback);
+            if (Application.isPlaying)
+            {
+                Object.DontDestroyOnLoad(fallback);
+            }
+
             return fallback.transform;
         }
 
@@ -296,7 +300,10 @@ namespace GameLogic.Cultivation
             }
 
             var eventSystem = new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
-            Object.DontDestroyOnLoad(eventSystem);
+            if (Application.isPlaying)
+            {
+                Object.DontDestroyOnLoad(eventSystem);
+            }
         }
 
         private static RectTransform CreatePanel(string name, Transform parent, Color color)

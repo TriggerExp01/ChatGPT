@@ -36,12 +36,9 @@ public partial class GameApp
     
     private static void StartGameLogic()
     {
-        var engine = new BattleEngine(20260619);
-        var state = engine.CreateBattle(CultivationSeedData.CreateSwordSectStarterDeck(), CultivationSeedData.StoneDemon);
-        var enemy = state.Enemies[0];
         Log.Warning(
-            $"======= Cultivation Phase 1 battle core ready: hand={state.Hand.Count}, spirit={state.Spirit}/{state.SpiritMax}, enemy={enemy.Body.Name}, intent={enemy.CurrentIntent.Description} =======");
-        CultivationBattlePrototypeUI.Open();
+            "======= Cultivation Phase 7 Run prototype ready: battle/reward/rest/route choice UI =======");
+        CultivationRunPrototypeUI.Open();
     }
     
     private static void Release()
