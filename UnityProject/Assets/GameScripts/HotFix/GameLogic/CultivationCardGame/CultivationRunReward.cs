@@ -5,7 +5,8 @@ namespace GameLogic.Cultivation
     public enum PillEffectType
     {
         Heal,
-        Spirit
+        Spirit,
+        Cleanse
     }
 
     public sealed class PillDefinition
@@ -42,6 +43,8 @@ namespace GameLogic.Cultivation
         public int HealAmount => EffectType == PillEffectType.Heal ? EffectValue : 0;
 
         public int SpiritAmount => EffectType == PillEffectType.Spirit ? EffectValue : 0;
+
+        public int CleanseHealAmount => EffectType == PillEffectType.Cleanse ? EffectValue : 0;
     }
 
     public sealed class CultivationRunReward

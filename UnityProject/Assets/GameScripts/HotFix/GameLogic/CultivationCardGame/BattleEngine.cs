@@ -784,6 +784,13 @@ namespace GameLogic.Cultivation
             PillEffectType.Spirit,
             2);
 
+        public static PillDefinition CleansePillItem { get; } = new PillDefinition(
+            "cleanse_pill",
+            "解毒丹",
+            "战斗内消耗品：清除所有负面状态，恢复 3 HP。",
+            PillEffectType.Cleanse,
+            3);
+
         public static IReadOnlyList<CardDefinition> CreateSwordSectStarterDeck()
         {
             return new List<CardDefinition>
@@ -848,6 +855,7 @@ namespace GameLogic.Cultivation
                 new CultivationMarketItem("market_thrust", Thrust, 25),
                 new CultivationMarketItem("market_small_restore_pill", SmallRestorePillItem, 15),
                 new CultivationMarketItem("market_spirit_boost_pill", SpiritBoostPillItem, 35),
+                new CultivationMarketItem("market_cleanse_pill", CleansePillItem, 15),
             };
         }
 

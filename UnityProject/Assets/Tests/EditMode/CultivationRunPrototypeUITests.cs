@@ -162,6 +162,31 @@ namespace GameLogic.Tests
         }
 
         [Test]
+        public void PrototypeUiCanUseCleansePillInNextBattle()
+        {
+            ForceCurrentBattleVictory();
+            _ui.ResolveBattle();
+            _ui.SkipReward();
+            _ui.ChooseRoute(1);
+            _ui.Rest();
+            _ui.ChooseRoute(0);
+            SetRunSpiritStones(20);
+            _ui.BuyMarketItem(4);
+            _ui.LeaveMarket();
+            DamageCurrentBattlePlayer(6);
+            AddCurrentBattlePlayerNegativeStatuses();
+
+            _ui.UsePillInBattle(0);
+
+            Assert.AreEqual(97, _ui.Snapshot.PlayerHp);
+            Assert.AreEqual(0, _ui.Snapshot.PillCount);
+            Assert.AreEqual(0, GetCurrentBattlePlayerBurnStacks());
+            Assert.AreEqual(0, GetCurrentBattlePlayerBurnTurns());
+            Assert.AreEqual(0, GetCurrentBattlePlayerBreakDefenseStacks());
+            StringAssert.Contains("使用 解毒丹，清除负面状态并恢复 3 HP", GetCurrentBattleLogText());
+        }
+
+        [Test]
         public void PrototypeUiCanRemoveDeckCardInMarket()
         {
             ForceCurrentBattleVictory();
@@ -220,42 +245,57 @@ namespace GameLogic.Tests
 
         private string GetCurrentBattleLogText()
         {
-            var battleField = typeof(CultivationRunPrototypeUI)
-                .GetField("_run", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            var run = (CultivationRunState)battleField.GetValue(_ui);
+            var run = GetRun();
             return string.Join("\n", run.CurrentBattle.Logs.ConvertAll(log => log.Message));
         }
 
         private void DamageCurrentBattlePlayer(int amount)
         {
-            var battleField = typeof(CultivationRunPrototypeUI)
-                .GetField("_run", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            var run = (CultivationRunState)battleField.GetValue(_ui);
-            run.CurrentBattle.Player.TakeDamage(amount);
+            GetRun().CurrentBattle.Player.TakeDamage(amount);
         }
 
         private int GetCurrentBattleSpirit()
         {
-            var battleField = typeof(CultivationRunPrototypeUI)
-                .GetField("_run", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            var run = (CultivationRunState)battleField.GetValue(_ui);
-            return run.CurrentBattle.Spirit;
+            return GetRun().CurrentBattle.Spirit;
+        }
+
+        private void AddCurrentBattlePlayerNegativeStatuses()
+        {
+            var player = GetRun().CurrentBattle.Player;
+            player.AddBurn(3, 2);
+            player.AddBreakDefense(2);
+        }
+
+        private int GetCurrentBattlePlayerBurnStacks()
+        {
+            return GetRun().CurrentBattle.Player.BurnStacks;
+        }
+
+        private int GetCurrentBattlePlayerBurnTurns()
+        {
+            return GetRun().CurrentBattle.Player.BurnTurns;
+        }
+
+        private int GetCurrentBattlePlayerBreakDefenseStacks()
+        {
+            return GetRun().CurrentBattle.Player.BreakDefenseStacks;
         }
 
         private void SetRunSpiritStones(int value)
         {
-            var battleField = typeof(CultivationRunPrototypeUI)
-                .GetField("_run", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            var run = (CultivationRunState)battleField.GetValue(_ui);
-            run.SpiritStones = value;
+            GetRun().SpiritStones = value;
         }
 
         private void ForceCurrentBattleVictory()
         {
+            GetRun().CurrentBattle.Outcome = BattleOutcome.Victory;
+        }
+
+        private CultivationRunState GetRun()
+        {
             var battleField = typeof(CultivationRunPrototypeUI)
                 .GetField("_run", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            var run = (CultivationRunState)battleField.GetValue(_ui);
-            run.CurrentBattle.Outcome = BattleOutcome.Victory;
+            return (CultivationRunState)battleField.GetValue(_ui);
         }
     }
 }

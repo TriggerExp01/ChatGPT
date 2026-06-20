@@ -96,6 +96,13 @@ namespace GameLogic.Cultivation
             BurnTurns = Math.Max(BurnTurns, turns);
         }
 
+        public void ClearNegativeStatuses()
+        {
+            BreakDefenseStacks = 0;
+            BurnStacks = 0;
+            BurnTurns = 0;
+        }
+
         public int AddSwordMark(int stacks)
         {
             SwordMarkStacks += Math.Max(0, stacks);

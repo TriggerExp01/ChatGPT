@@ -326,6 +326,10 @@ namespace GameLogic.Cultivation
                 case PillEffectType.Spirit:
                     battle.Spirit += pill.SpiritAmount;
                     return $"使用 {pill.Name}，本回合灵力 +{pill.SpiritAmount}。";
+                case PillEffectType.Cleanse:
+                    battle.Player.ClearNegativeStatuses();
+                    battle.Player.Heal(pill.CleanseHealAmount);
+                    return $"使用 {pill.Name}，清除负面状态并恢复 {pill.CleanseHealAmount} HP。";
                 default:
                     throw new ArgumentOutOfRangeException(nameof(pill.EffectType), pill.EffectType, "Unsupported pill effect type.");
             }
