@@ -71,7 +71,7 @@ namespace GameLogic.Cultivation
 
         private static string BuildRunText(CultivationRunState state)
         {
-            return $"状态：{state.Status}\n节点：{state.CurrentNodeIndex + 1}/{state.Route.Count}\nHP：{state.PlayerCurrentHp}/{state.PlayerMaxHp}\n灵石：{state.SpiritStones}\n牌组：{state.Deck.Count} 张\n已拿奖励：{state.ClaimedRewards.Count}\n坊市删牌：{state.RemovedMarketCards.Count}";
+            return $"状态：{state.Status}\n节点：{state.CurrentNodeIndex + 1}/{state.Route.Count}\nHP：{state.PlayerCurrentHp}/{state.PlayerMaxHp}\n灵石：{state.SpiritStones}\n牌组：{state.Deck.Count} 张\n已拿奖励：{state.ClaimedRewards.Count}\n坊市删牌：{state.RemovedMarketCards.Count}\n坊市售牌：{state.SoldMarketCards.Count}";
         }
 
         private static string BuildNodeText(CultivationRunState state)
@@ -107,6 +107,7 @@ namespace GameLogic.Cultivation
 
                 builder.Append("移除卡牌：").Append(CultivationRunEngine.MarketCardRemovalCost).Append(" 灵石 / 已移除 ").Append(state.RemovedMarketCards.Count).Append(" 张").AppendLine();
                 builder.Append("升级卡牌：").Append(CultivationRunEngine.MarketCardUpgradeCost).Append(" 灵石 / 已升级 ").Append(state.MarketUpgradedCards.Count).Append(" 张").AppendLine();
+                builder.Append("出售卡牌：半价回收 / 已出售 ").Append(state.SoldMarketCards.Count).Append(" 张").AppendLine();
             }
 
             return builder.ToString();
@@ -229,6 +230,8 @@ namespace GameLogic.Cultivation
 
         public int MarketUpgradedCardCount { get; private set; }
 
+        public int SoldMarketCardCount { get; private set; }
+
         public BattleOutcome BattleOutcome { get; private set; }
 
         public static RunPrototypeSnapshot From(CultivationRunState state)
@@ -255,6 +258,7 @@ namespace GameLogic.Cultivation
                 PurchasedMarketItemCount = state.PurchasedMarketItems.Count,
                 RemovedMarketCardCount = state.RemovedMarketCards.Count,
                 MarketUpgradedCardCount = state.MarketUpgradedCards.Count,
+                SoldMarketCardCount = state.SoldMarketCards.Count,
                 BattleOutcome = state.CurrentBattle?.Outcome ?? BattleOutcome.InProgress,
             };
         }

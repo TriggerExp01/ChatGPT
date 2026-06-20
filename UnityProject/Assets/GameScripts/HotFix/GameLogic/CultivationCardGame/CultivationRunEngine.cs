@@ -159,16 +159,7 @@ namespace GameLogic.Cultivation
         public void RemoveDeckCardAtMarket(CultivationRunState state, int deckIndex)
         {
             EnsureMarketState(state);
-
-            if (deckIndex < 0 || deckIndex >= state.Deck.Count)
-            {
-                throw new ArgumentOutOfRangeException(nameof(deckIndex), "Deck index is outside the run deck.");
-            }
-
-            if (state.Deck.Count <= 1)
-            {
-                throw new InvalidOperationException("Cannot remove the last card from the run deck.");
-            }
+            EnsureDeckCardCanLeaveDeckAtMarket(state, deckIndex);
 
             if (state.SpiritStones < MarketCardRemovalCost)
             {
@@ -179,6 +170,42 @@ namespace GameLogic.Cultivation
             state.SpiritStones -= MarketCardRemovalCost;
             state.Deck.RemoveAt(deckIndex);
             state.RemovedMarketCards.Add(removedCard);
+        }
+
+        public int GetMarketSellValue(CultivationRunState state, int deckIndex)
+        {
+            EnsureMarketState(state);
+
+            if (deckIndex < 0 || deckIndex >= state.Deck.Count)
+            {
+                throw new ArgumentOutOfRangeException(nameof(deckIndex), "Deck index is outside the run deck.");
+            }
+
+            var card = state.Deck[deckIndex];
+            var matchingMarketItem = state.CurrentMarketItems.FirstOrDefault(item => item.Card.Id == card.Id);
+            if (matchingMarketItem != null)
+            {
+                return matchingMarketItem.Price / 2;
+            }
+
+            if (state.CurrentMarketItems.Count > 0)
+            {
+                return Math.Max(1, state.CurrentMarketItems.Min(item => item.Price) / 2);
+            }
+
+            return 10;
+        }
+
+        public void SellDeckCardAtMarket(CultivationRunState state, int deckIndex)
+        {
+            EnsureMarketState(state);
+            EnsureDeckCardCanLeaveDeckAtMarket(state, deckIndex);
+
+            var soldCard = state.Deck[deckIndex];
+            var sellValue = GetMarketSellValue(state, deckIndex);
+            state.SpiritStones += sellValue;
+            state.Deck.RemoveAt(deckIndex);
+            state.SoldMarketCards.Add(soldCard);
         }
 
         public void UpgradeDeckCardAtMarket(CultivationRunState state, int deckIndex, int upgradeOptionIndex)
@@ -369,6 +396,19 @@ namespace GameLogic.Cultivation
             if (targetNodeIndex <= state.CurrentNodeIndex || targetNodeIndex >= state.Route.Count)
             {
                 throw new InvalidOperationException("Route targets must point to later nodes inside the current route.");
+            }
+        }
+
+        private static void EnsureDeckCardCanLeaveDeckAtMarket(CultivationRunState state, int deckIndex)
+        {
+            if (deckIndex < 0 || deckIndex >= state.Deck.Count)
+            {
+                throw new ArgumentOutOfRangeException(nameof(deckIndex), "Deck index is outside the run deck.");
+            }
+
+            if (state.Deck.Count <= 1)
+            {
+                throw new InvalidOperationException("Cannot remove the last card from the run deck.");
             }
         }
 

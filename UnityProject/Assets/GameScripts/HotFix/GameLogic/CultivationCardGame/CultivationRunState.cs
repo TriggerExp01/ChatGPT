@@ -17,6 +17,7 @@ namespace GameLogic.Cultivation
             PurchasedMarketItems = new List<CultivationMarketItem>();
             RemovedMarketCards = new List<CardDefinition>();
             MarketUpgradedCards = new List<CardDefinition>();
+            SoldMarketCards = new List<CardDefinition>();
 
             if (Deck.Count == 0)
             {
@@ -74,6 +75,8 @@ namespace GameLogic.Cultivation
         public List<CardDefinition> RemovedMarketCards { get; }
 
         public List<CardDefinition> MarketUpgradedCards { get; }
+
+        public List<CardDefinition> SoldMarketCards { get; }
 
         public CultivationRunNode CurrentNode => Route[CurrentNodeIndex];
     }

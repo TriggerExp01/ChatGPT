@@ -68,6 +68,7 @@ namespace GameLogic.Tests
             StringAssert.Contains("流云护身 / 20 灵石", text.NodeText);
             StringAssert.Contains("移除卡牌：35 灵石", text.NodeText);
             StringAssert.Contains("升级卡牌：50 灵石", text.NodeText);
+            StringAssert.Contains("出售卡牌：半价回收", text.NodeText);
             StringAssert.Contains("等待操作：Market", text.BattleText);
         }
 
@@ -98,6 +99,21 @@ namespace GameLogic.Tests
 
             Assert.AreEqual(1, snapshot.MarketUpgradedCardCount);
             StringAssert.Contains("已升级 1 张", text.NodeText);
+        }
+
+        [Test]
+        public void CreateSnapshotCountsSoldMarketCards()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var run = engine.StartRun(CreateInstantWinDeck(), CreateMarketRoute(), initialSpiritStones: 3);
+
+            engine.SellDeckCardAtMarket(run, 0);
+            var snapshot = CultivationRunPrototypePresenter.CreateSnapshot(run);
+            var text = CultivationRunPrototypePresenter.BuildText(run);
+
+            Assert.AreEqual(1, snapshot.SoldMarketCardCount);
+            StringAssert.Contains("坊市售牌：1", text.RunText);
+            StringAssert.Contains("已出售 1 张", text.NodeText);
         }
 
         [Test]

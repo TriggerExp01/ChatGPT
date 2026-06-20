@@ -500,6 +500,69 @@ namespace GameLogic.Tests
         }
 
         [Test]
+        public void MarketCardSellingGrantsHalfOfMatchingMarketItemPriceAndRemovesCard()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var deck = new[]
+            {
+                CultivationSeedData.CloudGuard,
+                CultivationSeedData.SwordQi,
+                CultivationSeedData.BreakArmor,
+                CultivationSeedData.GuardQi,
+                CultivationSeedData.LightBody,
+            };
+            var run = engine.StartRun(deck, CreateMarketRoute(), initialSpiritStones: 3);
+
+            Assert.AreEqual(10, engine.GetMarketSellValue(run, 0));
+            engine.SellDeckCardAtMarket(run, 0);
+
+            Assert.AreEqual(13, run.SpiritStones);
+            Assert.AreEqual(4, run.Deck.Count);
+            Assert.AreEqual(1, run.SoldMarketCards.Count);
+            Assert.AreEqual("cloud_guard", run.SoldMarketCards[0].Id);
+            Assert.IsFalse(run.Deck.Any(card => card.Id == "cloud_guard"));
+        }
+
+        [Test]
+        public void MarketCardSellingUsesLowestMarketPriceFallbackForUnlistedCard()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var run = engine.StartRun(CreateUniqueTestDeck(), CreateMarketRoute(), initialSpiritStones: 3);
+
+            Assert.AreEqual(10, engine.GetMarketSellValue(run, 0));
+            engine.SellDeckCardAtMarket(run, 0);
+
+            Assert.AreEqual(13, run.SpiritStones);
+            Assert.AreEqual(4, run.Deck.Count);
+            Assert.AreEqual(1, run.SoldMarketCards.Count);
+        }
+
+        [Test]
+        public void MarketCardSellingRejectsInvalidDeckIndex()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var run = engine.StartRun(CreateInstantWinDeck(), CreateMarketRoute(), initialSpiritStones: 3);
+
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => engine.SellDeckCardAtMarket(run, 99));
+            Assert.AreEqual(3, run.SpiritStones);
+            Assert.AreEqual(5, run.Deck.Count);
+            Assert.AreEqual(0, run.SoldMarketCards.Count);
+        }
+
+        [Test]
+        public void MarketCardSellingRejectsLastDeckCard()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var oneCard = new[] { new CardDefinition("only_card", "only_card", 0, new CardEffect(CardEffectType.Damage, 1)) };
+            var run = engine.StartRun(oneCard, CreateMarketRoute(), initialSpiritStones: 3);
+
+            Assert.Throws<System.InvalidOperationException>(() => engine.SellDeckCardAtMarket(run, 0));
+            Assert.AreEqual(3, run.SpiritStones);
+            Assert.AreEqual(1, run.Deck.Count);
+            Assert.AreEqual(0, run.SoldMarketCards.Count);
+        }
+
+        [Test]
         public void LeavingMarketAdvancesToNextNode()
         {
             var engine = new CultivationRunEngine(new BattleEngine(1));

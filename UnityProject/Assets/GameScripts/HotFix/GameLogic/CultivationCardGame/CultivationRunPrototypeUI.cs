@@ -182,6 +182,17 @@ namespace GameLogic.Cultivation
             Refresh();
         }
 
+        public void SellDeckCardAtMarket(int deckIndex)
+        {
+            if (_run == null || _run.Status != CultivationRunStatus.Market)
+            {
+                return;
+            }
+
+            _runEngine.SellDeckCardAtMarket(_run, deckIndex);
+            Refresh();
+        }
+
         public void UpgradeDeckCardAtMarket(int deckIndex, int upgradeOptionIndex)
         {
             if (_run == null || _run.Status != CultivationRunStatus.Market)
@@ -410,6 +421,12 @@ namespace GameLogic.Cultivation
                     button.interactable = _run.Deck.Count > 1 && _run.SpiritStones >= CultivationRunEngine.MarketCardRemovalCost;
                     button.onClick.AddListener(() => RemoveDeckCardAtMarket(index));
                     SetLayout(button.gameObject, flexibleWidth: 1, preferredHeight: 130);
+
+                    var sellValue = _runEngine.GetMarketSellValue(_run, index);
+                    var sellButton = CreateButton($"SellDeck_{i}_{card.Id}", _handRoot, $"出售\n{card.Name}\n+{sellValue} 灵石");
+                    sellButton.interactable = _run.Deck.Count > 1;
+                    sellButton.onClick.AddListener(() => SellDeckCardAtMarket(index));
+                    SetLayout(sellButton.gameObject, flexibleWidth: 1, preferredHeight: 130);
 
                     for (var optionIndex = 0; optionIndex < card.UpgradeOptions.Count; optionIndex++)
                     {
