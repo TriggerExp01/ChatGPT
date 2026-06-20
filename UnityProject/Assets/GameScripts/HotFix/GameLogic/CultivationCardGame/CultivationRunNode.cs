@@ -14,7 +14,8 @@ namespace GameLogic.Cultivation
             int restHealAmount = 0,
             IEnumerable<int> nextNodeIndices = null,
             int spiritStoneReward = 0,
-            IEnumerable<CultivationMarketItem> marketItems = null)
+            IEnumerable<CultivationMarketItem> marketItems = null,
+            IEnumerable<ArtifactDefinition> artifactRewardPool = null)
         {
             if (string.IsNullOrWhiteSpace(id))
             {
@@ -37,6 +38,7 @@ namespace GameLogic.Cultivation
             Enemy = enemy;
             RewardPool = new List<CultivationRunReward>(rewardPool ?? Array.Empty<CultivationRunReward>()).AsReadOnly();
             MarketItems = new List<CultivationMarketItem>(marketItems ?? Array.Empty<CultivationMarketItem>()).AsReadOnly();
+            ArtifactRewardPool = new List<ArtifactDefinition>(artifactRewardPool ?? Array.Empty<ArtifactDefinition>()).AsReadOnly();
             RestHealAmount = Math.Max(0, restHealAmount);
             SpiritStoneReward = Math.Max(0, spiritStoneReward);
 
@@ -63,6 +65,8 @@ namespace GameLogic.Cultivation
         public IReadOnlyList<CultivationRunReward> RewardPool { get; }
 
         public IReadOnlyList<CultivationMarketItem> MarketItems { get; }
+
+        public IReadOnlyList<ArtifactDefinition> ArtifactRewardPool { get; }
 
         public int RestHealAmount { get; }
 

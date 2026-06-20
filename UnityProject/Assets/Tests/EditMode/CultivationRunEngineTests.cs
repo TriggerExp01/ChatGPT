@@ -108,6 +108,41 @@ namespace GameLogic.Tests
         }
 
         [Test]
+        public void SeedPrototypeEliteVictoryDropsArtifact()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var run = engine.StartRun(CreateInstantWinDeck(), CultivationSeedData.CreateFirstPrototypeRoute());
+
+            WinCurrentBattle(engine, run);
+            engine.SkipReward(run);
+            WinCurrentBattle(engine, run);
+            engine.SkipReward(run);
+            engine.Rest(run);
+            WinCurrentBattle(engine, run);
+
+            Assert.AreEqual(CultivationRunStatus.Reward, run.Status);
+            Assert.AreEqual(1, run.Artifacts.Count);
+            Assert.AreEqual(1, run.DroppedArtifacts.Count);
+            CollectionAssert.Contains(
+                CultivationSeedData.CreatePrototypeArtifactRewardPool().Select(artifact => artifact.Id).ToArray(),
+                run.Artifacts[0].Id);
+            Assert.IsTrue(run.CurrentBattle.Logs.Any(log => log.Message.Contains("精英战获得法宝：")));
+        }
+
+        [Test]
+        public void NormalBattleVictoryDoesNotDropArtifact()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var run = engine.StartRun(CreateInstantWinDeck(), CultivationSeedData.CreateFirstPrototypeRoute());
+
+            WinCurrentBattle(engine, run);
+
+            Assert.AreEqual(0, run.Artifacts.Count);
+            Assert.AreEqual(0, run.DroppedArtifacts.Count);
+            Assert.IsFalse(run.CurrentBattle.Logs.Any(log => log.Message.Contains("精英战获得法宝：")));
+        }
+
+        [Test]
         public void VictoryRemovesExhaustedCardsFromRunDeck()
         {
             var exhaustWin = new CardDefinition(
@@ -924,7 +959,8 @@ namespace GameLogic.Tests
                     "test_node_2",
                     CultivationRunNodeType.Elite,
                     new EnemyDefinition("test_enemy_2", "test_enemy_2", 1, 0, new EnemyIntent(EnemyIntentType.Attack, 1)),
-                    rewards),
+                    rewards,
+                    artifactRewardPool: new[] { CultivationSeedData.SpiritStoneMineArtifact }),
             };
         }
 

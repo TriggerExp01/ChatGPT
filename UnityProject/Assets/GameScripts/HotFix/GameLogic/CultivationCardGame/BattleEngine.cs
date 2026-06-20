@@ -898,15 +898,25 @@ namespace GameLogic.Cultivation
             };
         }
 
+        public static IReadOnlyList<ArtifactDefinition> CreatePrototypeArtifactRewardPool()
+        {
+            return new List<ArtifactDefinition>
+            {
+                SpiritStoneMineArtifact,
+                RejuvenationJadeArtifact,
+            };
+        }
+
         public static IReadOnlyList<CultivationRunNode> CreateFirstPrototypeRoute()
         {
             var rewards = CreateSwordSectRewardPool();
+            var artifactRewards = CreatePrototypeArtifactRewardPool();
             return new List<CultivationRunNode>
             {
                 new CultivationRunNode("node_stone_demon", "山门石魔", CultivationRunNodeType.Battle, StoneDemon, rewards, spiritStoneReward: 15),
                 new CultivationRunNode("node_fire_bat", "火蝠洞", CultivationRunNodeType.Battle, FireBat, rewards, spiritStoneReward: 15),
                 new CultivationRunNode("node_meditation", "闭关调息", CultivationRunNodeType.Rest, null, null, restHealAmount: 30),
-                new CultivationRunNode("node_stone_demon_leader", "石魔首领", CultivationRunNodeType.Elite, StoneDemonLeader, rewards, spiritStoneReward: 35),
+                new CultivationRunNode("node_stone_demon_leader", "石魔首领", CultivationRunNodeType.Elite, StoneDemonLeader, rewards, spiritStoneReward: 35, artifactRewardPool: artifactRewards),
             };
         }
 
@@ -914,6 +924,7 @@ namespace GameLogic.Cultivation
         {
             var rewards = CreateSwordSectRewardPool();
             var marketItems = CreatePrototypeMarketItems();
+            var artifactRewards = CreatePrototypeArtifactRewardPool();
             return new List<CultivationRunNode>
             {
                 new CultivationRunNode(
@@ -954,7 +965,8 @@ namespace GameLogic.Cultivation
                     CultivationRunNodeType.Elite,
                     StoneDemonLeader,
                     rewards,
-                    spiritStoneReward: 35),
+                    spiritStoneReward: 35,
+                    artifactRewardPool: artifactRewards),
             };
         }
     }

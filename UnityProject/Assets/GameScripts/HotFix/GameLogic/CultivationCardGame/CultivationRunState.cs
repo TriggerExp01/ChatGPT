@@ -19,6 +19,7 @@ namespace GameLogic.Cultivation
             PurchasedMarketItems = new List<CultivationMarketItem>();
             Artifacts = new List<ArtifactDefinition>();
             PurchasedMarketArtifacts = new List<ArtifactDefinition>();
+            DroppedArtifacts = new List<ArtifactDefinition>();
             Pills = new List<PillDefinition>();
             PurchasedMarketPills = new List<PillDefinition>();
             RemovedMarketCards = new List<CardDefinition>();
@@ -82,6 +83,8 @@ namespace GameLogic.Cultivation
         public List<ArtifactDefinition> Artifacts { get; }
 
         public List<ArtifactDefinition> PurchasedMarketArtifacts { get; }
+
+        public List<ArtifactDefinition> DroppedArtifacts { get; }
 
         public int PillSlotLimit { get; }
 

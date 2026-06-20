@@ -115,6 +115,32 @@ namespace GameLogic.Tests
         }
 
         [Test]
+        public void BuildTextIncludesDroppedArtifactCount()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var route = new[]
+            {
+                new CultivationRunNode(
+                    "elite",
+                    "elite",
+                    CultivationRunNodeType.Elite,
+                    new EnemyDefinition("enemy", "enemy", 1, 0, new EnemyIntent(EnemyIntentType.Attack, 1)),
+                    CultivationSeedData.CreateSwordSectRewardPool(),
+                    artifactRewardPool: new[] { CultivationSeedData.SpiritStoneMineArtifact }),
+            };
+            var run = engine.StartRun(CreateInstantWinDeck(), route);
+
+            PlayFirstCard(run);
+            engine.ResolveBattleResult(run);
+            var snapshot = CultivationRunPrototypePresenter.CreateSnapshot(run);
+            var text = CultivationRunPrototypePresenter.BuildText(run);
+
+            Assert.AreEqual(1, snapshot.ArtifactCount);
+            Assert.AreEqual(1, snapshot.DroppedArtifactCount);
+            StringAssert.Contains("精英法宝：1", text.RunText);
+        }
+
+        [Test]
         public void SnapshotUsesCurrentBattleHpAfterUsingPill()
         {
             var engine = new CultivationRunEngine(new BattleEngine(1));

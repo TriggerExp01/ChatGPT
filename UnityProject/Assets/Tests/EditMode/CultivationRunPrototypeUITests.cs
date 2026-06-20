@@ -354,6 +354,27 @@ namespace GameLogic.Tests
             Assert.AreEqual(1, _ui.Snapshot.SoldMarketCardCount);
         }
 
+        [Test]
+        public void PrototypeUiEliteVictoryDropsArtifact()
+        {
+            ForceCurrentBattleVictory();
+            _ui.ResolveBattle();
+            _ui.SkipReward();
+            _ui.ChooseRoute(1);
+            _ui.Rest();
+            _ui.ChooseRoute(1);
+
+            Assert.AreEqual(CultivationRunNodeType.Elite, GetRun().CurrentNode.Type);
+
+            ForceCurrentBattleVictory();
+            _ui.ResolveBattle();
+
+            Assert.AreEqual(CultivationRunStatus.Reward, _ui.Snapshot.Status);
+            Assert.AreEqual(1, _ui.Snapshot.ArtifactCount);
+            Assert.AreEqual(1, _ui.Snapshot.DroppedArtifactCount);
+            StringAssert.Contains("精英战获得法宝：", GetCurrentBattleLogText());
+        }
+
         private string GetCurrentBattleLogText()
         {
             var run = GetRun();

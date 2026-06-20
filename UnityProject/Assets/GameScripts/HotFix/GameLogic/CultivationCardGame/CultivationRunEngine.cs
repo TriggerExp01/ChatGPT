@@ -77,6 +77,7 @@ namespace GameLogic.Cultivation
                         state.CurrentBattle.Logs.Add(new BattleLogEntry($"法宝额外获得 {artifactSpiritStoneReward} 灵石。"));
                     }
 
+                    AwardArtifactAfterEliteVictory(state);
                     RemoveExhaustedCardsFromDeck(state);
                     state.Status = CultivationRunStatus.Reward;
                     state.CurrentRewards.Clear();
@@ -429,6 +430,29 @@ namespace GameLogic.Cultivation
         private static int GetHealAfterVictory(CultivationRunState state)
         {
             return state.Artifacts.Sum(artifact => artifact.HealAfterVictoryAmount);
+        }
+
+        private ArtifactDefinition CreateArtifactReward(CultivationRunNode node)
+        {
+            if (node.Type != CultivationRunNodeType.Elite || node.ArtifactRewardPool.Count == 0)
+            {
+                return null;
+            }
+
+            return node.ArtifactRewardPool[_rewardRandom.Next(node.ArtifactRewardPool.Count)];
+        }
+
+        private void AwardArtifactAfterEliteVictory(CultivationRunState state)
+        {
+            var artifact = CreateArtifactReward(state.CurrentNode);
+            if (artifact == null)
+            {
+                return;
+            }
+
+            state.Artifacts.Add(artifact);
+            state.DroppedArtifacts.Add(artifact);
+            state.CurrentBattle.Logs.Add(new BattleLogEntry($"精英战获得法宝：{artifact.Name}。"));
         }
 
         private static void RemoveExhaustedCardsFromDeck(CultivationRunState state)
