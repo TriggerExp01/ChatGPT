@@ -38,12 +38,14 @@ namespace GameLogic.Cultivation
     {
         Battle,
         Elite,
+        Rest,
     }
 
     public enum CultivationRunStatus
     {
         InBattle,
         Reward,
+        Rest,
         Completed,
         Defeated,
     }

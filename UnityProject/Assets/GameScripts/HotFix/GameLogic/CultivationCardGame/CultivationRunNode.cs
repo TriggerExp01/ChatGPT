@@ -10,7 +10,8 @@ namespace GameLogic.Cultivation
             string name,
             CultivationRunNodeType type,
             EnemyDefinition enemy,
-            IEnumerable<CultivationRunReward> rewardPool)
+            IEnumerable<CultivationRunReward> rewardPool,
+            int restHealAmount = 0)
         {
             if (string.IsNullOrWhiteSpace(id))
             {
@@ -22,11 +23,17 @@ namespace GameLogic.Cultivation
                 throw new ArgumentException("Run node name is required.", nameof(name));
             }
 
+            if (type != CultivationRunNodeType.Rest && enemy == null)
+            {
+                throw new ArgumentNullException(nameof(enemy), "Combat run nodes require an enemy.");
+            }
+
             Id = id;
             Name = name;
             Type = type;
-            Enemy = enemy ?? throw new ArgumentNullException(nameof(enemy));
-            RewardPool = new List<CultivationRunReward>(rewardPool ?? throw new ArgumentNullException(nameof(rewardPool))).AsReadOnly();
+            Enemy = enemy;
+            RewardPool = new List<CultivationRunReward>(rewardPool ?? Array.Empty<CultivationRunReward>()).AsReadOnly();
+            RestHealAmount = Math.Max(0, restHealAmount);
         }
 
         public string Id { get; }
@@ -38,5 +45,7 @@ namespace GameLogic.Cultivation
         public EnemyDefinition Enemy { get; }
 
         public IReadOnlyList<CultivationRunReward> RewardPool { get; }
+
+        public int RestHealAmount { get; }
     }
 }

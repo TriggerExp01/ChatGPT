@@ -16,10 +16,12 @@ namespace GameLogic.Tests
 
             Assert.AreEqual(CultivationRunStatus.InBattle, run.Status);
             Assert.AreEqual(0, run.CurrentNodeIndex);
-            Assert.AreEqual(3, run.Route.Count);
+            Assert.AreEqual(4, run.Route.Count);
             Assert.AreEqual(CultivationSeedData.StoneDemon.Id, run.CurrentNode.Enemy.Id);
             Assert.NotNull(run.CurrentBattle);
             Assert.AreEqual(5, run.CurrentBattle.Hand.Count);
+            Assert.AreEqual(100, run.PlayerCurrentHp);
+            Assert.AreEqual(100, run.PlayerMaxHp);
         }
 
         [Test]
@@ -55,6 +57,64 @@ namespace GameLogic.Tests
             Assert.AreEqual(1, run.ClaimedRewards.Count);
             Assert.NotNull(run.CurrentBattle);
             Assert.AreEqual("test_enemy_2", run.CurrentNode.Enemy.Id);
+        }
+
+        [Test]
+        public void RunCarriesPlayerHpIntoNextBattle()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var run = engine.StartRun(CreateInstantWinDeck(), CreateTestRoute(), playerCurrentHp: 70);
+
+            Assert.AreEqual(70, run.CurrentBattle.Player.CurrentHp);
+
+            run.CurrentBattle.Player.TakeDamage(12);
+            PlayFirstCard(run);
+            engine.ResolveBattleResult(run);
+
+            Assert.AreEqual(58, run.PlayerCurrentHp);
+
+            engine.SkipReward(run);
+
+            Assert.AreEqual(CultivationRunStatus.InBattle, run.Status);
+            Assert.AreEqual(58, run.CurrentBattle.Player.CurrentHp);
+        }
+
+        [Test]
+        public void RestNodeHealsPersistentHpAndStartsNextBattle()
+        {
+            var route = CreateRouteWithRest();
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var run = engine.StartRun(CreateInstantWinDeck(), route, playerCurrentHp: 50);
+
+            PlayFirstCard(run);
+            engine.ResolveBattleResult(run);
+            engine.SkipReward(run);
+
+            Assert.AreEqual(CultivationRunStatus.Rest, run.Status);
+            Assert.AreEqual("rest_node", run.CurrentNode.Id);
+            Assert.IsNull(run.CurrentBattle);
+
+            engine.Rest(run);
+
+            Assert.AreEqual(80, run.PlayerCurrentHp);
+            Assert.AreEqual(CultivationRunStatus.InBattle, run.Status);
+            Assert.AreEqual("after_rest_enemy", run.CurrentNode.Enemy.Id);
+            Assert.AreEqual(80, run.CurrentBattle.Player.CurrentHp);
+        }
+
+        [Test]
+        public void RestDoesNotOverhealAboveMaxHp()
+        {
+            var route = CreateRouteWithRest();
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var run = engine.StartRun(CreateInstantWinDeck(), route, playerCurrentHp: 90);
+
+            WinCurrentBattle(engine, run);
+            engine.SkipReward(run);
+            engine.Rest(run);
+
+            Assert.AreEqual(100, run.PlayerCurrentHp);
+            Assert.AreEqual(100, run.CurrentBattle.Player.CurrentHp);
         }
 
         [Test]
@@ -95,6 +155,7 @@ namespace GameLogic.Tests
             engine.ResolveBattleResult(run);
 
             Assert.AreEqual(CultivationRunStatus.Defeated, run.Status);
+            Assert.AreEqual(0, run.PlayerCurrentHp);
             Assert.IsNull(run.CurrentBattle);
             Assert.AreEqual(0, run.CurrentRewards.Count);
         }
@@ -142,6 +203,33 @@ namespace GameLogic.Tests
                     "test_node_2",
                     CultivationRunNodeType.Elite,
                     new EnemyDefinition("test_enemy_2", "test_enemy_2", 1, 0, new EnemyIntent(EnemyIntentType.Attack, 1)),
+                    rewards),
+            };
+        }
+
+        private static IReadOnlyList<CultivationRunNode> CreateRouteWithRest()
+        {
+            var rewards = CultivationSeedData.CreateSwordSectRewardPool();
+            return new List<CultivationRunNode>
+            {
+                new CultivationRunNode(
+                    "before_rest",
+                    "before_rest",
+                    CultivationRunNodeType.Battle,
+                    new EnemyDefinition("before_rest_enemy", "before_rest_enemy", 1, 0, new EnemyIntent(EnemyIntentType.Attack, 1)),
+                    rewards),
+                new CultivationRunNode(
+                    "rest_node",
+                    "rest_node",
+                    CultivationRunNodeType.Rest,
+                    null,
+                    null,
+                    restHealAmount: 30),
+                new CultivationRunNode(
+                    "after_rest",
+                    "after_rest",
+                    CultivationRunNodeType.Elite,
+                    new EnemyDefinition("after_rest_enemy", "after_rest_enemy", 1, 0, new EnemyIntent(EnemyIntentType.Attack, 1)),
                     rewards),
             };
         }

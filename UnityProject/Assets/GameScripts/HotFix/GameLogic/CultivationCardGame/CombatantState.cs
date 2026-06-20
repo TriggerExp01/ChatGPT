@@ -4,7 +4,7 @@ namespace GameLogic.Cultivation
 {
     public sealed class CombatantState
     {
-        public CombatantState(string name, int maxHp, int defense = 0)
+        public CombatantState(string name, int maxHp, int defense = 0, int? currentHp = null)
         {
             if (string.IsNullOrWhiteSpace(name))
             {
@@ -16,9 +16,14 @@ namespace GameLogic.Cultivation
                 throw new ArgumentOutOfRangeException(nameof(maxHp), "Max HP must be positive.");
             }
 
+            if (currentHp.HasValue && (currentHp.Value <= 0 || currentHp.Value > maxHp))
+            {
+                throw new ArgumentOutOfRangeException(nameof(currentHp), "Current HP must be between 1 and max HP.");
+            }
+
             Name = name;
             MaxHp = maxHp;
-            CurrentHp = maxHp;
+            CurrentHp = currentHp ?? maxHp;
             Defense = Math.Max(0, defense);
         }
 

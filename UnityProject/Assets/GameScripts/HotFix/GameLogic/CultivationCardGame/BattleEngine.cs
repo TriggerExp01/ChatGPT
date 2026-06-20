@@ -15,6 +15,11 @@ namespace GameLogic.Cultivation
 
         public BattleState CreateBattle(IEnumerable<CardDefinition> deck, EnemyDefinition enemy)
         {
+            return CreateBattle(deck, enemy, 100, 100);
+        }
+
+        public BattleState CreateBattle(IEnumerable<CardDefinition> deck, EnemyDefinition enemy, int playerCurrentHp, int playerMaxHp = 100)
+        {
             if (deck == null)
             {
                 throw new ArgumentNullException(nameof(deck));
@@ -25,7 +30,17 @@ namespace GameLogic.Cultivation
                 throw new ArgumentNullException(nameof(enemy));
             }
 
-            var player = new CombatantState("修士", 100);
+            if (playerMaxHp <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(playerMaxHp), "Player max HP must be positive.");
+            }
+
+            if (playerCurrentHp <= 0 || playerCurrentHp > playerMaxHp)
+            {
+                throw new ArgumentOutOfRangeException(nameof(playerCurrentHp), "Player current HP must be between 1 and max HP.");
+            }
+
+            var player = new CombatantState("修士", playerMaxHp, currentHp: playerCurrentHp);
             var state = new BattleState(player, deck, new[] { new EnemyState(enemy) });
             Shuffle(state.DrawPile);
             StartPlayerTurn(state);
@@ -391,6 +406,7 @@ namespace GameLogic.Cultivation
             {
                 new CultivationRunNode("node_stone_demon", "山门石魔", CultivationRunNodeType.Battle, StoneDemon, rewards),
                 new CultivationRunNode("node_fire_bat", "火蝠洞", CultivationRunNodeType.Battle, FireBat, rewards),
+                new CultivationRunNode("node_meditation", "闭关调息", CultivationRunNodeType.Rest, null, null, restHealAmount: 30),
                 new CultivationRunNode("node_stone_demon_leader", "石魔首领", CultivationRunNodeType.Elite, StoneDemonLeader, rewards),
             };
         }

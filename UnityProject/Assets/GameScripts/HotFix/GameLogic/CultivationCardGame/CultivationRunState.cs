@@ -5,7 +5,7 @@ namespace GameLogic.Cultivation
 {
     public sealed class CultivationRunState
     {
-        public CultivationRunState(IEnumerable<CardDefinition> deck, IEnumerable<CultivationRunNode> route)
+        public CultivationRunState(IEnumerable<CardDefinition> deck, IEnumerable<CultivationRunNode> route, int playerMaxHp = 100, int? playerCurrentHp = null)
         {
             Deck = new List<CardDefinition>(deck ?? throw new ArgumentNullException(nameof(deck)));
             Route = new List<CultivationRunNode>(route ?? throw new ArgumentNullException(nameof(route))).AsReadOnly();
@@ -21,6 +21,19 @@ namespace GameLogic.Cultivation
             {
                 throw new ArgumentException("Run route cannot be empty.", nameof(route));
             }
+
+            if (playerMaxHp <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(playerMaxHp), "Player max HP must be positive.");
+            }
+
+            if (playerCurrentHp.HasValue && (playerCurrentHp.Value <= 0 || playerCurrentHp.Value > playerMaxHp))
+            {
+                throw new ArgumentOutOfRangeException(nameof(playerCurrentHp), "Player current HP must be between 1 and max HP.");
+            }
+
+            PlayerMaxHp = playerMaxHp;
+            PlayerCurrentHp = playerCurrentHp ?? playerMaxHp;
         }
 
         public List<CardDefinition> Deck { get; }
@@ -28,6 +41,10 @@ namespace GameLogic.Cultivation
         public IReadOnlyList<CultivationRunNode> Route { get; }
 
         public int CurrentNodeIndex { get; set; }
+
+        public int PlayerMaxHp { get; }
+
+        public int PlayerCurrentHp { get; set; }
 
         public CultivationRunStatus Status { get; set; }
 
