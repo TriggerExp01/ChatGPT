@@ -118,6 +118,65 @@ namespace GameLogic.Tests
         }
 
         [Test]
+        public void RestAndUpgradeReplacesSelectedDeckCardAndAdvances()
+        {
+            var route = CreateRouteWithRest();
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var run = engine.StartRun(CultivationSeedData.CreateSwordSectStarterDeck(), route, playerCurrentHp: 50);
+
+            run.CurrentBattle.Outcome = BattleOutcome.Victory;
+            engine.ResolveBattleResult(run);
+            engine.SkipReward(run);
+
+            var swordQiIndex = run.Deck.FindIndex(card => card.Id == "sword_qi");
+            Assert.GreaterOrEqual(swordQiIndex, 0);
+            Assert.AreEqual(CultivationRunStatus.Rest, run.Status);
+            Assert.IsTrue(run.RestUpgradeChoices.Any(choice => choice.DeckIndex == swordQiIndex));
+
+            engine.RestAndUpgrade(run, swordQiIndex, 0);
+
+            Assert.AreEqual("sword_qi_damage_1", run.Deck[swordQiIndex].Id);
+            Assert.AreEqual("追魂剑气", run.Deck[swordQiIndex].Name);
+            Assert.AreEqual(80, run.PlayerCurrentHp);
+            Assert.AreEqual(CultivationRunStatus.InBattle, run.Status);
+            Assert.AreEqual("after_rest_enemy", run.CurrentNode.Enemy.Id);
+            Assert.AreEqual("sword_qi_damage_1", run.CurrentBattle.DrawPile.Concat(run.CurrentBattle.Hand).Concat(run.CurrentBattle.DiscardPile).First(card => card.Id == "sword_qi_damage_1").Id);
+        }
+
+        [Test]
+        public void UpgradedCardIsRemovedFromRestChoicesUntilSecondLayerExists()
+        {
+            var route = CreateRouteWithRest();
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var run = engine.StartRun(CultivationSeedData.CreateSwordSectStarterDeck(), route);
+
+            run.CurrentBattle.Outcome = BattleOutcome.Victory;
+            engine.ResolveBattleResult(run);
+            engine.SkipReward(run);
+            var swordQiIndex = run.Deck.FindIndex(card => card.Id == "sword_qi");
+
+            engine.RestAndUpgrade(run, swordQiIndex, 1);
+
+            Assert.AreEqual("sword_qi_cost_1", run.Deck[swordQiIndex].Id);
+            Assert.IsFalse(run.Deck[swordQiIndex].CanUpgrade);
+        }
+
+        [Test]
+        public void RestAndUpgradeRejectsNonUpgradeableCard()
+        {
+            var route = CreateRouteWithRest();
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var plainCard = new CardDefinition("plain", "plain", 0, new CardEffect(CardEffectType.Draw, 1, CardTarget.Self));
+            var run = engine.StartRun(new[] { plainCard, plainCard, plainCard, plainCard, plainCard }, route);
+
+            run.CurrentBattle.Outcome = BattleOutcome.Victory;
+            engine.ResolveBattleResult(run);
+            engine.SkipReward(run);
+
+            Assert.Throws<System.InvalidOperationException>(() => engine.RestAndUpgrade(run, 0, 0));
+        }
+
+        [Test]
         public void SkippingFinalRewardCompletesRun()
         {
             var engine = new CultivationRunEngine(new BattleEngine(1));

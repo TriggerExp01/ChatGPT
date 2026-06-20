@@ -292,12 +292,38 @@ namespace GameLogic.Cultivation
             "sword_qi",
             "剑气诀",
             1,
+            new[]
+            {
+                new CardUpgradeOption(
+                    "sword_qi_damage_1",
+                    "追魂剑气",
+                    "伤害提升到 11。",
+                    new CardDefinition("sword_qi_damage_1", "追魂剑气", 1, new CardEffect(CardEffectType.Damage, 11))),
+                new CardUpgradeOption(
+                    "sword_qi_cost_1",
+                    "灵动剑气",
+                    "灵力消耗降为 0。",
+                    new CardDefinition("sword_qi_cost_1", "灵动剑气", 0, new CardEffect(CardEffectType.Damage, 8))),
+            },
             new CardEffect(CardEffectType.Damage, 8));
 
         public static CardDefinition BreakArmor { get; } = new CardDefinition(
             "break_armor",
             "破甲符",
             1,
+            new[]
+            {
+                new CardUpgradeOption(
+                    "break_armor_damage_1",
+                    "裂甲符",
+                    "伤害提升到 5，破防保持 1 层。",
+                    new CardDefinition("break_armor_damage_1", "裂甲符", 1, new CardEffect(CardEffectType.Damage, 5), new CardEffect(CardEffectType.BreakDefense, 1))),
+                new CardUpgradeOption(
+                    "break_armor_stack_1",
+                    "碎甲符",
+                    "破防提升到 2 层。",
+                    new CardDefinition("break_armor_stack_1", "碎甲符", 1, new CardEffect(CardEffectType.Damage, 3), new CardEffect(CardEffectType.BreakDefense, 2))),
+            },
             new CardEffect(CardEffectType.Damage, 3),
             new CardEffect(CardEffectType.BreakDefense, 1));
 
@@ -305,12 +331,38 @@ namespace GameLogic.Cultivation
             "guard_qi",
             "护体真气",
             1,
+            new[]
+            {
+                new CardUpgradeOption(
+                    "guard_qi_shield_1",
+                    "护体罡气",
+                    "护盾提升到 11。",
+                    new CardDefinition("guard_qi_shield_1", "护体罡气", 1, new CardEffect(CardEffectType.Shield, 11, CardTarget.Self))),
+                new CardUpgradeOption(
+                    "guard_qi_draw_1",
+                    "流转真气",
+                    "获得 7 护盾并抽 1 张牌。",
+                    new CardDefinition("guard_qi_draw_1", "流转真气", 1, new CardEffect(CardEffectType.Shield, 7, CardTarget.Self), new CardEffect(CardEffectType.Draw, 1, CardTarget.Self))),
+            },
             new CardEffect(CardEffectType.Shield, 8, CardTarget.Self));
 
         public static CardDefinition SwordStep { get; } = new CardDefinition(
             "sword_step",
             "剑步",
             1,
+            new[]
+            {
+                new CardUpgradeOption(
+                    "sword_step_guard_1",
+                    "御剑步",
+                    "护盾提升到 7，仍抽 1 张牌。",
+                    new CardDefinition("sword_step_guard_1", "御剑步", 1, new CardEffect(CardEffectType.Shield, 7, CardTarget.Self), new CardEffect(CardEffectType.Draw, 1, CardTarget.Self))),
+                new CardUpgradeOption(
+                    "sword_step_draw_1",
+                    "游龙剑步",
+                    "护盾保持 4，抽牌提升到 2。",
+                    new CardDefinition("sword_step_draw_1", "游龙剑步", 1, new CardEffect(CardEffectType.Shield, 4, CardTarget.Self), new CardEffect(CardEffectType.Draw, 2, CardTarget.Self))),
+            },
             new CardEffect(CardEffectType.Shield, 4, CardTarget.Self),
             new CardEffect(CardEffectType.Draw, 1, CardTarget.Self));
 
@@ -318,24 +370,76 @@ namespace GameLogic.Cultivation
             "light_body",
             "轻身术",
             0,
+            new[]
+            {
+                new CardUpgradeOption(
+                    "light_body_shield_1",
+                    "轻身护法",
+                    "抽 2 张牌并获得 3 护盾。",
+                    new CardDefinition("light_body_shield_1", "轻身护法", 0, new CardEffect(CardEffectType.Draw, 2, CardTarget.Self), new CardEffect(CardEffectType.Shield, 3, CardTarget.Self))),
+                new CardUpgradeOption(
+                    "light_body_draw_1",
+                    "身随剑走",
+                    "抽牌提升到 3。",
+                    new CardDefinition("light_body_draw_1", "身随剑走", 0, new CardEffect(CardEffectType.Draw, 3, CardTarget.Self))),
+            },
             new CardEffect(CardEffectType.Draw, 2, CardTarget.Self));
 
         public static CardDefinition HealingPill { get; } = new CardDefinition(
             "healing_pill",
             "回春丹",
             1,
+            new[]
+            {
+                new CardUpgradeOption(
+                    "healing_pill_heal_1",
+                    "大回春丹",
+                    "恢复提升到 10 HP。",
+                    new CardDefinition("healing_pill_heal_1", "大回春丹", 1, new CardEffect(CardEffectType.Heal, 10, CardTarget.Self))),
+                new CardUpgradeOption(
+                    "healing_pill_cycle_1",
+                    "回春行气丹",
+                    "恢复 6 HP 并抽 1 张牌。",
+                    new CardDefinition("healing_pill_cycle_1", "回春行气丹", 1, new CardEffect(CardEffectType.Heal, 6, CardTarget.Self), new CardEffect(CardEffectType.Draw, 1, CardTarget.Self))),
+            },
             new CardEffect(CardEffectType.Heal, 6, CardTarget.Self));
 
         public static CardDefinition FlyingSword { get; } = new CardDefinition(
             "flying_sword",
             "御剑式",
             2,
+            new[]
+            {
+                new CardUpgradeOption(
+                    "flying_sword_damage_1",
+                    "御剑穿云",
+                    "伤害提升到 20。",
+                    new CardDefinition("flying_sword_damage_1", "御剑穿云", 2, new CardEffect(CardEffectType.Damage, 20))),
+                new CardUpgradeOption(
+                    "flying_sword_cost_1",
+                    "御剑轻灵",
+                    "灵力消耗降为 1。",
+                    new CardDefinition("flying_sword_cost_1", "御剑轻灵", 1, new CardEffect(CardEffectType.Damage, 16))),
+            },
             new CardEffect(CardEffectType.Damage, 16));
 
         public static CardDefinition CloudGuard { get; } = new CardDefinition(
             "cloud_guard",
             "流云护身",
             1,
+            new[]
+            {
+                new CardUpgradeOption(
+                    "cloud_guard_shield_1",
+                    "流云固守",
+                    "护盾提升到 9，仍抽 1 张牌。",
+                    new CardDefinition("cloud_guard_shield_1", "流云固守", 1, new CardEffect(CardEffectType.Shield, 9, CardTarget.Self), new CardEffect(CardEffectType.Draw, 1, CardTarget.Self))),
+                new CardUpgradeOption(
+                    "cloud_guard_draw_1",
+                    "流云回环",
+                    "护盾保持 6，抽牌提升到 2。",
+                    new CardDefinition("cloud_guard_draw_1", "流云回环", 1, new CardEffect(CardEffectType.Shield, 6, CardTarget.Self), new CardEffect(CardEffectType.Draw, 2, CardTarget.Self))),
+            },
             new CardEffect(CardEffectType.Shield, 6, CardTarget.Self),
             new CardEffect(CardEffectType.Draw, 1, CardTarget.Self));
 
@@ -343,6 +447,19 @@ namespace GameLogic.Cultivation
             "small_restore_pill",
             "小还丹",
             1,
+            new[]
+            {
+                new CardUpgradeOption(
+                    "small_restore_pill_heal_1",
+                    "还真丹",
+                    "恢复提升到 14 HP。",
+                    new CardDefinition("small_restore_pill_heal_1", "还真丹", 1, new CardEffect(CardEffectType.Heal, 14, CardTarget.Self))),
+                new CardUpgradeOption(
+                    "small_restore_pill_draw_1",
+                    "还灵丹",
+                    "恢复 10 HP 并抽 1 张牌。",
+                    new CardDefinition("small_restore_pill_draw_1", "还灵丹", 1, new CardEffect(CardEffectType.Heal, 10, CardTarget.Self), new CardEffect(CardEffectType.Draw, 1, CardTarget.Self))),
+            },
             new CardEffect(CardEffectType.Heal, 10, CardTarget.Self));
 
         public static IReadOnlyList<CardDefinition> CreateSwordSectStarterDeck()

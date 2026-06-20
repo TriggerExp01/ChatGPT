@@ -6,6 +6,11 @@ namespace GameLogic.Cultivation
     public sealed class CardDefinition
     {
         public CardDefinition(string id, string name, int spiritCost, params CardEffect[] effects)
+            : this(id, name, spiritCost, null, effects)
+        {
+        }
+
+        public CardDefinition(string id, string name, int spiritCost, IEnumerable<CardUpgradeOption> upgradeOptions, params CardEffect[] effects)
         {
             if (string.IsNullOrWhiteSpace(id))
             {
@@ -26,6 +31,7 @@ namespace GameLogic.Cultivation
             Name = name;
             SpiritCost = spiritCost;
             Effects = new List<CardEffect>(effects ?? Array.Empty<CardEffect>()).AsReadOnly();
+            UpgradeOptions = new List<CardUpgradeOption>(upgradeOptions ?? Array.Empty<CardUpgradeOption>()).AsReadOnly();
         }
 
         public string Id { get; }
@@ -35,5 +41,9 @@ namespace GameLogic.Cultivation
         public int SpiritCost { get; }
 
         public IReadOnlyList<CardEffect> Effects { get; }
+
+        public IReadOnlyList<CardUpgradeOption> UpgradeOptions { get; }
+
+        public bool CanUpgrade => UpgradeOptions.Count > 0;
     }
 }

@@ -96,6 +96,19 @@ namespace GameLogic.Cultivation
             AdvanceToNextNode(state);
         }
 
+        public void RestAndUpgrade(CultivationRunState state, int deckIndex, int upgradeOptionIndex)
+        {
+            EnsureState(state);
+
+            if (state.Status != CultivationRunStatus.Rest)
+            {
+                throw new InvalidOperationException("Run is not in rest state.");
+            }
+
+            UpgradeDeckCard(state, deckIndex, upgradeOptionIndex);
+            Rest(state);
+        }
+
         private void EnterCurrentNode(CultivationRunState state)
         {
             switch (state.CurrentNode.Type)
@@ -107,6 +120,7 @@ namespace GameLogic.Cultivation
                 case CultivationRunNodeType.Rest:
                     state.CurrentBattle = null;
                     state.CurrentRewards.Clear();
+                    RefreshRestUpgradeChoices(state);
                     state.Status = CultivationRunStatus.Rest;
                     break;
                 default:
@@ -117,6 +131,7 @@ namespace GameLogic.Cultivation
         private void StartCurrentBattle(CultivationRunState state)
         {
             state.CurrentRewards.Clear();
+            state.RestUpgradeChoices.Clear();
             state.CurrentBattle = _battleEngine.CreateBattle(state.Deck, state.CurrentNode.Enemy, state.PlayerCurrentHp, state.PlayerMaxHp);
             state.Status = CultivationRunStatus.InBattle;
         }
@@ -134,6 +149,7 @@ namespace GameLogic.Cultivation
         private void AdvanceToNextNode(CultivationRunState state)
         {
             state.CurrentRewards.Clear();
+            state.RestUpgradeChoices.Clear();
             state.CurrentBattle = null;
 
             if (state.CurrentNodeIndex >= state.Route.Count - 1)
@@ -154,6 +170,41 @@ namespace GameLogic.Cultivation
             {
                 throw new InvalidOperationException("Run is not in reward state.");
             }
+        }
+
+        private static void RefreshRestUpgradeChoices(CultivationRunState state)
+        {
+            state.RestUpgradeChoices.Clear();
+            for (var i = 0; i < state.Deck.Count; i++)
+            {
+                var card = state.Deck[i];
+                if (card.CanUpgrade)
+                {
+                    state.RestUpgradeChoices.Add(new CultivationRestUpgradeChoice(i, card));
+                }
+            }
+        }
+
+        private static void UpgradeDeckCard(CultivationRunState state, int deckIndex, int upgradeOptionIndex)
+        {
+            if (deckIndex < 0 || deckIndex >= state.Deck.Count)
+            {
+                throw new ArgumentOutOfRangeException(nameof(deckIndex), "Deck index is outside the run deck.");
+            }
+
+            var card = state.Deck[deckIndex];
+            if (!card.CanUpgrade)
+            {
+                throw new InvalidOperationException("Selected card cannot be upgraded.");
+            }
+
+            if (upgradeOptionIndex < 0 || upgradeOptionIndex >= card.UpgradeOptions.Count)
+            {
+                throw new ArgumentOutOfRangeException(nameof(upgradeOptionIndex), "Upgrade option index is outside the selected card options.");
+            }
+
+            state.Deck[deckIndex] = card.UpgradeOptions[upgradeOptionIndex].UpgradedCard;
+            RefreshRestUpgradeChoices(state);
         }
 
         private static void EnsureState(CultivationRunState state)

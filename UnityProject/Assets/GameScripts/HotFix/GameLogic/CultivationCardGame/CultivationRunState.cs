@@ -11,6 +11,7 @@ namespace GameLogic.Cultivation
             Route = new List<CultivationRunNode>(route ?? throw new ArgumentNullException(nameof(route))).AsReadOnly();
             CurrentRewards = new List<CultivationRunReward>();
             ClaimedRewards = new List<CultivationRunReward>();
+            RestUpgradeChoices = new List<CultivationRestUpgradeChoice>();
 
             if (Deck.Count == 0)
             {
@@ -53,6 +54,8 @@ namespace GameLogic.Cultivation
         public List<CultivationRunReward> CurrentRewards { get; }
 
         public List<CultivationRunReward> ClaimedRewards { get; }
+
+        public List<CultivationRestUpgradeChoice> RestUpgradeChoices { get; }
 
         public CultivationRunNode CurrentNode => Route[CurrentNodeIndex];
     }
