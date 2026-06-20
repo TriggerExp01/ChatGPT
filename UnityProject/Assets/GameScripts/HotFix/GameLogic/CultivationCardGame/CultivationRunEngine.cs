@@ -19,14 +19,15 @@ namespace GameLogic.Cultivation
             _rewardRandom = new Random(rewardSeed);
         }
 
-        public CultivationRunState StartRun(IEnumerable<CardDefinition> deck = null, IEnumerable<CultivationRunNode> route = null, int playerMaxHp = 100, int? playerCurrentHp = null, int initialSpiritStones = 0)
+        public CultivationRunState StartRun(IEnumerable<CardDefinition> deck = null, IEnumerable<CultivationRunNode> route = null, int playerMaxHp = 100, int? playerCurrentHp = null, int initialSpiritStones = 0, CultivationSect sect = CultivationSect.Sword)
         {
             var state = new CultivationRunState(
-                deck ?? CultivationSeedData.CreateSwordSectStarterDeck(),
-                route ?? CultivationSeedData.CreateFirstPrototypeRoute(),
+                deck ?? CultivationSeedData.CreateStarterDeck(sect),
+                route ?? CultivationSeedData.CreateFirstPrototypeRoute(sect),
                 playerMaxHp,
                 playerCurrentHp,
-                initialSpiritStones);
+                initialSpiritStones,
+                sect);
 
             EnterCurrentNode(state);
             return state;

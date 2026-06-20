@@ -22,6 +22,7 @@
 - 修改 `UnityProject/Assets/GameScripts/HotFix/GameLogic/CultivationCardGame/BattleEngine.cs`
   - `ChanceDamage` 现在支持 `RepeatCount`，可用于多段独立概率伤害。
   - 新增 `ResolveChanceDamageHits(...)`，统一处理多段暴击、暴击眩晕和每击连锁。
+  - 修正 `ChanceDamageWithStun` / `ChanceDamageWithChain` 的参数语义：多段基础伤害固定使用 `Value`，`FallbackValue` 只作为暴击后眩晕概率或连锁伤害，不再被误当作未暴击伤害。
   - `CultivationSeedData` 新增 `ThunderousBarrage`。
   - `CreateThunderSectRewardPool()` 新增 `reward_thunderous_barrage`。
 - 修改 `UnityProject/Assets/GameScripts/HotFix/GameLogic/CultivationCardGame/CultivationRunPrototypePresenter.cs`
@@ -42,25 +43,20 @@
 
 - `dotnet build UnityProject\UnityProject.sln --no-restore`
   - 结果：通过，0 Error。
-  - 备注：仍存在项目既有 warning，包括 `USG0001`、`CS8632`、`System.Net.Http` / `System.IO.Compression` 版本冲突。
+- `git diff --check`
+  - 结果：通过。
 - Unity MCP
-  - 结果：未通过正式验收。
-  - `mcpforunity://editor/state` 可读取，但返回 `ready_for_tools=false`，阻塞原因为 `stale_status`。
-  - `read_console(action="get", types=["error"])` 超时。
-  - 定向 `run_tests(EditMode)` 超时，目标测试包括：
-    - `GameLogic.Tests.CultivationBattleEngineTests.ThunderousBarrageHitsMultipleTimes`
-    - `GameLogic.Tests.CultivationBattleEngineTests.ThunderousBarrageCriticalCanStun`
-    - `GameLogic.Tests.CultivationRunEngineTests.ThunderousBarrageFirstLayerUpgradesKeepSecondLayerChoices`
-  - 结论：本阶段新增代码和测试已通过 C# 编译，但 Unity Test Framework 实跑与控制台无 Error 验收仍待 MCP 恢复后补齐。
+  - `read_console(action="get", types=["error","warning"])`：0 条。
+  - `run_tests(EditMode, assembly_names=["GameLogic.EditModeTests"])`：通过，170/170 Passed，0 Failed，0 Skipped。
+  - 结论：本阶段代码、测试和 Unity MCP 验收已补齐。
 
 ## 假设与风险
 
 - `ChanceDamage` 的 `RepeatCount` 用于多段独立暴击；单段旧卡仍保持原有文本和结算语义。
 - `雷霆万钧·晕` 的 `FallbackValue` 承载暴击后眩晕概率，`Duration` 承载眩晕回合数。
 - `雷霆万钧·连` 的 `FallbackValue` 承载连锁伤害，`SecondaryValue` 承载每击连锁概率。
-- 当前仍缺少 Unity Editor 内测试实跑和控制台无 Error 验收，原因是 Unity MCP 连接状态不稳定。
+- 现有伤害公式仍保持“先扣目标防御再扣 HP”；因此 `雷霆万钧·连` 的 2 点连锁伤害会被石魔 2 点防御完全抵消，但连锁触发日志和目标选择仍会发生。
 
 ## 可选下一步
 
 - Phase57：接入天雷阁灵品卡 `雷神之锤`，补“本回合已触发过暴击”的战斗状态追踪和回报牌。
-- MCP 恢复后补跑 Phase49 到 Phase56 的天雷阁定向 EditMode 测试与完整 `GameLogic.EditModeTests`。

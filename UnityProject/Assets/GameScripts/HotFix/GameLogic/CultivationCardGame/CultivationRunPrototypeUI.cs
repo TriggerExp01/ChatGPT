@@ -29,8 +29,23 @@ namespace GameLogic.Cultivation
         private Text _statusText;
         private Button _endTurnButton;
         private Button _resetButton;
+        private Button _swordSectButton;
+        private Button _fireCloudSectButton;
+        private Button _thunderSectButton;
         private GameObject _infoCardTemplate;
+        private GameObject _statCardTemplate;
+        private GameObject _mapNodeTemplate;
         private GameObject _actionButtonTemplate;
+        private GameObject _rewardCardTemplate;
+        private GameObject _routeChoiceTemplate;
+        private GameObject _restChoiceTemplate;
+        private GameObject _marketItemTemplate;
+        private GameObject _chestRewardTemplate;
+        private GameObject _mysticEventTemplate;
+        private GameObject _goldenCorePassiveTemplate;
+        private GameObject _battleCardTemplate;
+        private GameObject _pillItemTemplate;
+        private GameObject _marketDeckActionTemplate;
         private GameObject _messageTextTemplate;
 
         private static readonly Color ThemeRootInk = new Color(0.026f, 0.032f, 0.030f, 0.99f);
@@ -49,6 +64,37 @@ namespace GameLogic.Cultivation
         private static readonly Color ThemeShadow = new Color(0f, 0f, 0f, 0.52f);
         private static readonly Color ThemeTextMain = new Color(0.93f, 0.96f, 0.90f, 1f);
         private static readonly Color ThemeTextMuted = new Color(0.72f, 0.80f, 0.78f, 1f);
+        private static readonly Color ThemeRewardButtonInk = new Color(0.190f, 0.145f, 0.088f, 1f);
+        private static readonly Color ThemeRouteButtonInk = new Color(0.118f, 0.205f, 0.185f, 1f);
+        private static readonly Color ThemeRestButtonInk = new Color(0.135f, 0.190f, 0.145f, 1f);
+        private static readonly Color ThemeMarketButtonInk = new Color(0.170f, 0.128f, 0.080f, 1f);
+        private static readonly Color ThemeChestButtonInk = new Color(0.205f, 0.160f, 0.080f, 1f);
+        private static readonly Color ThemeMysticButtonInk = new Color(0.120f, 0.105f, 0.185f, 1f);
+        private static readonly Color ThemeGoldenCoreButtonInk = new Color(0.235f, 0.185f, 0.070f, 1f);
+        private static readonly Color ThemeBattleCardButtonInk = new Color(0.155f, 0.095f, 0.075f, 1f);
+        private static readonly Color ThemePillButtonInk = new Color(0.095f, 0.165f, 0.128f, 1f);
+        private static readonly Color ThemeMarketDeckButtonInk = new Color(0.135f, 0.115f, 0.095f, 1f);
+
+        private enum InfoTemplateKind
+        {
+            Stat,
+            MapNode,
+        }
+
+        private enum ActionTemplateKind
+        {
+            Generic,
+            RewardCard,
+            RouteChoice,
+            RestChoice,
+            MarketItem,
+            ChestReward,
+            MysticEvent,
+            GoldenCorePassive,
+            BattleCard,
+            PillItem,
+            MarketDeckAction,
+        }
 
         public RunPrototypeSnapshot Snapshot => CultivationRunPrototypePresenter.CreateSnapshot(_run);
 
@@ -84,9 +130,14 @@ namespace GameLogic.Cultivation
 
         public void ResetRun()
         {
+            ResetRun(CultivationSect.Sword);
+        }
+
+        public void ResetRun(CultivationSect sect)
+        {
             _battleEngine = new BattleEngine(20260620);
             _runEngine = new CultivationRunEngine(_battleEngine);
-            _run = _runEngine.StartRun(CultivationSeedData.CreateSwordSectStarterDeck(), CultivationSeedData.CreateFirstPrototypeBranchingRoute());
+            _run = _runEngine.StartRun(route: CultivationSeedData.CreateFirstPrototypeBranchingRoute(sect), sect: sect);
             _run.CurrentBattle.Logs.Add(new BattleLogEntry("Phase 7 Run 原型界面已连接战斗、奖励、闭关升级和路线选择。"));
             Refresh();
         }
@@ -438,6 +489,18 @@ namespace GameLogic.Cultivation
             _resetButton.onClick.AddListener(ResetRun);
             SetLayout(_resetButton.gameObject, preferredWidth: 170, preferredHeight: 48);
 
+            _swordSectButton = CreateButton("SwordSectButton", actionBar, "剑宗开局");
+            _swordSectButton.onClick.AddListener(() => ResetRun(CultivationSect.Sword));
+            SetLayout(_swordSectButton.gameObject, preferredWidth: 170, preferredHeight: 48);
+
+            _fireCloudSectButton = CreateButton("FireCloudSectButton", actionBar, "火云宗开局");
+            _fireCloudSectButton.onClick.AddListener(() => ResetRun(CultivationSect.FireCloud));
+            SetLayout(_fireCloudSectButton.gameObject, preferredWidth: 190, preferredHeight: 48);
+
+            _thunderSectButton = CreateButton("ThunderSectButton", actionBar, "天雷阁开局");
+            _thunderSectButton.onClick.AddListener(() => ResetRun(CultivationSect.Thunder));
+            SetLayout(_thunderSectButton.gameObject, preferredWidth: 190, preferredHeight: 48);
+
             _endTurnButton = CreateButton("EndTurnButton", actionBar, "结束回合");
             _endTurnButton.onClick.AddListener(EndTurn);
             SetLayout(_endTurnButton.gameObject, preferredWidth: 170, preferredHeight: 48);
@@ -476,7 +539,7 @@ namespace GameLogic.Cultivation
 
             foreach (var stat in view.Stats)
             {
-                var card = CreateInfoCardItem($"Stat_{stat.Label}", _statsRoot, stat.Label, stat.Value, stat.Note, ThemeCardInk, ThemeGold);
+                var card = CreateInfoCardItem($"Stat_{stat.Label}", _statsRoot, stat.Label, stat.Value, stat.Note, ThemeCardInk, ThemeGold, InfoTemplateKind.Stat);
                 SetLayout(card.gameObject, preferredWidth: 156, preferredHeight: 44);
             }
         }
@@ -495,7 +558,7 @@ namespace GameLogic.Cultivation
                             ? new Color(0.10f, 0.16f, 0.18f, 1f)
                             : new Color(0.075f, 0.085f, 0.098f, 1f);
                 var note = $"{node.RealmName} / {node.TypeName}";
-                var card = CreateInfoCardItem($"MapNode_{node.Index}_{node.Id}", _mapRoot, $"{node.Index + 1}. {node.Name}", node.IsCurrent ? "当前" : node.IsChoice ? "可选" : node.IsPast ? "已走过" : "未探索", note, color, Color.white);
+                var card = CreateInfoCardItem($"MapNode_{node.Index}_{node.Id}", _mapRoot, $"{node.Index + 1}. {node.Name}", node.IsCurrent ? "当前" : node.IsChoice ? "可选" : node.IsPast ? "已走过" : "未探索", note, color, Color.white, InfoTemplateKind.MapNode);
                 SetLayout(card.gameObject, preferredWidth: 176, preferredHeight: 44);
             }
         }
@@ -510,7 +573,7 @@ namespace GameLogic.Cultivation
                     if (_run.CurrentBattle != null && _run.CurrentBattle.Outcome != BattleOutcome.InProgress)
                     {
                         var resolveLabel = _run.CurrentBattle.Outcome == BattleOutcome.Victory ? "结算胜利" : "结算失败";
-                        var resolve = CreateActionButton("ResolveBattleButton", _choiceRoot, resolveLabel, "进入奖励或失败结算");
+                        var resolve = CreateActionButton("ResolveBattleButton", _choiceRoot, resolveLabel, "进入奖励或失败结算", ActionTemplateKind.Generic);
                         resolve.onClick.AddListener(ResolveBattle);
                         SetLayout(resolve.gameObject, preferredWidth: 220, preferredHeight: 96);
                     }
@@ -521,17 +584,17 @@ namespace GameLogic.Cultivation
                     {
                         var index = i;
                         var reward = _run.CurrentRewards[i];
-                        var button = CreateActionButton($"Reward_{i}_{reward.Id}", _choiceRoot, $"奖励：{reward.Card.Name}", CultivationRunPrototypePresenter.FormatCardSummary(reward.Card));
+                        var button = CreateActionButton($"Reward_{i}_{reward.Id}", _choiceRoot, $"奖励：{reward.Card.Name}", CultivationRunPrototypePresenter.FormatCardSummary(reward.Card), ActionTemplateKind.RewardCard);
                         button.onClick.AddListener(() => ChooseReward(index));
                         SetLayout(button.gameObject, preferredWidth: 240, preferredHeight: 96);
                     }
 
-                    var skip = CreateActionButton("SkipRewardButton", _choiceRoot, "跳过奖励", "保持牌组精简");
+                    var skip = CreateActionButton("SkipRewardButton", _choiceRoot, "跳过奖励", "保持牌组精简", ActionTemplateKind.RewardCard);
                     skip.onClick.AddListener(SkipReward);
                     SetLayout(skip.gameObject, preferredWidth: 180, preferredHeight: 96);
                     break;
                 case CultivationRunStatus.Rest:
-                    var restOnly = CreateActionButton("RestOnlyButton", _choiceRoot, "闭关恢复", $"+{_run.CurrentNode.RestHealAmount} HP");
+                    var restOnly = CreateActionButton("RestOnlyButton", _choiceRoot, "闭关恢复", $"+{_run.CurrentNode.RestHealAmount} HP", ActionTemplateKind.RestChoice);
                     restOnly.onClick.AddListener(Rest);
                     SetLayout(restOnly.gameObject, preferredWidth: 220, preferredHeight: 96);
                     foreach (var choice in _run.RestUpgradeChoices)
@@ -541,7 +604,7 @@ namespace GameLogic.Cultivation
                             var optionIndex = i;
                             var option = choice.SourceCard.UpgradeOptions[i];
                             var deckIndex = choice.DeckIndex;
-                            var button = CreateActionButton($"Upgrade_{deckIndex}_{optionIndex}", _choiceRoot, $"{choice.SourceCard.Name} → {option.UpgradedCard.Name}", option.Description);
+                            var button = CreateActionButton($"Upgrade_{deckIndex}_{optionIndex}", _choiceRoot, $"{choice.SourceCard.Name} → {option.UpgradedCard.Name}", option.Description, ActionTemplateKind.RestChoice);
                             button.onClick.AddListener(() => RestAndUpgrade(deckIndex, optionIndex));
                             SetLayout(button.gameObject, preferredWidth: 260, preferredHeight: 96);
                         }
@@ -553,7 +616,7 @@ namespace GameLogic.Cultivation
                     {
                         var index = i;
                         var choice = _run.CurrentRouteChoices[i];
-                        var button = CreateActionButton($"Route_{i}_{choice.TargetNode.Id}", _choiceRoot, $"前往：{choice.TargetNode.Name}", $"{CultivationRunPrototypePresenter.FormatRealmName(choice.TargetNode.Realm)} / {CultivationRunPrototypePresenter.FormatNodeTypeName(choice.TargetNode.Type)}");
+                        var button = CreateActionButton($"Route_{i}_{choice.TargetNode.Id}", _choiceRoot, $"前往：{choice.TargetNode.Name}", $"{CultivationRunPrototypePresenter.FormatRealmName(choice.TargetNode.Realm)} / {CultivationRunPrototypePresenter.FormatNodeTypeName(choice.TargetNode.Type)}", ActionTemplateKind.RouteChoice);
                         button.onClick.AddListener(() => ChooseRoute(index));
                         SetLayout(button.gameObject, preferredWidth: 240, preferredHeight: 96);
                     }
@@ -569,18 +632,18 @@ namespace GameLogic.Cultivation
                             : item.IsPill
                                 ? item.Pill.Description
                                 : item.Artifact.Description;
-                        var button = CreateActionButton($"Market_{i}_{item.Id}", _choiceRoot, $"购买：{CultivationRunPrototypePresenter.FormatMarketItemName(item)}", $"{item.Price} 灵石\n{detail}");
+                        var button = CreateActionButton($"Market_{i}_{item.Id}", _choiceRoot, $"购买：{CultivationRunPrototypePresenter.FormatMarketItemName(item)}", $"{item.Price} 灵石\n{detail}", ActionTemplateKind.MarketItem);
                         button.interactable = _run.SpiritStones >= item.Price && (!item.IsPill || _run.Pills.Count < _run.PillSlotLimit);
                         button.onClick.AddListener(() => BuyMarketItem(index));
                         SetLayout(button.gameObject, preferredWidth: 260, preferredHeight: 96);
                     }
 
-                    var leave = CreateActionButton("LeaveMarketButton", _choiceRoot, "离开坊市", "进入下个节点");
+                    var leave = CreateActionButton("LeaveMarketButton", _choiceRoot, "离开坊市", "进入下个节点", ActionTemplateKind.MarketItem);
                     leave.onClick.AddListener(LeaveMarket);
                     SetLayout(leave.gameObject, preferredWidth: 180, preferredHeight: 96);
                     break;
                 case CultivationRunStatus.Chest:
-                    var openChest = CreateActionButton("OpenChestButton", _choiceRoot, "打开宝箱", $"获得 1 件法宝\n法宝池 {_run.CurrentNode.ArtifactRewardPool.Count} 件");
+                    var openChest = CreateActionButton("OpenChestButton", _choiceRoot, "打开宝箱", $"获得 1 件法宝\n法宝池 {_run.CurrentNode.ArtifactRewardPool.Count} 件", ActionTemplateKind.ChestReward);
                     openChest.interactable = _run.CurrentNode.ArtifactRewardPool.Count > 0;
                     openChest.onClick.AddListener(OpenChest);
                     SetLayout(openChest.gameObject, preferredWidth: 260, preferredHeight: 96);
@@ -590,7 +653,7 @@ namespace GameLogic.Cultivation
                     {
                         var index = i;
                         var option = _run.MysticEventChoices[i];
-                        var button = CreateActionButton($"Mystic_{i}_{option.Id}", _choiceRoot, $"秘境：{option.Name}", option.Description);
+                        var button = CreateActionButton($"Mystic_{i}_{option.Id}", _choiceRoot, $"秘境：{option.Name}", option.Description, ActionTemplateKind.MysticEvent);
                         button.onClick.AddListener(() => ChooseMysticEventOption(index));
                         SetLayout(button.gameObject, preferredWidth: 260, preferredHeight: 96);
                     }
@@ -601,7 +664,7 @@ namespace GameLogic.Cultivation
                     {
                         var index = i;
                         var passive = _run.CurrentGoldenCorePassiveChoices[i];
-                        var button = CreateActionButton($"GoldenCorePassive_{i}_{passive.Id}", _choiceRoot, $"金丹被动：{passive.Name}", passive.Description);
+                        var button = CreateActionButton($"GoldenCorePassive_{i}_{passive.Id}", _choiceRoot, $"金丹被动：{passive.Name}", passive.Description, ActionTemplateKind.GoldenCorePassive);
                         button.onClick.AddListener(() => ChooseGoldenCorePassive(index));
                         SetLayout(button.gameObject, preferredWidth: 280, preferredHeight: 96);
                     }
@@ -620,13 +683,13 @@ namespace GameLogic.Cultivation
                 {
                     var index = i;
                     var card = _run.Deck[i];
-                    var button = CreateActionButton($"RemoveDeck_{i}_{card.Id}", _handRoot, $"移除：{card.Name}", $"{CultivationRunEngine.MarketCardRemovalCost} 灵石");
+                    var button = CreateActionButton($"RemoveDeck_{i}_{card.Id}", _handRoot, $"移除：{card.Name}", $"{CultivationRunEngine.MarketCardRemovalCost} 灵石", ActionTemplateKind.MarketDeckAction);
                     button.interactable = _run.Deck.Count > 1 && _run.SpiritStones >= CultivationRunEngine.MarketCardRemovalCost;
                     button.onClick.AddListener(() => RemoveDeckCardAtMarket(index));
                     SetLayout(button.gameObject, preferredWidth: 220, preferredHeight: 130);
 
                     var sellValue = _runEngine.GetMarketSellValue(_run, index);
-                    var sellButton = CreateActionButton($"SellDeck_{i}_{card.Id}", _handRoot, $"出售：{card.Name}", $"+{sellValue} 灵石");
+                    var sellButton = CreateActionButton($"SellDeck_{i}_{card.Id}", _handRoot, $"出售：{card.Name}", $"+{sellValue} 灵石", ActionTemplateKind.MarketDeckAction);
                     sellButton.interactable = _run.Deck.Count > 1;
                     sellButton.onClick.AddListener(() => SellDeckCardAtMarket(index));
                     SetLayout(sellButton.gameObject, preferredWidth: 220, preferredHeight: 130);
@@ -635,7 +698,7 @@ namespace GameLogic.Cultivation
                     {
                         var selectedOptionIndex = optionIndex;
                         var option = card.UpgradeOptions[optionIndex];
-                        var upgradeButton = CreateActionButton($"MarketUpgrade_{i}_{optionIndex}_{option.Id}", _handRoot, $"升级：{card.Name}", $"→ {option.UpgradedCard.Name}\n{CultivationRunEngine.MarketCardUpgradeCost} 灵石");
+                        var upgradeButton = CreateActionButton($"MarketUpgrade_{i}_{optionIndex}_{option.Id}", _handRoot, $"升级：{card.Name}", $"→ {option.UpgradedCard.Name}\n{CultivationRunEngine.MarketCardUpgradeCost} 灵石", ActionTemplateKind.MarketDeckAction);
                         upgradeButton.interactable = _run.SpiritStones >= CultivationRunEngine.MarketCardUpgradeCost;
                         upgradeButton.onClick.AddListener(() => UpgradeDeckCardAtMarket(index, selectedOptionIndex));
                         SetLayout(upgradeButton.gameObject, preferredWidth: 260, preferredHeight: 130);
@@ -651,7 +714,7 @@ namespace GameLogic.Cultivation
                 {
                     var index = i;
                     var pill = _run.Pills[i];
-                    var button = CreateActionButton($"RunPill_{i}_{pill.Id}", _handRoot, $"丹药：{pill.Name}", pill.Description);
+                    var button = CreateActionButton($"RunPill_{i}_{pill.Id}", _handRoot, $"丹药：{pill.Name}", pill.Description, ActionTemplateKind.PillItem);
                     button.interactable = pill.IsRunEffect;
                     button.onClick.AddListener(() => UsePillInRun(index));
                     SetLayout(button.gameObject, preferredWidth: 240, preferredHeight: 130);
@@ -671,7 +734,7 @@ namespace GameLogic.Cultivation
             {
                 var index = i;
                 var pill = _run.Pills[i];
-                var button = CreateActionButton($"Pill_{i}_{pill.Id}", _handRoot, $"丹药：{pill.Name}", pill.Description);
+                var button = CreateActionButton($"Pill_{i}_{pill.Id}", _handRoot, $"丹药：{pill.Name}", pill.Description, ActionTemplateKind.PillItem);
                 button.interactable = _run.CurrentBattle.Outcome == BattleOutcome.InProgress && pill.EffectValue > 0 && pill.IsBattleEffect;
                 button.onClick.AddListener(() => UsePillInBattle(index));
                 SetLayout(button.gameObject, preferredWidth: 240, preferredHeight: 130);
@@ -682,7 +745,7 @@ namespace GameLogic.Cultivation
                 var index = i;
                 var card = _run.CurrentBattle.Hand[i];
                 var costText = FormatBattleCardCost(_run.CurrentBattle, card);
-                var button = CreateActionButton($"Card_{i}_{card.Id}", _handRoot, card.Name, $"{costText}\n{string.Join("\n", card.Effects.Select(CultivationRunPrototypePresenter.FormatEffect))}");
+                var button = CreateActionButton($"Card_{i}_{card.Id}", _handRoot, card.Name, $"{costText}\n{string.Join("\n", card.Effects.Select(CultivationRunPrototypePresenter.FormatEffect))}", ActionTemplateKind.BattleCard);
                 button.interactable = _run.CurrentBattle.Outcome == BattleOutcome.InProgress && _battleEngine.CanPlay(_run.CurrentBattle, card);
                 button.onClick.AddListener(() => PlayCardAt(index));
                 SetLayout(button.gameObject, preferredWidth: 240, preferredHeight: 130);
@@ -762,8 +825,21 @@ namespace GameLogic.Cultivation
             var templateRoot = transform.parent != null
                 ? transform.parent.Find("PrefabAnchors/UIItemTemplates")
                 : null;
+            EnsureSemanticTemplates(templateRoot);
             _infoCardTemplate = FindTemplate(templateRoot, "InfoCardTemplate");
+            _statCardTemplate = FindTemplate(templateRoot, "StatCardTemplate");
+            _mapNodeTemplate = FindTemplate(templateRoot, "MapNodeTemplate");
             _actionButtonTemplate = FindTemplate(templateRoot, "ActionButtonTemplate");
+            _rewardCardTemplate = FindTemplate(templateRoot, "RewardCardTemplate");
+            _routeChoiceTemplate = FindTemplate(templateRoot, "RouteChoiceTemplate");
+            _restChoiceTemplate = FindTemplate(templateRoot, "RestChoiceTemplate");
+            _marketItemTemplate = FindTemplate(templateRoot, "MarketItemTemplate");
+            _chestRewardTemplate = FindTemplate(templateRoot, "ChestRewardTemplate");
+            _mysticEventTemplate = FindTemplate(templateRoot, "MysticEventTemplate");
+            _goldenCorePassiveTemplate = FindTemplate(templateRoot, "GoldenCorePassiveTemplate");
+            _battleCardTemplate = FindTemplate(templateRoot, "BattleCardTemplate");
+            _pillItemTemplate = FindTemplate(templateRoot, "PillItemTemplate");
+            _marketDeckActionTemplate = FindTemplate(templateRoot, "MarketDeckActionTemplate");
             _messageTextTemplate = FindTemplate(templateRoot, "MessageTextTemplate");
         }
 
@@ -773,22 +849,150 @@ namespace GameLogic.Cultivation
             return template != null ? template.gameObject : null;
         }
 
-        private RectTransform CreateInfoCardItem(string name, Transform parent, string title, string value, string note, Color backgroundColor, Color valueColor)
+        private RectTransform CreateInfoCardItem(string name, Transform parent, string title, string value, string note, Color backgroundColor, Color valueColor, InfoTemplateKind templateKind)
         {
-            InstantiateTemplate(_infoCardTemplate, parent, name);
+            InstantiateTemplate(ResolveInfoTemplate(templateKind), parent, name);
             return CreateInfoCard(name, parent, title, value, note, backgroundColor, valueColor);
         }
 
-        private Button CreateActionButton(string name, Transform parent, string label, string detail)
+        private Button CreateActionButton(string name, Transform parent, string label, string detail, ActionTemplateKind templateKind)
         {
-            InstantiateTemplate(_actionButtonTemplate, parent, name);
-            return CreateButton(name, parent, label, detail);
+            InstantiateTemplate(ResolveActionTemplate(templateKind), parent, name);
+            var button = CreateButton(name, parent, label, detail);
+            ApplyActionButtonStyle(button, templateKind);
+            return button;
         }
 
         private Text CreateMessageText(string name, Transform parent, string value, int fontSize, FontStyle style, TextAnchor anchor)
         {
             InstantiateTemplate(_messageTextTemplate, parent, name);
             return CreateText(name, parent, value, fontSize, style, anchor);
+        }
+
+        private GameObject ResolveInfoTemplate(InfoTemplateKind templateKind)
+        {
+            switch (templateKind)
+            {
+                case InfoTemplateKind.Stat:
+                    return _statCardTemplate != null ? _statCardTemplate : _infoCardTemplate;
+                case InfoTemplateKind.MapNode:
+                    return _mapNodeTemplate != null ? _mapNodeTemplate : _infoCardTemplate;
+                default:
+                    return _infoCardTemplate;
+            }
+        }
+
+        private GameObject ResolveActionTemplate(ActionTemplateKind templateKind)
+        {
+            switch (templateKind)
+            {
+                case ActionTemplateKind.RewardCard:
+                    return _rewardCardTemplate != null ? _rewardCardTemplate : _actionButtonTemplate;
+                case ActionTemplateKind.RouteChoice:
+                    return _routeChoiceTemplate != null ? _routeChoiceTemplate : _actionButtonTemplate;
+                case ActionTemplateKind.RestChoice:
+                    return _restChoiceTemplate != null ? _restChoiceTemplate : _actionButtonTemplate;
+                case ActionTemplateKind.MarketItem:
+                    return _marketItemTemplate != null ? _marketItemTemplate : _actionButtonTemplate;
+                case ActionTemplateKind.ChestReward:
+                    return _chestRewardTemplate != null ? _chestRewardTemplate : _actionButtonTemplate;
+                case ActionTemplateKind.MysticEvent:
+                    return _mysticEventTemplate != null ? _mysticEventTemplate : _actionButtonTemplate;
+                case ActionTemplateKind.GoldenCorePassive:
+                    return _goldenCorePassiveTemplate != null ? _goldenCorePassiveTemplate : _actionButtonTemplate;
+                case ActionTemplateKind.BattleCard:
+                    return _battleCardTemplate != null ? _battleCardTemplate : _actionButtonTemplate;
+                case ActionTemplateKind.PillItem:
+                    return _pillItemTemplate != null ? _pillItemTemplate : _actionButtonTemplate;
+                case ActionTemplateKind.MarketDeckAction:
+                    return _marketDeckActionTemplate != null ? _marketDeckActionTemplate : _actionButtonTemplate;
+                default:
+                    return _actionButtonTemplate;
+            }
+        }
+
+        private static void EnsureSemanticTemplates(Transform templateRoot)
+        {
+            if (templateRoot == null)
+            {
+                return;
+            }
+
+            EnsureTemplate(templateRoot, "StatCardTemplate", "InfoCardTemplate", ThemeCardInk);
+            EnsureTemplate(templateRoot, "MapNodeTemplate", "InfoCardTemplate", new Color(0.075f, 0.100f, 0.110f, 1f));
+            EnsureTemplate(templateRoot, "RewardCardTemplate", "ActionButtonTemplate", ThemeRewardButtonInk);
+            EnsureTemplate(templateRoot, "RouteChoiceTemplate", "ActionButtonTemplate", ThemeRouteButtonInk);
+            EnsureTemplate(templateRoot, "RestChoiceTemplate", "ActionButtonTemplate", ThemeRestButtonInk);
+            EnsureTemplate(templateRoot, "MarketItemTemplate", "ActionButtonTemplate", ThemeMarketButtonInk);
+            EnsureTemplate(templateRoot, "ChestRewardTemplate", "ActionButtonTemplate", ThemeChestButtonInk);
+            EnsureTemplate(templateRoot, "MysticEventTemplate", "ActionButtonTemplate", ThemeMysticButtonInk);
+            EnsureTemplate(templateRoot, "GoldenCorePassiveTemplate", "ActionButtonTemplate", ThemeGoldenCoreButtonInk);
+            EnsureTemplate(templateRoot, "BattleCardTemplate", "ActionButtonTemplate", ThemeBattleCardButtonInk);
+            EnsureTemplate(templateRoot, "PillItemTemplate", "ActionButtonTemplate", ThemePillButtonInk);
+            EnsureTemplate(templateRoot, "MarketDeckActionTemplate", "ActionButtonTemplate", ThemeMarketDeckButtonInk);
+        }
+
+        private static void EnsureTemplate(Transform templateRoot, string templateName, string fallbackTemplateName, Color color)
+        {
+            var existing = templateRoot.Find(templateName);
+            var target = existing != null ? existing.gameObject : null;
+            if (target == null)
+            {
+                var fallback = templateRoot.Find(fallbackTemplateName);
+                if (fallback == null)
+                {
+                    return;
+                }
+
+                target = Instantiate(fallback.gameObject, templateRoot, false);
+                target.name = templateName;
+            }
+
+            target.SetActive(false);
+            var image = target.GetComponent<Image>();
+            if (image != null)
+            {
+                image.color = color;
+            }
+        }
+
+        private static void ApplyActionButtonStyle(Button button, ActionTemplateKind templateKind)
+        {
+            if (button == null)
+            {
+                return;
+            }
+
+            ApplyButtonColors(button, ResolveActionButtonColor(templateKind));
+        }
+
+        private static Color ResolveActionButtonColor(ActionTemplateKind templateKind)
+        {
+            switch (templateKind)
+            {
+                case ActionTemplateKind.RewardCard:
+                    return ThemeRewardButtonInk;
+                case ActionTemplateKind.RouteChoice:
+                    return ThemeRouteButtonInk;
+                case ActionTemplateKind.RestChoice:
+                    return ThemeRestButtonInk;
+                case ActionTemplateKind.MarketItem:
+                    return ThemeMarketButtonInk;
+                case ActionTemplateKind.ChestReward:
+                    return ThemeChestButtonInk;
+                case ActionTemplateKind.MysticEvent:
+                    return ThemeMysticButtonInk;
+                case ActionTemplateKind.GoldenCorePassive:
+                    return ThemeGoldenCoreButtonInk;
+                case ActionTemplateKind.BattleCard:
+                    return ThemeBattleCardButtonInk;
+                case ActionTemplateKind.PillItem:
+                    return ThemePillButtonInk;
+                case ActionTemplateKind.MarketDeckAction:
+                    return ThemeMarketDeckButtonInk;
+                default:
+                    return ThemeButtonInk;
+            }
         }
 
         private static void InstantiateTemplate(GameObject template, Transform parent, string name)
@@ -961,14 +1165,7 @@ namespace GameLogic.Cultivation
             ApplyGraphicChrome(rect.gameObject, ThemeGoldOutline, ThemeShadow, new Vector2(2f, -2f));
             var button = GetOrAdd<Button>(rect.gameObject);
             button.targetGraphic = image;
-            var colors = button.colors;
-            colors.normalColor = image.color;
-            colors.highlightedColor = new Color(0.32f, 0.27f, 0.16f, 1f);
-            colors.pressedColor = new Color(0.10f, 0.08f, 0.05f, 1f);
-            colors.selectedColor = new Color(0.25f, 0.22f, 0.14f, 1f);
-            colors.disabledColor = new Color(0.075f, 0.078f, 0.074f, 0.76f);
-            colors.fadeDuration = 0.08f;
-            button.colors = colors;
+            ApplyButtonColors(button, image.color);
 
             var layout = GetOrAdd<VerticalLayoutGroup>(rect.gameObject);
             layout.padding = new RectOffset(10, 10, 8, 8);
@@ -994,6 +1191,25 @@ namespace GameLogic.Cultivation
             detailText.resizeTextMaxSize = 12;
             SetLayout(detailText.gameObject, flexibleWidth: 1, flexibleHeight: 1);
             return button;
+        }
+
+        private static void ApplyButtonColors(Button button, Color baseColor)
+        {
+            var image = button.targetGraphic as Image ?? button.GetComponent<Image>();
+            if (image != null)
+            {
+                image.color = baseColor;
+                button.targetGraphic = image;
+            }
+
+            var colors = button.colors;
+            colors.normalColor = baseColor;
+            colors.highlightedColor = Color.Lerp(baseColor, ThemeGold, 0.20f);
+            colors.pressedColor = Color.Lerp(baseColor, Color.black, 0.45f);
+            colors.selectedColor = Color.Lerp(baseColor, ThemeJade, 0.16f);
+            colors.disabledColor = new Color(0.075f, 0.078f, 0.074f, 0.76f);
+            colors.fadeDuration = 0.08f;
+            button.colors = colors;
         }
 
         private static void ApplyGraphicChrome(GameObject target, Color outlineColor, Color shadowColor, Vector2 shadowDistance)

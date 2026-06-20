@@ -256,6 +256,28 @@ namespace GameLogic.Cultivation
                     return $"破防 {effect.Value}";
                 case CardEffectType.Burn:
                     return $"灼烧 {effect.Value} / {effect.Duration} 回合";
+                case CardEffectType.ChanceDamage:
+                    return effect.RepeatCount > 1
+                        ? $"造成 {effect.FallbackValue} 伤害 × {effect.RepeatCount}，每击 {effect.ChancePercent}% 概率暴击"
+                        : $"{effect.ChancePercent}% 概率造成 {effect.Value} 伤害，失败造成 {effect.FallbackValue} 伤害";
+                case CardEffectType.ChanceDamageWithStun:
+                    return $"造成 {effect.Value} 伤害 × {effect.RepeatCount}，每击 {effect.ChancePercent}% 概率暴击；暴击时 {effect.FallbackValue}% 概率眩晕";
+                case CardEffectType.ChanceDamageWithChain:
+                    return $"造成 {effect.Value} 伤害 × {effect.RepeatCount}，每击 {effect.ChancePercent}% 概率暴击；每击 {effect.SecondaryValue}% 概率连锁 {effect.FallbackValue} 伤害";
+                case CardEffectType.ChainOnChanceDamage:
+                    return $"{effect.ChancePercent}% 概率造成 {effect.Value} 伤害，失败造成 {effect.FallbackValue} 伤害；命中连锁 {effect.SecondaryValue} 伤害";
+                case CardEffectType.ChanceStun:
+                    return $"{effect.ChancePercent}% 概率眩晕 {Math.Max(1, effect.Duration)} 回合";
+                case CardEffectType.ChainOnChanceStun:
+                    return $"造成 {effect.Value} 伤害，{effect.ChancePercent}% 概率眩晕 {Math.Max(1, effect.Duration)} 回合；成功连锁 {effect.SecondaryValue} 伤害";
+                case CardEffectType.ChanceChainDamage:
+                    return $"造成 {effect.Value} 伤害，{effect.ChancePercent}% 概率连锁 {effect.SecondaryValue} 伤害";
+                case CardEffectType.ChanceChainDamageWithStun:
+                    return $"造成 {effect.Value} 伤害，{effect.ChancePercent}% 概率连锁 {effect.SecondaryValue} 伤害；连锁有 {effect.FallbackValue}% 概率眩晕";
+                case CardEffectType.ChanceChainDamageRepeatTarget:
+                    return $"造成 {effect.Value} 伤害，{effect.ChancePercent}% 概率连锁 {effect.SecondaryValue} 伤害；可重复目标，最多 {Math.Max(1, effect.RepeatCount)} 次";
+                case CardEffectType.ChargeDamage:
+                    return $"下次攻击伤害 ×{effect.Value}";
                 default:
                     return effect.Type.ToString();
             }

@@ -26,6 +26,82 @@ namespace GameLogic.Tests
         }
 
         [Test]
+        public void StartRunCanUseFireCloudSectStarterDeck()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+
+            var run = engine.StartRun(sect: CultivationSect.FireCloud);
+            var deckIds = run.Deck.Select(card => card.Id).ToArray();
+
+            Assert.AreEqual(CultivationSect.FireCloud, run.Sect);
+            CollectionAssert.Contains(deckIds, CultivationSeedData.BurningPalm.Id);
+            CollectionAssert.Contains(deckIds, CultivationSeedData.FlameFormula.Id);
+            CollectionAssert.Contains(deckIds, CultivationSeedData.FireCloudStep.Id);
+            CollectionAssert.DoesNotContain(deckIds, CultivationSeedData.SwordQi.Id);
+            Assert.IsTrue(run.CurrentNode.RewardPool.Any(reward => reward.Card.Id == CultivationSeedData.BurningPalm.Id));
+        }
+
+        [Test]
+        public void StartRunCanUseThunderSectStarterDeck()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+
+            var run = engine.StartRun(sect: CultivationSect.Thunder);
+            var deckIds = run.Deck.Select(card => card.Id).ToArray();
+
+            Assert.AreEqual(CultivationSect.Thunder, run.Sect);
+            CollectionAssert.Contains(deckIds, CultivationSeedData.ThunderTalisman.Id);
+            CollectionAssert.Contains(deckIds, CultivationSeedData.HeavenlyThunderSpell.Id);
+            CollectionAssert.Contains(deckIds, CultivationSeedData.ThunderEscape.Id);
+            CollectionAssert.DoesNotContain(deckIds, CultivationSeedData.LightningChain.Id);
+            CollectionAssert.DoesNotContain(deckIds, CultivationSeedData.ThunderCharge.Id);
+            CollectionAssert.DoesNotContain(deckIds, CultivationSeedData.FiveThunderOrthodoxy.Id);
+            CollectionAssert.DoesNotContain(deckIds, CultivationSeedData.ThunderousBarrage.Id);
+            CollectionAssert.DoesNotContain(deckIds, CultivationSeedData.SwordQi.Id);
+            Assert.IsTrue(run.CurrentNode.RewardPool.Any(reward => reward.Card.Id == CultivationSeedData.HeavenlyThunderSpell.Id));
+            Assert.IsTrue(run.CurrentNode.RewardPool.Any(reward => reward.Card.Id == CultivationSeedData.LightningChain.Id));
+            Assert.IsTrue(run.CurrentNode.RewardPool.Any(reward => reward.Card.Id == CultivationSeedData.ThunderCharge.Id));
+            Assert.IsTrue(run.CurrentNode.RewardPool.Any(reward => reward.Card.Id == CultivationSeedData.FiveThunderOrthodoxy.Id));
+            Assert.IsTrue(run.CurrentNode.RewardPool.Any(reward => reward.Card.Id == CultivationSeedData.ThunderousBarrage.Id));
+        }
+
+        [Test]
+        public void FireCloudSectBranchingRouteUsesFireCloudRewardPool()
+        {
+            var expectedRewardIds = CultivationSeedData.CreateFireCloudSectRewardPool()
+                .Select(reward => reward.Id)
+                .ToArray();
+            var route = CultivationSeedData.CreateFirstPrototypeBranchingRoute(CultivationSect.FireCloud);
+            var battleNodes = route
+                .Where(node => node.Type == CultivationRunNodeType.Battle || node.Type == CultivationRunNodeType.Elite)
+                .ToArray();
+
+            Assert.Greater(battleNodes.Length, 0);
+            foreach (var node in battleNodes)
+            {
+                CollectionAssert.AreEquivalent(expectedRewardIds, node.RewardPool.Select(reward => reward.Id).ToArray());
+            }
+        }
+
+        [Test]
+        public void ThunderSectBranchingRouteUsesThunderRewardPool()
+        {
+            var expectedRewardIds = CultivationSeedData.CreateThunderSectRewardPool()
+                .Select(reward => reward.Id)
+                .ToArray();
+            var route = CultivationSeedData.CreateFirstPrototypeBranchingRoute(CultivationSect.Thunder);
+            var battleNodes = route
+                .Where(node => node.Type == CultivationRunNodeType.Battle || node.Type == CultivationRunNodeType.Elite)
+                .ToArray();
+
+            Assert.Greater(battleNodes.Length, 0);
+            foreach (var node in battleNodes)
+            {
+                CollectionAssert.AreEquivalent(expectedRewardIds, node.RewardPool.Select(reward => reward.Id).ToArray());
+            }
+        }
+
+        [Test]
         public void VictoryMovesRunToRewardState()
         {
             var engine = new CultivationRunEngine(new BattleEngine(1));
@@ -466,6 +542,86 @@ namespace GameLogic.Tests
             Assert.AreEqual(2, run.Deck[swordQiIndex].UpgradeOptions.Count);
             Assert.AreEqual("sword_qi_cost_2_draw", run.Deck[swordQiIndex].UpgradeOptions[0].UpgradedCard.Id);
             Assert.AreEqual("sword_qi_cost_2_sharpness", run.Deck[swordQiIndex].UpgradeOptions[1].UpgradedCard.Id);
+        }
+
+        [Test]
+        public void ThunderFirstLayerUpgradesKeepSecondLayerChainChoices()
+        {
+            var talismanStrong = CultivationSeedData.ThunderTalisman.UpgradeOptions[0].UpgradedCard;
+            var spellQuick = CultivationSeedData.HeavenlyThunderSpell.UpgradeOptions[1].UpgradedCard;
+
+            Assert.IsTrue(talismanStrong.CanUpgrade);
+            Assert.AreEqual("thunder_talisman_damage_2_chance", talismanStrong.UpgradeOptions[0].UpgradedCard.Id);
+            Assert.AreEqual("thunder_talisman_damage_2_chain", talismanStrong.UpgradeOptions[1].UpgradedCard.Id);
+            Assert.IsTrue(talismanStrong.UpgradeOptions[1].UpgradedCard.Effects.Any(effect => effect.Type == CardEffectType.ChainOnChanceDamage));
+
+            Assert.IsTrue(spellQuick.CanUpgrade);
+            Assert.AreEqual("heavenly_thunder_spell_cost_2_chain", spellQuick.UpgradeOptions[0].UpgradedCard.Id);
+            Assert.AreEqual("heavenly_thunder_spell_cost_2_break", spellQuick.UpgradeOptions[1].UpgradedCard.Id);
+            Assert.IsTrue(spellQuick.UpgradeOptions[0].UpgradedCard.Effects.Any(effect => effect.Type == CardEffectType.ChainOnChanceStun));
+        }
+
+        [Test]
+        public void LightningChainFirstLayerUpgradesKeepSecondLayerChoices()
+        {
+            var lightningStrong = CultivationSeedData.LightningChain.UpgradeOptions[0].UpgradedCard;
+            var lightningWide = CultivationSeedData.LightningChain.UpgradeOptions[1].UpgradedCard;
+
+            Assert.IsTrue(lightningStrong.CanUpgrade);
+            Assert.AreEqual("lightning_chain_chance_2_damage", lightningStrong.UpgradeOptions[0].UpgradedCard.Id);
+            Assert.AreEqual("lightning_chain_chance_2_repeat", lightningStrong.UpgradeOptions[1].UpgradedCard.Id);
+            Assert.AreEqual(6, lightningStrong.UpgradeOptions[0].UpgradedCard.Effects[0].SecondaryValue);
+            Assert.AreEqual(CardEffectType.ChanceChainDamageRepeatTarget, lightningStrong.UpgradeOptions[1].UpgradedCard.Effects[0].Type);
+            Assert.AreEqual(4, lightningStrong.UpgradeOptions[1].UpgradedCard.Effects[0].RepeatCount);
+
+            Assert.IsTrue(lightningWide.CanUpgrade);
+            Assert.AreEqual("lightning_chain_damage_2_cost", lightningWide.UpgradeOptions[0].UpgradedCard.Id);
+            Assert.AreEqual("lightning_chain_damage_2_stun", lightningWide.UpgradeOptions[1].UpgradedCard.Id);
+            Assert.AreEqual(1, lightningWide.UpgradeOptions[0].UpgradedCard.SpiritCost);
+            Assert.IsTrue(lightningWide.UpgradeOptions[1].UpgradedCard.Effects.Any(effect => effect.Type == CardEffectType.ChanceChainDamageWithStun));
+        }
+
+        [Test]
+        public void FiveThunderOrthodoxyFirstLayerUpgradesKeepSecondLayerChoices()
+        {
+            var fiveThunderStrong = CultivationSeedData.FiveThunderOrthodoxy.UpgradeOptions[0].UpgradedCard;
+            var fiveThunderStable = CultivationSeedData.FiveThunderOrthodoxy.UpgradeOptions[1].UpgradedCard;
+
+            Assert.IsTrue(fiveThunderStrong.CanUpgrade);
+            Assert.AreEqual("five_thunder_orthodoxy_damage_2_stun", fiveThunderStrong.UpgradeOptions[0].UpgradedCard.Id);
+            Assert.AreEqual("five_thunder_orthodoxy_damage_2_chain", fiveThunderStrong.UpgradeOptions[1].UpgradedCard.Id);
+            Assert.AreEqual(13, fiveThunderStrong.Effects[0].Value);
+            Assert.AreEqual(75, fiveThunderStrong.UpgradeOptions[0].UpgradedCard.Effects[1].ChancePercent);
+            Assert.AreEqual(7, fiveThunderStrong.UpgradeOptions[1].UpgradedCard.Effects[0].SecondaryValue);
+
+            Assert.IsTrue(fiveThunderStable.CanUpgrade);
+            Assert.AreEqual("five_thunder_orthodoxy_stable_2_cost", fiveThunderStable.UpgradeOptions[0].UpgradedCard.Id);
+            Assert.AreEqual("five_thunder_orthodoxy_stable_2_certain_stun", fiveThunderStable.UpgradeOptions[1].UpgradedCard.Id);
+            Assert.AreEqual(75, fiveThunderStable.Effects[0].ChancePercent);
+            Assert.AreEqual(75, fiveThunderStable.Effects[1].ChancePercent);
+            Assert.AreEqual(2, fiveThunderStable.UpgradeOptions[0].UpgradedCard.SpiritCost);
+            Assert.IsTrue(fiveThunderStable.UpgradeOptions[1].UpgradedCard.Effects.Any(effect => effect.Type == CardEffectType.Stun));
+        }
+
+        [Test]
+        public void ThunderousBarrageFirstLayerUpgradesKeepSecondLayerChoices()
+        {
+            var barrageHits = CultivationSeedData.ThunderousBarrage.UpgradeOptions[0].UpgradedCard;
+            var barrageCritical = CultivationSeedData.ThunderousBarrage.UpgradeOptions[1].UpgradedCard;
+
+            Assert.IsTrue(barrageHits.CanUpgrade);
+            Assert.AreEqual("thunderous_barrage_hits_2_more", barrageHits.UpgradeOptions[0].UpgradedCard.Id);
+            Assert.AreEqual("thunderous_barrage_hits_2_damage", barrageHits.UpgradeOptions[1].UpgradedCard.Id);
+            Assert.AreEqual(5, barrageHits.Effects[0].RepeatCount);
+            Assert.AreEqual(7, barrageHits.UpgradeOptions[0].UpgradedCard.Effects[0].RepeatCount);
+            Assert.AreEqual(6, barrageHits.UpgradeOptions[1].UpgradedCard.Effects[0].Value);
+
+            Assert.IsTrue(barrageCritical.CanUpgrade);
+            Assert.AreEqual("thunderous_barrage_critical_2_stun", barrageCritical.UpgradeOptions[0].UpgradedCard.Id);
+            Assert.AreEqual("thunderous_barrage_critical_2_chain", barrageCritical.UpgradeOptions[1].UpgradedCard.Id);
+            Assert.AreEqual(25, barrageCritical.Effects[0].ChancePercent);
+            Assert.AreEqual(CardEffectType.ChanceDamageWithStun, barrageCritical.UpgradeOptions[0].UpgradedCard.Effects[0].Type);
+            Assert.AreEqual(CardEffectType.ChanceDamageWithChain, barrageCritical.UpgradeOptions[1].UpgradedCard.Effects[0].Type);
         }
 
         [Test]

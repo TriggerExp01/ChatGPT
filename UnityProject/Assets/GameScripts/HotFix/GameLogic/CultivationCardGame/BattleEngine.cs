@@ -255,6 +255,110 @@ namespace GameLogic.Cultivation
                     }
 
                     break;
+                case CardEffectType.ChanceDamage:
+                    foreach (var enemy in SelectTargets(state, effect, explicitTarget))
+                    {
+                        ResolveChanceDamageHits(state, card, effect, enemy);
+                    }
+
+                    break;
+                case CardEffectType.ChanceDamageWithStun:
+                    foreach (var enemy in SelectTargets(state, effect, explicitTarget))
+                    {
+                        ResolveChanceDamageHits(state, card, effect, enemy, stunOnHit: true);
+                    }
+
+                    break;
+                case CardEffectType.ChanceDamageWithChain:
+                    foreach (var enemy in SelectTargets(state, effect, explicitTarget))
+                    {
+                        ResolveChanceDamageHits(state, card, effect, enemy, chainOnEachHit: true);
+                    }
+
+                    break;
+                case CardEffectType.ChainOnChanceDamage:
+                    foreach (var enemy in SelectTargets(state, effect, explicitTarget))
+                    {
+                        var triggered = RollChance(effect.ChancePercent);
+                        var damage = triggered ? effect.Value : effect.FallbackValue;
+                        if (damage <= 0)
+                        {
+                            state.Logs.Add(new BattleLogEntry($"{card.Name} 的暴击判定未触发。"));
+                            continue;
+                        }
+
+                        var multiplier = state.TryConsumeChargedDamageMultiplier();
+                        var dealt = enemy.Body.TakeDamage(damage * multiplier, state.Player.Sharpness);
+                        var resultText = triggered ? "暴击触发" : "暴击未触发";
+                        var chargeText = multiplier > 1 ? $" 蓄力 x{multiplier}" : string.Empty;
+                        state.Logs.Add(new BattleLogEntry($"{card.Name} {resultText}{chargeText}，对 {enemy.Body.Name} 造成 {dealt} 点伤害。"));
+
+                        if (triggered)
+                        {
+                            ChainToOneAdditionalEnemy(state, card, enemy, effect.SecondaryValue);
+                        }
+                    }
+
+                    break;
+                case CardEffectType.ChanceStun:
+                    foreach (var enemy in SelectTargets(state, effect, explicitTarget))
+                    {
+                        if (RollChance(effect.ChancePercent))
+                        {
+                            enemy.Body.AddStun(Math.Max(1, effect.Duration));
+                            state.Logs.Add(new BattleLogEntry($"{card.Name} 眩晕判定成功，使 {enemy.Body.Name} 眩晕 {Math.Max(1, effect.Duration)} 回合。"));
+                        }
+                        else
+                        {
+                            state.Logs.Add(new BattleLogEntry($"{card.Name} 眩晕判定未触发。"));
+                        }
+                    }
+
+                    break;
+                case CardEffectType.ChainOnChanceStun:
+                    foreach (var enemy in SelectTargets(state, effect, explicitTarget))
+                    {
+                        var dealt = enemy.Body.TakeDamage(effect.Value, state.Player.Sharpness);
+                        state.Logs.Add(new BattleLogEntry($"{card.Name} 对 {enemy.Body.Name} 造成 {dealt} 点伤害。"));
+
+                        if (RollChance(effect.ChancePercent))
+                        {
+                            enemy.Body.AddStun(Math.Max(1, effect.Duration));
+                            state.Logs.Add(new BattleLogEntry($"{card.Name} 眩晕判定成功，使 {enemy.Body.Name} 眩晕 {Math.Max(1, effect.Duration)} 回合。"));
+                            ChainToOneAdditionalEnemy(state, card, enemy, effect.SecondaryValue);
+                        }
+                        else
+                        {
+                            state.Logs.Add(new BattleLogEntry($"{card.Name} 眩晕判定未触发，雷击连锁未触发。"));
+                        }
+                    }
+
+                    break;
+                case CardEffectType.ChanceChainDamage:
+                    foreach (var enemy in SelectTargets(state, effect, explicitTarget))
+                    {
+                        ResolveChanceChainDamage(state, card, effect, enemy, false);
+                    }
+
+                    break;
+                case CardEffectType.ChanceChainDamageWithStun:
+                    foreach (var enemy in SelectTargets(state, effect, explicitTarget))
+                    {
+                        ResolveChanceChainDamage(state, card, effect, enemy, true);
+                    }
+
+                    break;
+                case CardEffectType.ChanceChainDamageRepeatTarget:
+                    foreach (var enemy in SelectTargets(state, effect, explicitTarget))
+                    {
+                        ResolveChanceChainDamage(state, card, effect, enemy, false, true);
+                    }
+
+                    break;
+                case CardEffectType.ChargeDamage:
+                    state.AddChargedDamage(effect.Value, Math.Max(1, effect.RepeatCount));
+                    state.Logs.Add(new BattleLogEntry($"{card.Name} 蓄力完成，下次攻击伤害 x{effect.Value}。"));
+                    break;
                 case CardEffectType.Sharpness:
                     state.Player.AddSharpness(effect.Value, Math.Max(1, effect.Duration));
                     state.Logs.Add(new BattleLogEntry($"{card.Name} 获得锋锐 {effect.Value}，持续 {Math.Max(1, effect.Duration)} 回合。"));
@@ -266,13 +370,149 @@ namespace GameLogic.Cultivation
             }
         }
 
+        private bool RollChance(int chancePercent)
+        {
+            if (chancePercent <= 0)
+            {
+                return false;
+            }
+
+            if (chancePercent >= 100)
+            {
+                return true;
+            }
+
+            return Random.Next(100) < chancePercent;
+        }
+
+        private void ResolveChanceDamageHits(BattleState state, CardDefinition card, CardEffect effect, EnemyState enemy, bool stunOnHit = false, bool chainOnEachHit = false)
+        {
+            for (var hit = 0; hit < effect.RepeatCount; hit++)
+            {
+                if (enemy.Body.IsDefeated)
+                {
+                    return;
+                }
+
+                var triggered = RollChance(effect.ChancePercent);
+                var damage = stunOnHit || chainOnEachHit
+                    ? effect.Value
+                    : triggered ? effect.Value : effect.FallbackValue;
+                var hitText = effect.RepeatCount > 1 ? $" 第 {hit + 1}/{effect.RepeatCount} 击" : string.Empty;
+                if (damage <= 0)
+                {
+                    state.Logs.Add(new BattleLogEntry($"{card.Name}{hitText} 的暴击判定未触发。"));
+                    continue;
+                }
+
+                var multiplier = state.TryConsumeChargedDamageMultiplier();
+                var dealt = enemy.Body.TakeDamage(damage * multiplier, state.Player.Sharpness);
+                var resultText = triggered ? "暴击触发" : "暴击未触发";
+                var chargeText = multiplier > 1 ? $" 蓄力 x{multiplier}" : string.Empty;
+                state.Logs.Add(new BattleLogEntry($"{card.Name}{hitText} {resultText}{chargeText}，对 {enemy.Body.Name} 造成 {dealt} 点伤害。"));
+
+                if (triggered && stunOnHit && RollChance(effect.FallbackValue))
+                {
+                    enemy.Body.AddStun(Math.Max(1, effect.Duration));
+                    state.Logs.Add(new BattleLogEntry($"{card.Name}{hitText} 暴击附加眩晕，使 {enemy.Body.Name} 眩晕 {Math.Max(1, effect.Duration)} 回合。"));
+                }
+
+                if (chainOnEachHit && RollChance(effect.SecondaryValue))
+                {
+                    ChainToOneAdditionalEnemy(state, card, enemy, Math.Max(0, effect.FallbackValue));
+                }
+            }
+        }
+
+        private void ResolveChanceChainDamage(BattleState state, CardDefinition card, CardEffect effect, EnemyState firstTarget, bool stunOnChain, bool allowRepeatTarget = false)
+        {
+            if (firstTarget == null || firstTarget.Body.IsDefeated)
+            {
+                return;
+            }
+
+            var multiplier = state.TryConsumeChargedDamageMultiplier();
+            var dealt = firstTarget.Body.TakeDamage(effect.Value * multiplier, state.Player.Sharpness);
+            var chargeText = multiplier > 1 ? $" 蓄力 x{multiplier}" : string.Empty;
+            state.Logs.Add(new BattleLogEntry($"{card.Name}{chargeText} 对 {firstTarget.Body.Name} 造成 {dealt} 点伤害。"));
+
+            var chainedTargets = new HashSet<EnemyState> { firstTarget };
+            var current = firstTarget;
+            var chainCount = 0;
+            var maxChainCount = allowRepeatTarget ? Math.Max(1, effect.RepeatCount) : int.MaxValue;
+            while (chainCount < maxChainCount && RollChance(effect.ChancePercent))
+            {
+                var candidates = state.Enemies
+                    .Where(enemy => !enemy.Body.IsDefeated && (allowRepeatTarget || !chainedTargets.Contains(enemy)))
+                    .ToList();
+                if (candidates.Count == 0)
+                {
+                    state.Logs.Add(new BattleLogEntry($"{card.Name} 雷击连锁没有可用目标。"));
+                    return;
+                }
+
+                var next = candidates[Random.Next(candidates.Count)];
+                var chainDamage = Math.Max(0, effect.SecondaryValue);
+                if (chainDamage <= 0)
+                {
+                    state.Logs.Add(new BattleLogEntry($"{card.Name} 雷击连锁未造成伤害。"));
+                    return;
+                }
+
+                var chainDealt = next.Body.TakeDamage(chainDamage, state.Player.Sharpness);
+                state.Logs.Add(new BattleLogEntry($"{card.Name} 从 {current.Body.Name} 连锁至 {next.Body.Name}，造成 {chainDealt} 点伤害。"));
+                if (stunOnChain && RollChance(effect.FallbackValue))
+                {
+                    next.Body.AddStun(Math.Max(1, effect.Duration));
+                    state.Logs.Add(new BattleLogEntry($"{card.Name} 连锁雷击使 {next.Body.Name} 眩晕 {Math.Max(1, effect.Duration)} 回合。"));
+                }
+
+                chainedTargets.Add(next);
+                current = next;
+                chainCount++;
+            }
+
+            if (allowRepeatTarget && chainCount >= maxChainCount)
+            {
+                state.Logs.Add(new BattleLogEntry($"{card.Name} 雷击连锁达到上限 {maxChainCount} 次。"));
+                return;
+            }
+
+            state.Logs.Add(new BattleLogEntry($"{card.Name} 雷击连锁未继续触发。"));
+        }
+
+        private void ChainToOneAdditionalEnemy(BattleState state, CardDefinition card, EnemyState sourceTarget, int damage)
+        {
+            var chainDamage = Math.Max(0, damage);
+            if (chainDamage <= 0)
+            {
+                state.Logs.Add(new BattleLogEntry($"{card.Name} 雷击连锁未造成伤害。"));
+                return;
+            }
+
+            var candidates = state.Enemies
+                .Where(enemy => !enemy.Body.IsDefeated && enemy != sourceTarget)
+                .ToList();
+            if (candidates.Count == 0)
+            {
+                state.Logs.Add(new BattleLogEntry($"{card.Name} 雷击连锁没有可用目标。"));
+                return;
+            }
+
+            var next = candidates[Random.Next(candidates.Count)];
+            var dealt = next.Body.TakeDamage(chainDamage, state.Player.Sharpness);
+            state.Logs.Add(new BattleLogEntry($"{card.Name} 从 {sourceTarget.Body.Name} 连锁至 {next.Body.Name}，造成 {dealt} 点伤害。"));
+        }
+
         private static void DealCardDamage(BattleState state, CardDefinition card, CardEffect effect, EnemyState enemy)
         {
             for (var hit = 0; hit < effect.RepeatCount; hit++)
             {
-                var dealt = enemy.Body.TakeDamage(effect.Value, state.Player.Sharpness);
+                var multiplier = state.TryConsumeChargedDamageMultiplier();
+                var dealt = enemy.Body.TakeDamage(effect.Value * multiplier, state.Player.Sharpness);
                 var hitText = effect.RepeatCount > 1 ? $" 第 {hit + 1}/{effect.RepeatCount} 击" : string.Empty;
-                state.Logs.Add(new BattleLogEntry($"{card.Name}{hitText} 对 {enemy.Body.Name} 造成 {dealt} 点伤害。"));
+                var chargeText = multiplier > 1 ? $" 蓄力 x{multiplier}" : string.Empty;
+                state.Logs.Add(new BattleLogEntry($"{card.Name}{hitText}{chargeText} 对 {enemy.Body.Name} 造成 {dealt} 点伤害。"));
                 if (enemy.Body.IsDefeated)
                 {
                     break;
@@ -875,6 +1115,340 @@ namespace GameLogic.Cultivation
             },
             new CardEffect(CardEffectType.Heal, 10, CardTarget.Self));
 
+        public static CardDefinition BurningPalm { get; } = new CardDefinition(
+            "burning_palm",
+            "焚天掌",
+            1,
+            new[]
+            {
+                new CardUpgradeOption(
+                    "burning_palm_damage_1",
+                    "赤焰掌",
+                    "伤害提升到 8，灼烧保持 2 层。",
+                    new CardDefinition("burning_palm_damage_1", "赤焰掌", 1, new CardEffect(CardEffectType.Damage, 8), new CardEffect(CardEffectType.Burn, 2, duration: 3))),
+                new CardUpgradeOption(
+                    "burning_palm_burn_1",
+                    "燎原掌",
+                    "伤害保持 5，灼烧提升到 4 层。",
+                    new CardDefinition("burning_palm_burn_1", "燎原掌", 1, new CardEffect(CardEffectType.Damage, 5), new CardEffect(CardEffectType.Burn, 4, duration: 3))),
+            },
+            new CardEffect(CardEffectType.Damage, 5),
+            new CardEffect(CardEffectType.Burn, 2, duration: 3));
+
+        public static CardDefinition FlameFormula { get; } = new CardDefinition(
+            "flame_formula",
+            "烈火诀",
+            1,
+            new[]
+            {
+                new CardUpgradeOption(
+                    "flame_formula_burn_1",
+                    "烈焰诀",
+                    "对全体敌人施加 3 层灼烧。",
+                    new CardDefinition("flame_formula_burn_1", "烈焰诀", 1, new CardEffect(CardEffectType.Burn, 3, CardTarget.EnemyAll, 3))),
+                new CardUpgradeOption(
+                    "flame_formula_draw_1",
+                    "心火诀",
+                    "对全体敌人施加 2 层灼烧，并抽 1 张牌。",
+                    new CardDefinition("flame_formula_draw_1", "心火诀", 1, new CardEffect(CardEffectType.Burn, 2, CardTarget.EnemyAll, 3), new CardEffect(CardEffectType.Draw, 1, CardTarget.Self))),
+            },
+            new CardEffect(CardEffectType.Burn, 2, CardTarget.EnemyAll, 3));
+
+        public static CardDefinition FireCloudStep { get; } = new CardDefinition(
+            "fire_cloud_step",
+            "火云步",
+            1,
+            new[]
+            {
+                new CardUpgradeOption(
+                    "fire_cloud_step_guard_1",
+                    "火云护步",
+                    "获得 9 护盾并抽 1 张牌。",
+                    new CardDefinition("fire_cloud_step_guard_1", "火云护步", 1, new CardEffect(CardEffectType.Shield, 9, CardTarget.Self), new CardEffect(CardEffectType.Draw, 1, CardTarget.Self))),
+                new CardUpgradeOption(
+                    "fire_cloud_step_burn_1",
+                    "踏火行",
+                    "获得 6 护盾，抽 1 张牌，并对敌人施加 1 层灼烧。",
+                    new CardDefinition("fire_cloud_step_burn_1", "踏火行", 1, new CardEffect(CardEffectType.Shield, 6, CardTarget.Self), new CardEffect(CardEffectType.Draw, 1, CardTarget.Self), new CardEffect(CardEffectType.Burn, 1, duration: 2))),
+            },
+            new CardEffect(CardEffectType.Shield, 6, CardTarget.Self),
+            new CardEffect(CardEffectType.Draw, 1, CardTarget.Self));
+
+        public static CardDefinition ThunderTalisman { get; } = new CardDefinition(
+            "thunder_talisman",
+            "雷击符",
+            1,
+            new[]
+            {
+                new CardUpgradeOption(
+                    "thunder_talisman_damage_1",
+                    "雷击符·强",
+                    "基础造成 5 伤害，30% 概率暴击造成 15 伤害。",
+                    new CardDefinition(
+                        "thunder_talisman_damage_1",
+                        "雷击符·强",
+                        1,
+                        new[]
+                        {
+                            new CardUpgradeOption(
+                                "thunder_talisman_damage_2_chance",
+                                "雷击符·极",
+                                "暴击概率提升到 50%，暴击造成 15 伤害。",
+                                new CardDefinition("thunder_talisman_damage_2_chance", "雷击符·极", 1, new CardEffect(CardEffectType.ChanceDamage, 15, chancePercent: 50, fallbackValue: 5))),
+                            new CardUpgradeOption(
+                                "thunder_talisman_damage_2_chain",
+                                "雷击符·连",
+                                "暴击时额外连锁 1 名敌人，造成 7 伤害。",
+                                new CardDefinition("thunder_talisman_damage_2_chain", "雷击符·连", 1, new CardEffect(CardEffectType.ChainOnChanceDamage, 15, chancePercent: 30, fallbackValue: 5, secondaryValue: 7))),
+                        },
+                        new CardEffect(CardEffectType.ChanceDamage, 15, chancePercent: 30, fallbackValue: 5))),
+                new CardUpgradeOption(
+                    "thunder_talisman_break_1",
+                    "雷击符·晕",
+                    "基础造成 5 伤害，30% 概率暴击造成 10 伤害，并施加 1 层破防。",
+                    new CardDefinition("thunder_talisman_break_1", "雷击符·晕", 1, new CardEffect(CardEffectType.ChanceDamage, 10, chancePercent: 30, fallbackValue: 5), new CardEffect(CardEffectType.BreakDefense, 1))),
+            },
+            new CardEffect(CardEffectType.ChanceDamage, 10, chancePercent: 30, fallbackValue: 5));
+
+        public static CardDefinition HeavenlyThunderSpell { get; } = new CardDefinition(
+            "heavenly_thunder_spell",
+            "天雷咒",
+            2,
+            new[]
+            {
+                new CardUpgradeOption(
+                    "heavenly_thunder_spell_stun_1",
+                    "天雷咒·强",
+                    "造成 10 伤害，60% 概率眩晕 1 回合。",
+                    new CardDefinition("heavenly_thunder_spell_stun_1", "天雷咒·强", 2, new CardEffect(CardEffectType.Damage, 10), new CardEffect(CardEffectType.ChanceStun, 0, duration: 1, chancePercent: 60))),
+                new CardUpgradeOption(
+                    "heavenly_thunder_spell_cost_1",
+                    "天雷咒·速",
+                    "灵力消耗降为 1，造成 10 伤害，40% 概率眩晕 1 回合。",
+                    new CardDefinition(
+                        "heavenly_thunder_spell_cost_1",
+                        "天雷咒·速",
+                        1,
+                        new[]
+                        {
+                            new CardUpgradeOption(
+                                "heavenly_thunder_spell_cost_2_chain",
+                                "天雷咒·连",
+                                "眩晕成功时额外连锁 1 名敌人，造成 5 伤害。",
+                                new CardDefinition("heavenly_thunder_spell_cost_2_chain", "天雷咒·连", 1, new CardEffect(CardEffectType.ChainOnChanceStun, 10, duration: 1, chancePercent: 40, secondaryValue: 5))),
+                            new CardUpgradeOption(
+                                "heavenly_thunder_spell_cost_2_break",
+                                "天雷咒·晕",
+                                "造成 10 伤害，40% 概率眩晕；并施加 1 层破防。",
+                                new CardDefinition("heavenly_thunder_spell_cost_2_break", "天雷咒·晕", 1, new CardEffect(CardEffectType.Damage, 10), new CardEffect(CardEffectType.ChanceStun, 0, duration: 1, chancePercent: 40), new CardEffect(CardEffectType.BreakDefense, 1))),
+                        },
+                        new CardEffect(CardEffectType.Damage, 10),
+                        new CardEffect(CardEffectType.ChanceStun, 0, duration: 1, chancePercent: 40))),
+            },
+            new CardEffect(CardEffectType.Damage, 10),
+            new CardEffect(CardEffectType.ChanceStun, 0, duration: 1, chancePercent: 40));
+
+        public static CardDefinition LightningChain { get; } = new CardDefinition(
+            "lightning_chain",
+            "雷电链",
+            2,
+            new[]
+            {
+                new CardUpgradeOption(
+                    "lightning_chain_chance_1",
+                    "雷电链·强",
+                    "造成 8 伤害，75% 概率连锁至另一名敌人造成 4 伤害。",
+                    new CardDefinition(
+                        "lightning_chain_chance_1",
+                        "雷电链·强",
+                        2,
+                        new[]
+                        {
+                            new CardUpgradeOption(
+                                "lightning_chain_chance_2_damage",
+                                "雷电链·极",
+                                "造成 8 伤害，75% 概率连锁造成 6 伤害。",
+                                new CardDefinition("lightning_chain_chance_2_damage", "雷电链·极", 2, new CardEffect(CardEffectType.ChanceChainDamage, 8, chancePercent: 75, secondaryValue: 6))),
+                            new CardUpgradeOption(
+                                "lightning_chain_chance_2_repeat",
+                                "雷电链·多",
+                                "造成 8 伤害，75% 概率连锁造成 4 伤害；可重复命中同一目标，最多连锁 4 次。",
+                                new CardDefinition("lightning_chain_chance_2_repeat", "雷电链·多", 2, new CardEffect(CardEffectType.ChanceChainDamageRepeatTarget, 8, chancePercent: 75, secondaryValue: 4, repeatCount: 4))),
+                        },
+                        new CardEffect(CardEffectType.ChanceChainDamage, 8, chancePercent: 75, secondaryValue: 4))),
+                new CardUpgradeOption(
+                    "lightning_chain_damage_1",
+                    "雷电链·广",
+                    "造成 12 伤害，50% 概率连锁至另一名敌人造成 4 伤害。",
+                    new CardDefinition(
+                        "lightning_chain_damage_1",
+                        "雷电链·广",
+                        2,
+                        new[]
+                        {
+                            new CardUpgradeOption(
+                                "lightning_chain_damage_2_cost",
+                                "雷电链·速",
+                                "灵力消耗降为 1，造成 12 伤害，50% 概率连锁造成 4 伤害。",
+                                new CardDefinition("lightning_chain_damage_2_cost", "雷电链·速", 1, new CardEffect(CardEffectType.ChanceChainDamage, 12, chancePercent: 50, secondaryValue: 4))),
+                            new CardUpgradeOption(
+                                "lightning_chain_damage_2_stun",
+                                "雷电链·晕",
+                                "造成 12 伤害，50% 概率连锁造成 4 伤害；连锁伤害有 20% 概率眩晕。",
+                                new CardDefinition("lightning_chain_damage_2_stun", "雷电链·晕", 2, new CardEffect(CardEffectType.ChanceChainDamageWithStun, 12, duration: 1, chancePercent: 50, fallbackValue: 20, secondaryValue: 4))),
+                        },
+                        new CardEffect(CardEffectType.ChanceChainDamage, 12, chancePercent: 50, secondaryValue: 4))),
+            },
+            new CardEffect(CardEffectType.ChanceChainDamage, 8, chancePercent: 50, secondaryValue: 4));
+
+        public static CardDefinition ThunderCharge { get; } = new CardDefinition(
+            "thunder_charge",
+            "蓄雷术",
+            1,
+            new[]
+            {
+                new CardUpgradeOption(
+                    "thunder_charge_guard_1",
+                    "蓄雷大法",
+                    "下次攻击伤害翻倍，并获得 8 护盾。",
+                    new CardDefinition("thunder_charge_guard_1", "蓄雷大法", 1, new CardEffect(CardEffectType.ChargeDamage, 2, CardTarget.Self), new CardEffect(CardEffectType.Shield, 8, CardTarget.Self))),
+                new CardUpgradeOption(
+                    "thunder_charge_quick_1",
+                    "蓄雷速发",
+                    "灵力消耗降为 0，下次攻击伤害翻倍，并获得 4 护盾。",
+                    new CardDefinition("thunder_charge_quick_1", "蓄雷速发", 0, new CardEffect(CardEffectType.ChargeDamage, 2, CardTarget.Self), new CardEffect(CardEffectType.Shield, 4, CardTarget.Self))),
+            },
+            new CardEffect(CardEffectType.ChargeDamage, 2, CardTarget.Self),
+            new CardEffect(CardEffectType.Shield, 4, CardTarget.Self));
+
+        public static CardDefinition ThunderEscape { get; } = new CardDefinition(
+            "thunder_escape",
+            "雷遁术",
+            0,
+            new[]
+            {
+                new CardUpgradeOption(
+                    "thunder_escape_draw_1",
+                    "雷遁术·速",
+                    "抽牌提升到 3 张。",
+                    new CardDefinition("thunder_escape_draw_1", "雷遁术·速", 0, new CardEffect(CardEffectType.Draw, 3, CardTarget.Self))),
+                new CardUpgradeOption(
+                    "thunder_escape_guard_1",
+                    "雷遁术·护",
+                    "抽 2 张牌，并获得 3 护盾。",
+                    new CardDefinition("thunder_escape_guard_1", "雷遁术·护", 0, new CardEffect(CardEffectType.Draw, 2, CardTarget.Self), new CardEffect(CardEffectType.Shield, 3, CardTarget.Self))),
+            },
+            new CardEffect(CardEffectType.Draw, 2, CardTarget.Self));
+
+        public static CardDefinition FiveThunderOrthodoxy { get; } = new CardDefinition(
+            "five_thunder_orthodoxy",
+            "五雷正法",
+            3,
+            new[]
+            {
+                new CardUpgradeOption(
+                    "five_thunder_orthodoxy_damage_1",
+                    "五雷正法·强",
+                    "造成 13 伤害，50% 概率眩晕 1 回合，50% 概率连锁造成 4 伤害。",
+                    new CardDefinition(
+                        "five_thunder_orthodoxy_damage_1",
+                        "五雷正法·强",
+                        3,
+                        new[]
+                        {
+                            new CardUpgradeOption(
+                                "five_thunder_orthodoxy_damage_2_stun",
+                                "五雷正法·极",
+                                "造成 13 伤害，75% 概率眩晕 1 回合，50% 概率连锁造成 4 伤害。",
+                                new CardDefinition("five_thunder_orthodoxy_damage_2_stun", "五雷正法·极", 3, new CardEffect(CardEffectType.ChanceChainDamage, 13, chancePercent: 50, secondaryValue: 4), new CardEffect(CardEffectType.ChanceStun, 0, duration: 1, chancePercent: 75))),
+                            new CardUpgradeOption(
+                                "five_thunder_orthodoxy_damage_2_chain",
+                                "五雷正法·爆",
+                                "造成 13 伤害，50% 概率眩晕 1 回合，50% 概率连锁造成 7 伤害。",
+                                new CardDefinition("five_thunder_orthodoxy_damage_2_chain", "五雷正法·爆", 3, new CardEffect(CardEffectType.ChanceChainDamage, 13, chancePercent: 50, secondaryValue: 7), new CardEffect(CardEffectType.ChanceStun, 0, duration: 1, chancePercent: 50))),
+                        },
+                        new CardEffect(CardEffectType.ChanceChainDamage, 13, chancePercent: 50, secondaryValue: 4),
+                        new CardEffect(CardEffectType.ChanceStun, 0, duration: 1, chancePercent: 50))),
+                new CardUpgradeOption(
+                    "five_thunder_orthodoxy_stable_1",
+                    "五雷正法·稳",
+                    "造成 8 伤害，75% 概率眩晕 1 回合，75% 概率连锁造成 4 伤害。",
+                    new CardDefinition(
+                        "five_thunder_orthodoxy_stable_1",
+                        "五雷正法·稳",
+                        3,
+                        new[]
+                        {
+                            new CardUpgradeOption(
+                                "five_thunder_orthodoxy_stable_2_cost",
+                                "五雷正法·速",
+                                "灵力消耗降为 2，造成 8 伤害，75% 概率眩晕 1 回合，75% 概率连锁造成 4 伤害。",
+                                new CardDefinition("five_thunder_orthodoxy_stable_2_cost", "五雷正法·速", 2, new CardEffect(CardEffectType.ChanceChainDamage, 8, chancePercent: 75, secondaryValue: 4), new CardEffect(CardEffectType.ChanceStun, 0, duration: 1, chancePercent: 75))),
+                            new CardUpgradeOption(
+                                "five_thunder_orthodoxy_stable_2_certain_stun",
+                                "五雷正法·灭",
+                                "伤害降为 5，必定眩晕 1 回合，75% 概率连锁造成 4 伤害。",
+                                new CardDefinition("five_thunder_orthodoxy_stable_2_certain_stun", "五雷正法·灭", 3, new CardEffect(CardEffectType.ChanceChainDamage, 5, chancePercent: 75, secondaryValue: 4), new CardEffect(CardEffectType.Stun, 0, duration: 1))),
+                        },
+                        new CardEffect(CardEffectType.ChanceChainDamage, 8, chancePercent: 75, secondaryValue: 4),
+                        new CardEffect(CardEffectType.ChanceStun, 0, duration: 1, chancePercent: 75))),
+            },
+            new CardEffect(CardEffectType.ChanceChainDamage, 8, chancePercent: 50, secondaryValue: 4),
+            new CardEffect(CardEffectType.ChanceStun, 0, duration: 1, chancePercent: 50));
+
+        public static CardDefinition ThunderousBarrage { get; } = new CardDefinition(
+            "thunderous_barrage",
+            "雷霆万钧",
+            2,
+            new[]
+            {
+                new CardUpgradeOption(
+                    "thunderous_barrage_hits_1",
+                    "雷霆万钧·多",
+                    "造成 4 伤害 x5，每击独立 10% 暴击。",
+                    new CardDefinition(
+                        "thunderous_barrage_hits_1",
+                        "雷霆万钧·多",
+                        2,
+                        new[]
+                        {
+                            new CardUpgradeOption(
+                                "thunderous_barrage_hits_2_more",
+                                "雷霆万钧·极",
+                                "造成 4 伤害 x7，每击独立 10% 暴击。",
+                                new CardDefinition("thunderous_barrage_hits_2_more", "雷霆万钧·极", 2, new CardEffect(CardEffectType.ChanceDamage, 4, repeatCount: 7, chancePercent: 10, fallbackValue: 4))),
+                            new CardUpgradeOption(
+                                "thunderous_barrage_hits_2_damage",
+                                "雷霆万钧·强",
+                                "造成 6 伤害 x3，每击独立 10% 暴击。",
+                                new CardDefinition("thunderous_barrage_hits_2_damage", "雷霆万钧·强", 2, new CardEffect(CardEffectType.ChanceDamage, 6, repeatCount: 3, chancePercent: 10, fallbackValue: 6))),
+                        },
+                        new CardEffect(CardEffectType.ChanceDamage, 4, repeatCount: 5, chancePercent: 10, fallbackValue: 4))),
+                new CardUpgradeOption(
+                    "thunderous_barrage_critical_1",
+                    "雷霆万钧·暴",
+                    "造成 4 伤害 x3，每击独立 25% 暴击。",
+                    new CardDefinition(
+                        "thunderous_barrage_critical_1",
+                        "雷霆万钧·暴",
+                        2,
+                        new[]
+                        {
+                            new CardUpgradeOption(
+                                "thunderous_barrage_critical_2_stun",
+                                "雷霆万钧·晕",
+                                "造成 4 伤害 x3，每击独立 25% 暴击；暴击时 20% 概率眩晕。",
+                                new CardDefinition("thunderous_barrage_critical_2_stun", "雷霆万钧·晕", 2, new CardEffect(CardEffectType.ChanceDamageWithStun, 4, duration: 1, repeatCount: 3, chancePercent: 25, fallbackValue: 20))),
+                            new CardUpgradeOption(
+                                "thunderous_barrage_critical_2_chain",
+                                "雷霆万钧·连",
+                                "造成 4 伤害 x3，每击独立 25% 暴击；每击 30% 概率连锁 2 伤害。",
+                                new CardDefinition("thunderous_barrage_critical_2_chain", "雷霆万钧·连", 2, new CardEffect(CardEffectType.ChanceDamageWithChain, 4, repeatCount: 3, chancePercent: 25, fallbackValue: 2, secondaryValue: 30))),
+                        },
+                        new CardEffect(CardEffectType.ChanceDamage, 4, repeatCount: 3, chancePercent: 25, fallbackValue: 4))),
+            },
+            new CardEffect(CardEffectType.ChanceDamage, 4, repeatCount: 3, chancePercent: 10, fallbackValue: 4));
+
         public static PillDefinition SmallRestorePillItem { get; } = new PillDefinition(
             "small_restore_pill",
             "小还丹",
@@ -940,6 +1514,47 @@ namespace GameLogic.Cultivation
                 LightBody,
                 HealingPill,
             };
+        }
+
+        public static IReadOnlyList<CardDefinition> CreateFireCloudSectStarterDeck()
+        {
+            return new List<CardDefinition>
+            {
+                BurningPalm, BurningPalm, BurningPalm,
+                FlameFormula, FlameFormula, FlameFormula,
+                GuardQi, GuardQi,
+                FireCloudStep, FireCloudStep,
+                HealingPill, HealingPill,
+            };
+        }
+
+        public static IReadOnlyList<CardDefinition> CreateThunderSectStarterDeck()
+        {
+            return new List<CardDefinition>
+            {
+                ThunderTalisman, ThunderTalisman, ThunderTalisman,
+                HeavenlyThunderSpell, HeavenlyThunderSpell,
+                ThunderTalisman, ThunderTalisman,
+                GuardQi, GuardQi,
+                ThunderEscape,
+                LightBody,
+                HealingPill,
+            };
+        }
+
+        public static IReadOnlyList<CardDefinition> CreateStarterDeck(CultivationSect sect)
+        {
+            switch (sect)
+            {
+                case CultivationSect.Sword:
+                    return CreateSwordSectStarterDeck();
+                case CultivationSect.FireCloud:
+                    return CreateFireCloudSectStarterDeck();
+                case CultivationSect.Thunder:
+                    return CreateThunderSectStarterDeck();
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(sect), sect, "Unsupported cultivation sect.");
+            }
         }
 
         public static EnemyDefinition StoneDemon { get; } = new EnemyDefinition(
@@ -1063,6 +1678,50 @@ namespace GameLogic.Cultivation
             };
         }
 
+        public static IReadOnlyList<CultivationRunReward> CreateFireCloudSectRewardPool()
+        {
+            return new List<CultivationRunReward>
+            {
+                new CultivationRunReward("reward_burning_palm", BurningPalm),
+                new CultivationRunReward("reward_flame_formula", FlameFormula),
+                new CultivationRunReward("reward_fire_cloud_step", FireCloudStep),
+                new CultivationRunReward("reward_guard_qi", GuardQi),
+                new CultivationRunReward("reward_healing_pill", HealingPill),
+            };
+        }
+
+        public static IReadOnlyList<CultivationRunReward> CreateThunderSectRewardPool()
+        {
+            return new List<CultivationRunReward>
+            {
+                new CultivationRunReward("reward_thunder_talisman", ThunderTalisman),
+                new CultivationRunReward("reward_heavenly_thunder_spell", HeavenlyThunderSpell),
+                new CultivationRunReward("reward_lightning_chain", LightningChain),
+                new CultivationRunReward("reward_thunder_charge", ThunderCharge),
+                new CultivationRunReward("reward_thunder_escape", ThunderEscape),
+                new CultivationRunReward("reward_five_thunder_orthodoxy", FiveThunderOrthodoxy),
+                new CultivationRunReward("reward_thunderous_barrage", ThunderousBarrage),
+                new CultivationRunReward("reward_guard_qi", GuardQi),
+                new CultivationRunReward("reward_light_body", LightBody),
+                new CultivationRunReward("reward_healing_pill", HealingPill),
+            };
+        }
+
+        public static IReadOnlyList<CultivationRunReward> CreateRewardPool(CultivationSect sect)
+        {
+            switch (sect)
+            {
+                case CultivationSect.Sword:
+                    return CreateSwordSectRewardPool();
+                case CultivationSect.FireCloud:
+                    return CreateFireCloudSectRewardPool();
+                case CultivationSect.Thunder:
+                    return CreateThunderSectRewardPool();
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(sect), sect, "Unsupported cultivation sect.");
+            }
+        }
+
         public static IReadOnlyList<CultivationMarketItem> CreatePrototypeMarketItems()
         {
             return new List<CultivationMarketItem>
@@ -1111,9 +1770,9 @@ namespace GameLogic.Cultivation
                 "不冒险，直接离开。",
                 MysticEventEffectType.Leave));
 
-        public static IReadOnlyList<CultivationRunNode> CreateFirstPrototypeRoute()
+        public static IReadOnlyList<CultivationRunNode> CreateFirstPrototypeRoute(CultivationSect sect = CultivationSect.Sword)
         {
-            var rewards = CreateSwordSectRewardPool();
+            var rewards = CreateRewardPool(sect);
             var artifactRewards = CreatePrototypeArtifactRewardPool();
             return new List<CultivationRunNode>
             {
@@ -1124,9 +1783,9 @@ namespace GameLogic.Cultivation
             };
         }
 
-        public static IReadOnlyList<CultivationRunNode> CreateFirstPrototypeBranchingRoute()
+        public static IReadOnlyList<CultivationRunNode> CreateFirstPrototypeBranchingRoute(CultivationSect sect = CultivationSect.Sword)
         {
-            var rewards = CreateSwordSectRewardPool();
+            var rewards = CreateRewardPool(sect);
             var marketItems = CreatePrototypeMarketItems();
             var artifactRewards = CreatePrototypeArtifactRewardPool();
             return new List<CultivationRunNode>

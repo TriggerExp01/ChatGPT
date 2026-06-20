@@ -9,7 +9,7 @@ namespace GameLogic.Cultivation
         public const int DefaultSpiritMax = 3;
         public const int DefaultHandLimit = 5;
 
-        public CultivationRunState(IEnumerable<CardDefinition> deck, IEnumerable<CultivationRunNode> route, int playerMaxHp = 100, int? playerCurrentHp = null, int initialSpiritStones = 0)
+        public CultivationRunState(IEnumerable<CardDefinition> deck, IEnumerable<CultivationRunNode> route, int playerMaxHp = 100, int? playerCurrentHp = null, int initialSpiritStones = 0, CultivationSect sect = CultivationSect.Sword)
         {
             Deck = new List<CardDefinition>(deck ?? throw new ArgumentNullException(nameof(deck)));
             Route = new List<CultivationRunNode>(route ?? throw new ArgumentNullException(nameof(route))).AsReadOnly();
@@ -55,6 +55,7 @@ namespace GameLogic.Cultivation
             PlayerMaxHp = playerMaxHp;
             PlayerCurrentHp = playerCurrentHp ?? playerMaxHp;
             SpiritStones = Math.Max(0, initialSpiritStones);
+            Sect = sect;
             PillSlotLimit = DefaultPillSlotLimit;
             CurrentRealm = Route[0].Realm;
             SpiritMax = DefaultSpiritMax;
@@ -64,6 +65,8 @@ namespace GameLogic.Cultivation
         public List<CardDefinition> Deck { get; }
 
         public IReadOnlyList<CultivationRunNode> Route { get; }
+
+        public CultivationSect Sect { get; }
 
         public int CurrentNodeIndex { get; set; }
 

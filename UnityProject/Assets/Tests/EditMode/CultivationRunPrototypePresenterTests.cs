@@ -55,6 +55,28 @@ namespace GameLogic.Tests
         }
 
         [Test]
+        public void BuildTextAndSnapshotIncludeSelectedSect()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var run = engine.StartRun(sect: CultivationSect.FireCloud);
+            var thunderRun = engine.StartRun(sect: CultivationSect.Thunder);
+
+            var text = CultivationRunPrototypePresenter.BuildText(run);
+            var view = CultivationRunPrototypePresenter.BuildViewModel(run);
+            var snapshot = CultivationRunPrototypePresenter.CreateSnapshot(run);
+            var thunderText = CultivationRunPrototypePresenter.BuildText(thunderRun);
+            var thunderView = CultivationRunPrototypePresenter.BuildViewModel(thunderRun);
+            var thunderSnapshot = CultivationRunPrototypePresenter.CreateSnapshot(thunderRun);
+
+            Assert.AreEqual(CultivationSect.FireCloud, snapshot.Sect);
+            StringAssert.Contains("门派：火云宗", text.RunText);
+            StringAssert.Contains("火云宗", view.PhaseTitle);
+            Assert.AreEqual(CultivationSect.Thunder, thunderSnapshot.Sect);
+            StringAssert.Contains("门派：天雷阁", thunderText.RunText);
+            StringAssert.Contains("天雷阁", thunderView.PhaseTitle);
+        }
+
+        [Test]
         public void BuildTextIncludesFreezeStatusForFoundationBattles()
         {
             var engine = new CultivationRunEngine(new BattleEngine(1));
@@ -394,6 +416,40 @@ namespace GameLogic.Tests
             StringAssert.Contains("锋锐 3 / 2 回合", summary);
             StringAssert.Contains("消耗", summary);
             StringAssert.Contains("每层剑气印记 +3 伤害", summary);
+        }
+
+        [Test]
+        public void FormatCardSummaryDescribesChanceKeywords()
+        {
+            var card = new CardDefinition(
+                "chance_keyword_test",
+                "概率关键词测试",
+                1,
+                new CardEffect(CardEffectType.ChanceDamage, 10, chancePercent: 30, fallbackValue: 5),
+                new CardEffect(CardEffectType.ChainOnChanceDamage, 15, chancePercent: 30, fallbackValue: 5, secondaryValue: 7),
+                new CardEffect(CardEffectType.ChanceDamage, 4, repeatCount: 3, chancePercent: 10, fallbackValue: 4),
+                new CardEffect(CardEffectType.ChanceDamageWithStun, 4, duration: 1, repeatCount: 3, chancePercent: 25, fallbackValue: 20),
+                new CardEffect(CardEffectType.ChanceDamageWithChain, 4, repeatCount: 3, chancePercent: 25, fallbackValue: 2, secondaryValue: 30),
+                new CardEffect(CardEffectType.ChanceStun, 0, duration: 1, chancePercent: 40),
+                new CardEffect(CardEffectType.ChainOnChanceStun, 10, duration: 1, chancePercent: 40, secondaryValue: 5),
+                new CardEffect(CardEffectType.ChanceChainDamage, 8, chancePercent: 50, secondaryValue: 4),
+                new CardEffect(CardEffectType.ChanceChainDamageWithStun, 12, duration: 1, chancePercent: 50, fallbackValue: 20, secondaryValue: 4),
+                new CardEffect(CardEffectType.ChanceChainDamageRepeatTarget, 8, chancePercent: 75, secondaryValue: 4, repeatCount: 4),
+                new CardEffect(CardEffectType.ChargeDamage, 2, CardTarget.Self));
+
+            var summary = CultivationRunPrototypePresenter.FormatCardSummary(card);
+
+            StringAssert.Contains("30% 概率造成 10 伤害，失败造成 5 伤害", summary);
+            StringAssert.Contains("30% 概率造成 15 伤害，失败造成 5 伤害；命中连锁 7 伤害", summary);
+            StringAssert.Contains("造成 4 伤害 × 3，每击 10% 概率暴击", summary);
+            StringAssert.Contains("造成 4 伤害 × 3，每击 25% 概率暴击；暴击时 20% 概率眩晕", summary);
+            StringAssert.Contains("造成 4 伤害 × 3，每击 25% 概率暴击；每击 30% 概率连锁 2 伤害", summary);
+            StringAssert.Contains("40% 概率眩晕 1 回合", summary);
+            StringAssert.Contains("造成 10 伤害，40% 概率眩晕 1 回合；成功连锁 5 伤害", summary);
+            StringAssert.Contains("造成 8 伤害，50% 概率连锁 4 伤害", summary);
+            StringAssert.Contains("造成 12 伤害，50% 概率连锁 4 伤害；连锁有 20% 概率眩晕", summary);
+            StringAssert.Contains("造成 8 伤害，75% 概率连锁 4 伤害；可重复目标，最多 4 次", summary);
+            StringAssert.Contains("下次攻击伤害 ×2", summary);
         }
 
         private static void PlayFirstCard(CultivationRunState run)

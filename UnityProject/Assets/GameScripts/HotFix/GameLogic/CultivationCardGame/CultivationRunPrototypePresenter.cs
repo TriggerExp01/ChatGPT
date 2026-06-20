@@ -87,6 +87,28 @@ namespace GameLogic.Cultivation
                     return $"每层剑气印记 +{effect.Value} 伤害";
                 case CardEffectType.Stun:
                     return $"眩晕 {Math.Max(1, effect.Duration)} 回合";
+                case CardEffectType.ChanceDamage:
+                    return effect.RepeatCount > 1
+                        ? $"造成 {effect.FallbackValue} 伤害 × {effect.RepeatCount}，每击 {effect.ChancePercent}% 概率暴击"
+                        : $"{effect.ChancePercent}% 概率造成 {effect.Value} 伤害，失败造成 {effect.FallbackValue} 伤害";
+                case CardEffectType.ChanceDamageWithStun:
+                    return $"造成 {effect.Value} 伤害 × {effect.RepeatCount}，每击 {effect.ChancePercent}% 概率暴击；暴击时 {effect.FallbackValue}% 概率眩晕";
+                case CardEffectType.ChanceDamageWithChain:
+                    return $"造成 {effect.Value} 伤害 × {effect.RepeatCount}，每击 {effect.ChancePercent}% 概率暴击；每击 {effect.SecondaryValue}% 概率连锁 {effect.FallbackValue} 伤害";
+                case CardEffectType.ChainOnChanceDamage:
+                    return $"{effect.ChancePercent}% 概率造成 {effect.Value} 伤害，失败造成 {effect.FallbackValue} 伤害；命中连锁 {effect.SecondaryValue} 伤害";
+                case CardEffectType.ChanceStun:
+                    return $"{effect.ChancePercent}% 概率眩晕 {Math.Max(1, effect.Duration)} 回合";
+                case CardEffectType.ChainOnChanceStun:
+                    return $"造成 {effect.Value} 伤害，{effect.ChancePercent}% 概率眩晕 {Math.Max(1, effect.Duration)} 回合；成功连锁 {effect.SecondaryValue} 伤害";
+                case CardEffectType.ChanceChainDamage:
+                    return $"造成 {effect.Value} 伤害，{effect.ChancePercent}% 概率连锁 {effect.SecondaryValue} 伤害";
+                case CardEffectType.ChanceChainDamageWithStun:
+                    return $"造成 {effect.Value} 伤害，{effect.ChancePercent}% 概率连锁 {effect.SecondaryValue} 伤害；连锁有 {effect.FallbackValue}% 概率眩晕";
+                case CardEffectType.ChanceChainDamageRepeatTarget:
+                    return $"造成 {effect.Value} 伤害，{effect.ChancePercent}% 概率连锁 {effect.SecondaryValue} 伤害；可重复目标，最多 {Math.Max(1, effect.RepeatCount)} 次";
+                case CardEffectType.ChargeDamage:
+                    return $"下次攻击伤害 ×{effect.Value}";
                 default:
                     return effect.Type.ToString();
             }
@@ -97,7 +119,7 @@ namespace GameLogic.Cultivation
             var playerHp = state.CurrentBattle?.Player.CurrentHp ?? state.PlayerCurrentHp;
             var playerMaxHp = state.CurrentBattle?.Player.MaxHp ?? state.PlayerMaxHp;
             var passive = state.SelectedGoldenCorePassive?.Name ?? (state.CurrentGoldenCorePassiveChoices.Count > 0 ? "待选择" : "未获得");
-            return $"状态：{FormatStatusName(state.Status)}\n境界：{FormatRealmName(state.CurrentRealm)}\n金丹被动：{passive}\n节点：{state.CurrentNodeIndex + 1}/{state.Route.Count}\nHP：{playerHp}/{playerMaxHp}\n灵力上限：{state.SpiritMax}\n手牌上限：{state.HandLimit}\n灵石：{state.SpiritStones}\n牌组：{state.Deck.Count} 张\n丹药：{state.Pills.Count}/{state.PillSlotLimit}\n法宝：{state.Artifacts.Count}\n精英法宝：{state.DroppedArtifacts.Count}\n宝箱法宝：{state.ChestArtifacts.Count}\n已拿奖励：{state.ClaimedRewards.Count}\n已突破：{state.RealmBreakthroughCount}\n坊市删牌：{state.RemovedMarketCards.Count}\n坊市售牌：{state.SoldMarketCards.Count}";
+            return $"门派：{FormatSectName(state.Sect)}\n状态：{FormatStatusName(state.Status)}\n境界：{FormatRealmName(state.CurrentRealm)}\n金丹被动：{passive}\n节点：{state.CurrentNodeIndex + 1}/{state.Route.Count}\nHP：{playerHp}/{playerMaxHp}\n灵力上限：{state.SpiritMax}\n手牌上限：{state.HandLimit}\n灵石：{state.SpiritStones}\n牌组：{state.Deck.Count} 张\n丹药：{state.Pills.Count}/{state.PillSlotLimit}\n法宝：{state.Artifacts.Count}\n精英法宝：{state.DroppedArtifacts.Count}\n宝箱法宝：{state.ChestArtifacts.Count}\n已拿奖励：{state.ClaimedRewards.Count}\n已突破：{state.RealmBreakthroughCount}\n坊市删牌：{state.RemovedMarketCards.Count}\n坊市售牌：{state.SoldMarketCards.Count}";
         }
 
         private static string BuildNodeText(CultivationRunState state)
@@ -332,7 +354,7 @@ namespace GameLogic.Cultivation
 
         private static string BuildPhaseTitle(CultivationRunState state)
         {
-            return $"{FormatRealmName(state.CurrentRealm)} · 节点 {state.CurrentNodeIndex + 1}/{state.Route.Count} · {state.CurrentNode.Name}";
+            return $"{FormatSectName(state.Sect)} · {FormatRealmName(state.CurrentRealm)} · 节点 {state.CurrentNodeIndex + 1}/{state.Route.Count} · {state.CurrentNode.Name}";
         }
 
         private static string BuildStatusSummary(CultivationRunState state)
@@ -389,6 +411,21 @@ namespace GameLogic.Cultivation
                     return "修行失败";
                 default:
                     return status.ToString();
+            }
+        }
+
+        public static string FormatSectName(CultivationSect sect)
+        {
+            switch (sect)
+            {
+                case CultivationSect.Sword:
+                    return "剑宗";
+                case CultivationSect.FireCloud:
+                    return "火云宗";
+                case CultivationSect.Thunder:
+                    return "天雷阁";
+                default:
+                    return sect.ToString();
             }
         }
 
@@ -452,7 +489,7 @@ namespace GameLogic.Cultivation
 
             var battle = state.CurrentBattle;
             var enemy = battle.Enemies.FirstOrDefault();
-            return $"玩家\nHP {battle.Player.CurrentHp}/{battle.Player.MaxHp}  护盾 {battle.Player.Shield}\n灵力 {battle.Spirit}/{battle.SpiritMax}  回合 {battle.TurnNumber}\n锋锐 {battle.Player.Sharpness}/{battle.Player.SharpnessTurns}  破防 {battle.Player.BreakDefenseStacks}  灼烧 {battle.Player.BurnStacks}/{battle.Player.BurnTurns}  冰冻 {battle.Player.FreezeStacks}/{battle.Player.FreezeTurns}  眩晕 {battle.Player.StunTurns}\n灵力消耗 -{battle.SpiritCostReduction}  额外抽牌 +{battle.ExtraDrawPerTurn}\n\n敌人：{enemy?.Body.Name ?? string.Empty}\nHP {enemy?.Body.CurrentHp ?? 0}/{enemy?.Body.MaxHp ?? 0}  护盾 {enemy?.Body.Shield ?? 0}\n攻击强化 +{enemy?.AttackBonus ?? 0}  破防 {enemy?.Body.BreakDefenseStacks ?? 0}  灼烧 {enemy?.Body.BurnStacks ?? 0}/{enemy?.Body.BurnTurns ?? 0}  冰冻 {enemy?.Body.FreezeStacks ?? 0}/{enemy?.Body.FreezeTurns ?? 0}  眩晕 {enemy?.Body.StunTurns ?? 0}  剑气印记 {enemy?.Body.SwordMarkStacks ?? 0}\n意图：{enemy?.CurrentIntent.Description ?? string.Empty}\n\n战斗结果：{battle.Outcome}";
+            return $"玩家\nHP {battle.Player.CurrentHp}/{battle.Player.MaxHp}  护盾 {battle.Player.Shield}\n灵力 {battle.Spirit}/{battle.SpiritMax}  回合 {battle.TurnNumber}\n锋锐 {battle.Player.Sharpness}/{battle.Player.SharpnessTurns}  破防 {battle.Player.BreakDefenseStacks}  灼烧 {battle.Player.BurnStacks}/{battle.Player.BurnTurns}  冰冻 {battle.Player.FreezeStacks}/{battle.Player.FreezeTurns}  眩晕 {battle.Player.StunTurns}\n灵力消耗 -{battle.SpiritCostReduction}  额外抽牌 +{battle.ExtraDrawPerTurn}  蓄力 x{battle.ChargedDamageMultiplier}/{battle.ChargedDamageUses}\n\n敌人：{enemy?.Body.Name ?? string.Empty}\nHP {enemy?.Body.CurrentHp ?? 0}/{enemy?.Body.MaxHp ?? 0}  护盾 {enemy?.Body.Shield ?? 0}\n攻击强化 +{enemy?.AttackBonus ?? 0}  破防 {enemy?.Body.BreakDefenseStacks ?? 0}  灼烧 {enemy?.Body.BurnStacks ?? 0}/{enemy?.Body.BurnTurns ?? 0}  冰冻 {enemy?.Body.FreezeStacks ?? 0}/{enemy?.Body.FreezeTurns ?? 0}  眩晕 {enemy?.Body.StunTurns ?? 0}  剑气印记 {enemy?.Body.SwordMarkStacks ?? 0}\n意图：{enemy?.CurrentIntent.Description ?? string.Empty}\n\n战斗结果：{battle.Outcome}";
         }
 
         private static string BuildDeckText(CultivationRunState state)
@@ -697,6 +734,8 @@ namespace GameLogic.Cultivation
 
     public sealed class RunPrototypeSnapshot
     {
+        public CultivationSect Sect { get; private set; }
+
         public CultivationRunStatus Status { get; private set; }
 
         public int CurrentNodeIndex { get; private set; }
@@ -770,6 +809,7 @@ namespace GameLogic.Cultivation
 
             return new RunPrototypeSnapshot
             {
+                Sect = state.Sect,
                 Status = state.Status,
                 CurrentNodeIndex = state.CurrentNodeIndex,
                 CurrentNodeName = state.CurrentNode.Name,

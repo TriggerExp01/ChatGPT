@@ -43,6 +43,10 @@ namespace GameLogic.Cultivation
 
         public int ExtraDrawPerTurn { get; private set; }
 
+        public int ChargedDamageMultiplier { get; private set; } = 1;
+
+        public int ChargedDamageUses { get; private set; }
+
         public int TurnNumber { get; set; }
 
         public BattleOutcome Outcome { get; set; } = BattleOutcome.InProgress;
@@ -55,6 +59,34 @@ namespace GameLogic.Cultivation
         public void AddExtraDrawPerTurn(int amount)
         {
             ExtraDrawPerTurn += Math.Max(0, amount);
+        }
+
+        public void AddChargedDamage(int multiplier, int uses = 1)
+        {
+            if (multiplier <= 1 || uses <= 0)
+            {
+                return;
+            }
+
+            ChargedDamageMultiplier = Math.Max(ChargedDamageMultiplier, multiplier);
+            ChargedDamageUses += uses;
+        }
+
+        public int TryConsumeChargedDamageMultiplier()
+        {
+            if (ChargedDamageUses <= 0 || ChargedDamageMultiplier <= 1)
+            {
+                return 1;
+            }
+
+            var multiplier = ChargedDamageMultiplier;
+            ChargedDamageUses--;
+            if (ChargedDamageUses == 0)
+            {
+                ChargedDamageMultiplier = 1;
+            }
+
+            return multiplier;
         }
 
         public int GetEffectiveSpiritCost(CardDefinition card)

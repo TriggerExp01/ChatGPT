@@ -20,6 +20,16 @@ namespace GameLogic.Cultivation
         Exhaust,
         DamagePerSwordMark,
         Stun,
+        ChanceDamage,
+        ChanceStun,
+        ChanceChainDamage,
+        ChargeDamage,
+        ChainOnChanceDamage,
+        ChainOnChanceStun,
+        ChanceChainDamageWithStun,
+        ChanceChainDamageRepeatTarget,
+        ChanceDamageWithStun,
+        ChanceDamageWithChain,
     }
 
     public enum EnemyIntentType
@@ -75,5 +85,12 @@ namespace GameLogic.Cultivation
         NascentSoul,
         SoulTransformation,
         Tribulation,
+    }
+
+    public enum CultivationSect
+    {
+        Sword,
+        FireCloud,
+        Thunder,
     }
 }

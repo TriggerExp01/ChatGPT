@@ -49,7 +49,41 @@ namespace GameLogic.Tests
             Assert.NotNull(_root.transform.Find("CultivationRunPrototypeUI/Lower/ChoicesScrollPanel/Viewport/Content"));
             Assert.NotNull(_root.transform.Find("CultivationRunPrototypeUI/Lower/HandScrollPanel/Viewport/Content"));
             Assert.NotNull(_root.transform.Find("CultivationRunPrototypeUI/Lower/ActionBar/ResetButton"));
+            Assert.NotNull(_root.transform.Find("CultivationRunPrototypeUI/Lower/ActionBar/SwordSectButton"));
+            Assert.NotNull(_root.transform.Find("CultivationRunPrototypeUI/Lower/ActionBar/FireCloudSectButton"));
+            Assert.NotNull(_root.transform.Find("CultivationRunPrototypeUI/Lower/ActionBar/ThunderSectButton"));
             Assert.NotNull(_root.transform.Find("CultivationRunPrototypeUI/Lower/ActionBar/EndTurnButton"));
+        }
+
+        [Test]
+        public void SectButtonsRestartRunWithSelectedSect()
+        {
+            var fireCloudButton = _root.transform
+                .Find("CultivationRunPrototypeUI/Lower/ActionBar/FireCloudSectButton")
+                .GetComponent<Button>();
+            var swordButton = _root.transform
+                .Find("CultivationRunPrototypeUI/Lower/ActionBar/SwordSectButton")
+                .GetComponent<Button>();
+            var thunderButton = _root.transform
+                .Find("CultivationRunPrototypeUI/Lower/ActionBar/ThunderSectButton")
+                .GetComponent<Button>();
+
+            fireCloudButton.onClick.Invoke();
+
+            Assert.AreEqual(CultivationSect.FireCloud, _ui.Snapshot.Sect);
+            StringAssert.Contains("火云宗", _root.transform.Find("CultivationRunPrototypeUI/Header/TitleRow/TitleBox/StageText").GetComponent<Text>().text);
+            StringAssert.Contains(CultivationSeedData.BurningPalm.Name, _root.transform.Find("CultivationRunPrototypeUI/Body/DeckPanel/DeckText").GetComponent<Text>().text);
+
+            thunderButton.onClick.Invoke();
+
+            Assert.AreEqual(CultivationSect.Thunder, _ui.Snapshot.Sect);
+            StringAssert.Contains("天雷阁", _root.transform.Find("CultivationRunPrototypeUI/Header/TitleRow/TitleBox/StageText").GetComponent<Text>().text);
+            StringAssert.Contains(CultivationSeedData.ThunderTalisman.Name, _root.transform.Find("CultivationRunPrototypeUI/Body/DeckPanel/DeckText").GetComponent<Text>().text);
+
+            swordButton.onClick.Invoke();
+
+            Assert.AreEqual(CultivationSect.Sword, _ui.Snapshot.Sect);
+            StringAssert.Contains(CultivationSeedData.SwordQi.Name, _root.transform.Find("CultivationRunPrototypeUI/Body/DeckPanel/DeckText").GetComponent<Text>().text);
         }
 
         [Test]
@@ -160,6 +194,51 @@ namespace GameLogic.Tests
             Assert.NotNull(firstCard.GetComponent<CanvasGroup>());
             Assert.NotNull(firstCard.Find("Label"));
             Assert.NotNull(firstCard.Find("Detail"));
+        }
+
+        [Test]
+        public void PrototypeUiCreatesSemanticDynamicTemplatesWhenPrefabHasGenericTemplates()
+        {
+            var prefab = Resources.Load<GameObject>(CultivationRunWindow.ResourceLocation);
+            var instance = Object.Instantiate(prefab, _root.transform);
+
+            var ui = CultivationRunPrototypeUI.Open(instance.transform);
+            var templateRoot = instance.transform.Find("PrefabAnchors/UIItemTemplates");
+
+            Assert.NotNull(ui);
+            Assert.NotNull(templateRoot.Find("StatCardTemplate"));
+            Assert.NotNull(templateRoot.Find("MapNodeTemplate"));
+            Assert.NotNull(templateRoot.Find("RewardCardTemplate"));
+            Assert.NotNull(templateRoot.Find("RouteChoiceTemplate"));
+            Assert.NotNull(templateRoot.Find("RestChoiceTemplate"));
+            Assert.NotNull(templateRoot.Find("MarketItemTemplate"));
+            Assert.NotNull(templateRoot.Find("ChestRewardTemplate"));
+            Assert.NotNull(templateRoot.Find("MysticEventTemplate"));
+            Assert.NotNull(templateRoot.Find("GoldenCorePassiveTemplate"));
+            Assert.NotNull(templateRoot.Find("BattleCardTemplate"));
+            Assert.NotNull(templateRoot.Find("PillItemTemplate"));
+            Assert.NotNull(templateRoot.Find("MarketDeckActionTemplate"));
+            Assert.IsFalse(templateRoot.Find("BattleCardTemplate").gameObject.activeSelf);
+            Assert.IsFalse(templateRoot.Find("RouteChoiceTemplate").gameObject.activeSelf);
+        }
+
+        [Test]
+        public void RuntimeDynamicItemsUseSemanticTemplateStyles()
+        {
+            var firstCard = FindFirstChildWithPrefix(_root.transform.Find("CultivationRunPrototypeUI/Lower/HandScrollPanel/Viewport/Content"), "Card_");
+            Assert.NotNull(firstCard);
+            AssertColorApproximately(new Color(0.155f, 0.095f, 0.075f, 1f), firstCard.GetComponent<Image>().color);
+
+            ForceCurrentBattleVictory();
+            _ui.ResolveBattle();
+            var reward = FindFirstChildWithPrefix(_root.transform.Find("CultivationRunPrototypeUI/Lower/ChoicesScrollPanel/Viewport/Content"), "Reward_");
+            Assert.NotNull(reward);
+            AssertColorApproximately(new Color(0.190f, 0.145f, 0.088f, 1f), reward.GetComponent<Image>().color);
+
+            _ui.SkipReward();
+            var route = FindFirstChildWithPrefix(_root.transform.Find("CultivationRunPrototypeUI/Lower/ChoicesScrollPanel/Viewport/Content"), "Route_");
+            Assert.NotNull(route);
+            AssertColorApproximately(new Color(0.118f, 0.205f, 0.185f, 1f), route.GetComponent<Image>().color);
         }
 
         [Test]
