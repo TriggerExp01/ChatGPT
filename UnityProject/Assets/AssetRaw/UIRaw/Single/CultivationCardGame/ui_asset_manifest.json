@@ -1,0 +1,32 @@
+{
+  "phase": "Phase60_UIAssetBaseline",
+  "source": "procedural_placeholder_owned_by_project",
+  "license": "project_generated_placeholder_replaceable",
+  "root": "Assets/AssetRaw/UIRaw/Single/CultivationCardGame",
+  "purpose": "current_game_ui_placeholder_assets_and_stable_replacement_paths",
+  "assets": [
+    "Backgrounds/bg_combat_qi_refining_placeholder.png",
+    "Panels/ui_panel_dark.png",
+    "Panels/ui_panel_gold.png",
+    "Buttons/ui_button_normal.png",
+    "Buttons/ui_button_hover.png",
+    "Buttons/ui_button_pressed.png",
+    "Buttons/ui_button_disabled.png",
+    "Cards/ui_card_frame_common.png",
+    "Cards/ui_card_frame_spirit.png",
+    "Cards/ui_card_frame_immortal.png",
+    "Cards/ui_card_frame_saint.png",
+    "Cards/ui_card_frame_dao.png",
+    "Icons/ui_icon_spirit_gem.png",
+    "Icons/ui_icon_shield.png",
+    "Icons/ui_icon_thunder.png",
+    "Intents/ui_intent_attack.png",
+    "Intents/ui_intent_defend.png",
+    "Intents/ui_intent_stun.png",
+    "MapNodes/ui_node_battle.png",
+    "MapNodes/ui_node_elite.png",
+    "MapNodes/ui_node_market.png",
+    "MapNodes/ui_node_rest.png",
+    "MapNodes/ui_node_boss.png"
+  ]
+}

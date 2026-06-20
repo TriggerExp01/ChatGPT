@@ -48,6 +48,17 @@ namespace GameLogic.Cultivation
         private GameObject _marketDeckActionTemplate;
         private GameObject _messageTextTemplate;
 
+        private static bool _visualAssetsLoaded;
+        private static Sprite _combatBackgroundSprite;
+        private static Sprite _darkPanelSprite;
+        private static Sprite _goldPanelSprite;
+        private static Sprite _buttonNormalSprite;
+        private static Sprite _buttonHoverSprite;
+        private static Sprite _buttonPressedSprite;
+        private static Sprite _buttonDisabledSprite;
+        private static Sprite _cardFrameCommonSprite;
+        private static Sprite _cardFrameSpiritSprite;
+
         private static readonly Color ThemeRootInk = new Color(0.026f, 0.032f, 0.030f, 0.99f);
         private static readonly Color ThemeHeaderInk = new Color(0.070f, 0.088f, 0.082f, 0.98f);
         private static readonly Color ThemeRunPanelInk = new Color(0.060f, 0.083f, 0.085f, 0.97f);
@@ -94,6 +105,12 @@ namespace GameLogic.Cultivation
             BattleCard,
             PillItem,
             MarketDeckAction,
+        }
+
+        private enum PanelVisualKind
+        {
+            Dark,
+            Gold,
         }
 
         public RunPrototypeSnapshot Snapshot => CultivationRunPrototypePresenter.CreateSnapshot(_run);
@@ -366,8 +383,11 @@ namespace GameLogic.Cultivation
 
         private void BuildView()
         {
+            EnsureVisualAssetsLoaded();
+
             var background = GetOrAdd<Image>(gameObject);
             background.color = ThemeRootInk;
+            ApplySprite(background, _combatBackgroundSprite, Image.Type.Sliced);
             ApplyGraphicChrome(gameObject, new Color(0.18f, 0.27f, 0.23f, 0.34f), ThemeShadow, new Vector2(2f, -2f));
 
             var rootLayout = GetOrAdd<VerticalLayoutGroup>(gameObject);
@@ -381,6 +401,7 @@ namespace GameLogic.Cultivation
             var header = CreatePanel("Header", transform, ThemeHeaderInk);
             var headerLayout = header.GetComponent<VerticalLayoutGroup>();
             headerLayout.padding = new RectOffset(20, 20, 12, 12);
+            ApplyPanelSprite(header.GetComponent<Image>(), PanelVisualKind.Gold);
             ApplyGraphicChrome(header.gameObject, ThemeGoldOutline, ThemeShadow, new Vector2(3f, -3f));
             SetLayout(header.gameObject, flexibleWidth: 1, preferredHeight: 172);
 
@@ -442,6 +463,7 @@ namespace GameLogic.Cultivation
             SetLayout(_nodeText.gameObject, flexibleWidth: 1, flexibleHeight: 1);
 
             var center = CreatePanel("BattlePanel", body, ThemeBattlePanelInk);
+            ApplyPanelSprite(center.GetComponent<Image>(), PanelVisualKind.Gold);
             ApplyGraphicChrome(center.gameObject, ThemeGoldOutline, ThemeShadow, new Vector2(3f, -3f));
             SetLayout(center.gameObject, flexibleWidth: 1.45f, flexibleHeight: 1);
             CreateSectionLabel(center, "战斗详情");
@@ -934,6 +956,7 @@ namespace GameLogic.Cultivation
 
         private static void EnsureTemplate(Transform templateRoot, string templateName, string fallbackTemplateName, Color color)
         {
+            EnsureVisualAssetsLoaded();
             var existing = templateRoot.Find(templateName);
             var target = existing != null ? existing.gameObject : null;
             if (target == null)
@@ -953,6 +976,8 @@ namespace GameLogic.Cultivation
             if (image != null)
             {
                 image.color = color;
+                var sprite = templateName == "BattleCardTemplate" ? _cardFrameSpiritSprite : _buttonNormalSprite;
+                ApplySprite(image, sprite, Image.Type.Sliced);
             }
         }
 
@@ -964,6 +989,10 @@ namespace GameLogic.Cultivation
             }
 
             ApplyButtonColors(button, ResolveActionButtonColor(templateKind));
+            if (templateKind == ActionTemplateKind.BattleCard)
+            {
+                ApplySprite(button.targetGraphic as Image ?? button.GetComponent<Image>(), _cardFrameSpiritSprite, Image.Type.Sliced);
+            }
         }
 
         private static Color ResolveActionButtonColor(ActionTemplateKind templateKind)
@@ -1009,9 +1038,11 @@ namespace GameLogic.Cultivation
 
         private static RectTransform CreatePanel(string name, Transform parent, Color color)
         {
+            EnsureVisualAssetsLoaded();
             var rect = CreateRect(name, parent, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
             var image = GetOrAdd<Image>(rect.gameObject);
             image.color = color;
+            ApplyPanelSprite(image, PanelVisualKind.Dark);
             GetOrAdd<CanvasGroup>(rect.gameObject).alpha = 1f;
             ApplyGraphicChrome(rect.gameObject, ThemePanelOutline, ThemeShadow, new Vector2(2.5f, -2.5f));
             var layout = GetOrAdd<VerticalLayoutGroup>(rect.gameObject);
@@ -1044,9 +1075,11 @@ namespace GameLogic.Cultivation
 
         private static RectTransform CreateInfoCard(string name, Transform parent, string title, string value, string note, Color backgroundColor, Color valueColor)
         {
+            EnsureVisualAssetsLoaded();
             var rect = CreateRect(name, parent, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
             var image = GetOrAdd<Image>(rect.gameObject);
             image.color = backgroundColor;
+            ApplySprite(image, _cardFrameCommonSprite, Image.Type.Sliced);
             GetOrAdd<CanvasGroup>(rect.gameObject).alpha = 1f;
             ApplyGraphicChrome(rect.gameObject, ThemeGoldOutline, ThemeShadow, new Vector2(2f, -2f));
             var layout = GetOrAdd<VerticalLayoutGroup>(rect.gameObject);
@@ -1158,9 +1191,11 @@ namespace GameLogic.Cultivation
 
         private static Button CreateButton(string name, Transform parent, string label, string detail)
         {
+            EnsureVisualAssetsLoaded();
             var rect = CreateRect(name, parent, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
             var image = GetOrAdd<Image>(rect.gameObject);
             image.color = ThemeButtonInk;
+            ApplySprite(image, _buttonNormalSprite, Image.Type.Sliced);
             GetOrAdd<CanvasGroup>(rect.gameObject).alpha = 1f;
             ApplyGraphicChrome(rect.gameObject, ThemeGoldOutline, ThemeShadow, new Vector2(2f, -2f));
             var button = GetOrAdd<Button>(rect.gameObject);
@@ -1195,10 +1230,12 @@ namespace GameLogic.Cultivation
 
         private static void ApplyButtonColors(Button button, Color baseColor)
         {
+            EnsureVisualAssetsLoaded();
             var image = button.targetGraphic as Image ?? button.GetComponent<Image>();
             if (image != null)
             {
                 image.color = baseColor;
+                ApplySprite(image, _buttonNormalSprite, Image.Type.Sliced);
                 button.targetGraphic = image;
             }
 
@@ -1210,6 +1247,52 @@ namespace GameLogic.Cultivation
             colors.disabledColor = new Color(0.075f, 0.078f, 0.074f, 0.76f);
             colors.fadeDuration = 0.08f;
             button.colors = colors;
+            if (_buttonHoverSprite != null || _buttonPressedSprite != null || _buttonDisabledSprite != null)
+            {
+                button.transition = Selectable.Transition.SpriteSwap;
+                var spriteState = button.spriteState;
+                spriteState.highlightedSprite = _buttonHoverSprite;
+                spriteState.pressedSprite = _buttonPressedSprite;
+                spriteState.selectedSprite = _buttonHoverSprite;
+                spriteState.disabledSprite = _buttonDisabledSprite;
+                button.spriteState = spriteState;
+            }
+        }
+
+        private static void EnsureVisualAssetsLoaded()
+        {
+            if (_visualAssetsLoaded)
+            {
+                return;
+            }
+
+            _combatBackgroundSprite = CultivationUIAssetCatalog.LoadEditorSprite(CultivationUIAssetCatalog.CombatQiRefiningBackground);
+            _darkPanelSprite = CultivationUIAssetCatalog.LoadEditorSprite(CultivationUIAssetCatalog.DarkPanel);
+            _goldPanelSprite = CultivationUIAssetCatalog.LoadEditorSprite(CultivationUIAssetCatalog.GoldPanel);
+            _buttonNormalSprite = CultivationUIAssetCatalog.LoadEditorSprite(CultivationUIAssetCatalog.ButtonNormal);
+            _buttonHoverSprite = CultivationUIAssetCatalog.LoadEditorSprite(CultivationUIAssetCatalog.ButtonHover);
+            _buttonPressedSprite = CultivationUIAssetCatalog.LoadEditorSprite(CultivationUIAssetCatalog.ButtonPressed);
+            _buttonDisabledSprite = CultivationUIAssetCatalog.LoadEditorSprite(CultivationUIAssetCatalog.ButtonDisabled);
+            _cardFrameCommonSprite = CultivationUIAssetCatalog.LoadEditorSprite(CultivationUIAssetCatalog.CardFrameCommon);
+            _cardFrameSpiritSprite = CultivationUIAssetCatalog.LoadEditorSprite(CultivationUIAssetCatalog.CardFrameSpirit);
+            _visualAssetsLoaded = true;
+        }
+
+        private static void ApplyPanelSprite(Image image, PanelVisualKind visualKind)
+        {
+            ApplySprite(image, visualKind == PanelVisualKind.Gold ? _goldPanelSprite : _darkPanelSprite, Image.Type.Sliced);
+        }
+
+        private static void ApplySprite(Image image, Sprite sprite, Image.Type imageType)
+        {
+            if (image == null || sprite == null)
+            {
+                return;
+            }
+
+            image.sprite = sprite;
+            image.type = imageType;
+            image.preserveAspect = false;
         }
 
         private static void ApplyGraphicChrome(GameObject target, Color outlineColor, Color shadowColor, Vector2 shadowDistance)
