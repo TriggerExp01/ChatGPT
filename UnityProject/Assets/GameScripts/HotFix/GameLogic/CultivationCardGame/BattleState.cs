@@ -69,6 +69,28 @@ namespace GameLogic.Cultivation
 
         public int BloodGuardHealTurns { get; private set; }
 
+        public int DeathWardHealAmount { get; private set; }
+
+        public int DeathWardTurns { get; private set; }
+
+        public int DamageTakenHealPercent { get; private set; }
+
+        public int DamageTakenHealTurns { get; private set; }
+
+        public int FlatDamageBonus { get; private set; }
+
+        public int FlatDamageBonusTurns { get; private set; }
+
+        public int FrenzyDamageBonusPerStepPercent { get; private set; }
+
+        public int FrenzyDamageBonusTurns { get; private set; }
+
+        public int BloodlossRetaliationPercent { get; private set; }
+
+        public int BloodlossRetaliationTurns { get; private set; }
+
+        public int SelfHpLostThisTurn { get; private set; }
+
         public bool PoisonDamageTriggeredThisTurn { get; private set; }
 
         public int TurnNumber { get; set; }
@@ -233,6 +255,146 @@ namespace GameLogic.Cultivation
             var before = Player.CurrentHp;
             Player.Heal(BloodGuardHealAmount);
             return Player.CurrentHp - before;
+        }
+
+        public void AddDeathWard(int healAmount, int turns)
+        {
+            DeathWardHealAmount = Math.Max(DeathWardHealAmount, Math.Max(0, healAmount));
+            DeathWardTurns = Math.Max(DeathWardTurns, Math.Max(1, turns));
+        }
+
+        public void ResolveDeathWardDurationAtTurnStart()
+        {
+            if (DeathWardTurns <= 0)
+            {
+                DeathWardHealAmount = 0;
+                return;
+            }
+
+            DeathWardTurns--;
+            if (DeathWardTurns == 0)
+            {
+                DeathWardHealAmount = 0;
+            }
+        }
+
+        public int TryTriggerDeathWard()
+        {
+            if (DeathWardHealAmount <= 0 || DeathWardTurns <= 0 || Player.CurrentHp > 0)
+            {
+                return 0;
+            }
+
+            Player.Heal(Math.Max(1, DeathWardHealAmount));
+            DeathWardHealAmount = 0;
+            DeathWardTurns = 0;
+            return Player.CurrentHp;
+        }
+
+        public void AddDamageTakenHeal(int percent, int turns)
+        {
+            DamageTakenHealPercent += Math.Max(0, percent);
+            DamageTakenHealTurns = Math.Max(DamageTakenHealTurns, Math.Max(1, turns));
+        }
+
+        public void ResolveDamageTakenHealDurationAtTurnStart()
+        {
+            if (DamageTakenHealTurns <= 0)
+            {
+                DamageTakenHealPercent = 0;
+                return;
+            }
+
+            DamageTakenHealTurns--;
+            if (DamageTakenHealTurns == 0)
+            {
+                DamageTakenHealPercent = 0;
+            }
+        }
+
+        public int TriggerDamageTakenHeal(int hpDamage)
+        {
+            if (DamageTakenHealPercent <= 0 || DamageTakenHealTurns <= 0 || hpDamage <= 0)
+            {
+                return 0;
+            }
+
+            var before = Player.CurrentHp;
+            Player.Heal(hpDamage * DamageTakenHealPercent / 100);
+            return Player.CurrentHp - before;
+        }
+
+        public void AddFlatDamageBonus(int amount, int turns)
+        {
+            FlatDamageBonus += Math.Max(0, amount);
+            FlatDamageBonusTurns = Math.Max(FlatDamageBonusTurns, Math.Max(1, turns));
+        }
+
+        public void ResolveFlatDamageBonusDurationAtTurnStart()
+        {
+            if (FlatDamageBonusTurns <= 0)
+            {
+                FlatDamageBonus = 0;
+                return;
+            }
+
+            FlatDamageBonusTurns--;
+            if (FlatDamageBonusTurns == 0)
+            {
+                FlatDamageBonus = 0;
+            }
+        }
+
+        public void AddFrenzyDamageBonus(int percentPerMissingHpStep, int turns)
+        {
+            FrenzyDamageBonusPerStepPercent += Math.Max(0, percentPerMissingHpStep);
+            FrenzyDamageBonusTurns = Math.Max(FrenzyDamageBonusTurns, Math.Max(1, turns));
+        }
+
+        public void ResolveFrenzyDamageBonusDurationAtTurnStart()
+        {
+            if (FrenzyDamageBonusTurns <= 0)
+            {
+                FrenzyDamageBonusPerStepPercent = 0;
+                return;
+            }
+
+            FrenzyDamageBonusTurns--;
+            if (FrenzyDamageBonusTurns == 0)
+            {
+                FrenzyDamageBonusPerStepPercent = 0;
+            }
+        }
+
+        public void AddBloodlossRetaliation(int percent, int turns)
+        {
+            BloodlossRetaliationPercent += Math.Max(0, percent);
+            BloodlossRetaliationTurns = Math.Max(BloodlossRetaliationTurns, Math.Max(1, turns));
+        }
+
+        public void ResolveBloodlossRetaliationDurationAtTurnStart()
+        {
+            if (BloodlossRetaliationTurns <= 0)
+            {
+                BloodlossRetaliationPercent = 0;
+                return;
+            }
+
+            BloodlossRetaliationTurns--;
+            if (BloodlossRetaliationTurns == 0)
+            {
+                BloodlossRetaliationPercent = 0;
+            }
+        }
+
+        public void AddSelfHpLostThisTurn(int amount)
+        {
+            SelfHpLostThisTurn += Math.Max(0, amount);
+        }
+
+        public void ResetSelfHpLostThisTurn()
+        {
+            SelfHpLostThisTurn = 0;
         }
 
         public bool TryConsumeDodge()

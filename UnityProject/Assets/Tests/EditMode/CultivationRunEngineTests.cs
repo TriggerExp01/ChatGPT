@@ -232,6 +232,34 @@ namespace GameLogic.Tests
         }
 
         [Test]
+        public void DemonicSectRewardPoolContainsCompleteCombatCardSet()
+        {
+            var rewards = CultivationSeedData.CreateDemonicSectRewardPool();
+            var cardIds = rewards
+                .Where(reward => reward.Card != null && reward.Card.Id != "healing_pill")
+                .Select(reward => reward.Card.Id)
+                .Distinct()
+                .ToArray();
+
+            Assert.AreEqual(25, cardIds.Length);
+            CollectionAssert.Contains(cardIds, CultivationSeedData.SacrificeArt.Id);
+            CollectionAssert.Contains(cardIds, CultivationSeedData.SoulDevourArt.Id);
+            CollectionAssert.Contains(cardIds, CultivationSeedData.TenThousandDemonHeartBite.Id);
+            CollectionAssert.Contains(cardIds, CultivationSeedData.FrenzyBlood.Id);
+            CollectionAssert.Contains(cardIds, CultivationSeedData.HeavenlyDemonDescent.Id);
+            CollectionAssert.Contains(cardIds, CultivationSeedData.TenThousandDemonHomage.Id);
+            CollectionAssert.Contains(cardIds, CultivationSeedData.BloodSacrificeHeal.Id);
+            CollectionAssert.Contains(cardIds, CultivationSeedData.DemonArmor.Id);
+            CollectionAssert.Contains(cardIds, CultivationSeedData.UndyingDemonBody.Id);
+            CollectionAssert.Contains(cardIds, CultivationSeedData.BloodDemonImmortality.Id);
+            CollectionAssert.Contains(cardIds, CultivationSeedData.BloodShadowStep.Id);
+            CollectionAssert.Contains(cardIds, CultivationSeedData.HeavenlyDemonEscape.Id);
+            CollectionAssert.Contains(cardIds, CultivationSeedData.BloodSacrificeEmpower.Id);
+            CollectionAssert.Contains(cardIds, CultivationSeedData.DemonBloodBoil.Id);
+            CollectionAssert.Contains(cardIds, CultivationSeedData.HeavenlyDemonTrueUnderstanding.Id);
+        }
+
+        [Test]
         public void VictoryMovesRunToRewardState()
         {
             var engine = new CultivationRunEngine(new BattleEngine(1));

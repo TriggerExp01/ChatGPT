@@ -357,6 +357,99 @@ namespace GameLogic.Tests
         }
 
         [Test]
+        public void SacrificeArtConsumesHighestCostHandCardForDamage()
+        {
+            var engine = new BattleEngine(1);
+            var fodder = new CardDefinition("sacrifice_fodder", "献祭素材", 2, new CardEffect(CardEffectType.Shield, 1, CardTarget.Self));
+            var state = CreateOrderedBattle(engine, CultivationSeedData.SacrificeArt, fodder);
+            var enemy = state.Enemies[0];
+
+            engine.PlayCard(state, CultivationSeedData.SacrificeArt, enemy);
+
+            Assert.AreEqual(26, enemy.Body.CurrentHp);
+            Assert.IsFalse(state.Hand.Contains(fodder));
+            Assert.IsTrue(state.ExhaustPile.Contains(fodder));
+        }
+
+        [Test]
+        public void BloodSacrificeEmpowerAddsFlatDamageToFollowingAttack()
+        {
+            var engine = new BattleEngine(1);
+            var strike = new CardDefinition("empower_strike", "强化后攻击", 0, new CardEffect(CardEffectType.Damage, 10));
+            var state = CreateOrderedBattle(engine, CultivationSeedData.BloodSacrificeEmpower, strike);
+            var enemy = state.Enemies[0];
+
+            engine.PlayCard(state, CultivationSeedData.BloodSacrificeEmpower, enemy);
+            engine.PlayCard(state, strike, enemy);
+
+            Assert.AreEqual(95, state.Player.CurrentHp);
+            Assert.AreEqual(27, enemy.Body.CurrentHp);
+        }
+
+        [Test]
+        public void FrenzyBloodScalesLaterDamageByMissingHpSteps()
+        {
+            var engine = new BattleEngine(1);
+            var strike = new CardDefinition("frenzy_strike", "癫狂后攻击", 0, new CardEffect(CardEffectType.Damage, 20));
+            var state = CreateOrderedBattleWithPlayerHp(engine, 60, CultivationSeedData.FrenzyBlood, strike);
+            var enemy = state.Enemies[0];
+
+            engine.PlayCard(state, CultivationSeedData.FrenzyBlood, enemy);
+            engine.PlayCard(state, strike, enemy);
+
+            Assert.AreEqual(18, enemy.Body.CurrentHp);
+        }
+
+        [Test]
+        public void DemonBloodBoilRetaliatesWhenBloodSacrificeLosesHp()
+        {
+            var engine = new BattleEngine(1);
+            var state = CreateOrderedBattle(engine, CultivationSeedData.DemonBloodBoil, CultivationSeedData.BloodSacrificePalm);
+            var enemy = state.Enemies[0];
+
+            engine.PlayCard(state, CultivationSeedData.DemonBloodBoil, enemy);
+            engine.PlayCard(state, CultivationSeedData.BloodSacrificePalm, enemy);
+
+            Assert.AreEqual(29, enemy.Body.CurrentHp);
+            Assert.IsTrue(state.Logs.Any(log => log.Message.Contains("魔血沸腾")));
+        }
+
+        [Test]
+        public void UndyingDemonBodyTriggersDeathWardAfterLethalAttack()
+        {
+            var enemy = new EnemyDefinition(
+                "lethal_attacker",
+                "致命攻击者",
+                30,
+                0,
+                new EnemyIntent(EnemyIntentType.Attack, 50));
+            var engine = new BattleEngine(1);
+            var state = engine.CreateBattle(new[] { CultivationSeedData.UndyingDemonBody }.Concat(CultivationSeedData.CreateSwordSectStarterDeck()), enemy, playerCurrentHp: 10);
+            state.Hand.Clear();
+            state.DrawPile.Remove(CultivationSeedData.UndyingDemonBody);
+            state.Hand.Add(CultivationSeedData.UndyingDemonBody);
+
+            engine.PlayCard(state, CultivationSeedData.UndyingDemonBody, state.Enemies[0]);
+            engine.EndPlayerTurn(state);
+
+            Assert.AreEqual(BattleOutcome.InProgress, state.Outcome);
+            Assert.AreEqual(20, state.Player.CurrentHp);
+        }
+
+        [Test]
+        public void HeavenlyDemonEscapeRewardsSelfDamageThisTurn()
+        {
+            var engine = new BattleEngine(1);
+            var state = CreateOrderedBattle(engine, CultivationSeedData.HeavenlyDemonDisintegration, CultivationSeedData.HeavenlyDemonEscape);
+
+            engine.PlayCard(state, CultivationSeedData.HeavenlyDemonDisintegration, state.Enemies[0]);
+            engine.PlayCard(state, CultivationSeedData.HeavenlyDemonEscape, state.Enemies[0]);
+
+            Assert.AreEqual(2, state.DodgeCharges);
+            Assert.GreaterOrEqual(state.Hand.Count, 4);
+        }
+
+        [Test]
         public void MedicineSectStarterDeckUsesPoisonLeechAndRegenerationCards()
         {
             var deck = CultivationSeedData.CreateMedicineSectStarterDeck();

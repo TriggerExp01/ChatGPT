@@ -99,6 +99,10 @@ namespace GameLogic.Cultivation
                     return $"受击施加中毒 {effect.Value} / {Math.Max(1, effect.Duration)} 回合";
                 case CardEffectType.BloodSacrifice:
                     return $"血祭：失去 {effect.Value} HP";
+                case CardEffectType.SacrificeHandCardDamage:
+                    return $"献祭 1 张手牌，造成其灵力 ×{effect.Value} 伤害";
+                case CardEffectType.SacrificeHandCardHeal:
+                    return $"献祭 1 张手牌，恢复 {effect.Value} HP";
                 case CardEffectType.LowHpDamage:
                     return $"造成 {effect.Value} 伤害，HP ≤ {effect.ChancePercent}% 时 +{(effect.SecondaryValue > 0 ? effect.SecondaryValue : effect.Value)} 伤害";
                 case CardEffectType.MissingHpDamage:
@@ -107,6 +111,22 @@ namespace GameLogic.Cultivation
                     return $"获得 {effect.Value} 护盾，HP ≤ {effect.ChancePercent}% 时 +{effect.SecondaryValue} 护盾";
                 case CardEffectType.BloodGuardHeal:
                     return $"受击后回复 {effect.Value} HP / {Math.Max(1, effect.Duration)} 回合";
+                case CardEffectType.SpiritGain:
+                    return $"本回合灵力 +{effect.Value}";
+                case CardEffectType.FlatDamageBonus:
+                    return $"所有出牌伤害 +{effect.Value} / {Math.Max(1, effect.Duration)} 回合";
+                case CardEffectType.FrenzyDamageBonus:
+                    return $"癫狂：每损失 10% HP，出牌伤害 +{effect.Value}% / {Math.Max(1, effect.Duration)} 回合";
+                case CardEffectType.BloodlossRetaliation:
+                    return $"失去 HP 时反击等量伤害的 {effect.Value}% / {Math.Max(1, effect.Duration)} 回合";
+                case CardEffectType.LowHpDodge:
+                    return $"获得 {effect.Value} 次闪避，HP ≤ {effect.ChancePercent}% 时 +{effect.SecondaryValue} 次";
+                case CardEffectType.SelfDamageDodgeDraw:
+                    return $"本回合每自伤 {effect.Value} HP，获得 1 闪避并抽 1 张牌";
+                case CardEffectType.DeathWard:
+                    return $"免死：触发时恢复 {effect.Value} HP / {Math.Max(1, effect.Duration)} 回合";
+                case CardEffectType.DamageTakenHeal:
+                    return $"受伤后恢复伤害的 {effect.Value}% / {Math.Max(1, effect.Duration)} 回合";
                 case CardEffectType.SwordMark:
                     return $"剑气印记 {effect.Value}";
                 case CardEffectType.Sharpness:

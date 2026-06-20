@@ -75,9 +75,15 @@ namespace GameLogic.Cultivation
             state.TurnNumber++;
             state.ResetTurnCriticalState();
             state.ResetPoisonDamageTriggered();
+            state.ResetSelfHpLostThisTurn();
             state.ClearAttackCounter();
             state.ResolvePoisonCounterDurationAtTurnStart();
             state.ResolveBloodGuardHealDurationAtTurnStart();
+            state.ResolveDeathWardDurationAtTurnStart();
+            state.ResolveDamageTakenHealDurationAtTurnStart();
+            state.ResolveFlatDamageBonusDurationAtTurnStart();
+            state.ResolveFrenzyDamageBonusDurationAtTurnStart();
+            state.ResolveBloodlossRetaliationDurationAtTurnStart();
             state.Player.ClearShield();
             state.Player.ResolveSharpnessAtTurnStart();
             state.Spirit = state.SpiritMax;
@@ -288,10 +294,10 @@ namespace GameLogic.Cultivation
                 case CardEffectType.Leech:
                     foreach (var enemy in SelectTargets(state, effect, explicitTarget))
                     {
-                        var dealt = enemy.Body.TakeDamage(effect.Value, state.Player.Sharpness);
+                        var (dealt, chargeText, bonusText) = DealCardDamageValue(state, enemy, effect.Value);
                         var healed = dealt * Math.Max(0, effect.SecondaryValue) / 100;
                         state.Player.Heal(healed);
-                        state.Logs.Add(new BattleLogEntry($"{card.Name} 对 {enemy.Body.Name} 造成 {dealt} 点伤害，并吸灵恢复 {healed} HP。"));
+                        state.Logs.Add(new BattleLogEntry($"{card.Name}{chargeText}{bonusText} 对 {enemy.Body.Name} 造成 {dealt} 点伤害，并吸灵恢复 {healed} HP。"));
                     }
 
                     break;
@@ -304,8 +310,13 @@ namespace GameLogic.Cultivation
                     state.Logs.Add(new BattleLogEntry($"{card.Name} 本回合受击时施加中毒 {effect.Value} 层。"));
                     break;
                 case CardEffectType.BloodSacrifice:
-                    var hpLost = state.Player.LoseHpAsCost(effect.Value);
-                    state.Logs.Add(new BattleLogEntry($"{card.Name} 血祭失去 {hpLost} HP。"));
+                    var hpLost = ApplySelfHpLoss(state, card, effect.Value, "血祭");
+                    break;
+                case CardEffectType.SacrificeHandCardDamage:
+                    ResolveSacrificeHandCardDamage(state, card, effect, explicitTarget);
+                    break;
+                case CardEffectType.SacrificeHandCardHeal:
+                    ResolveSacrificeHandCardHeal(state, card, effect);
                     break;
                 case CardEffectType.LowHpDamage:
                     foreach (var enemy in SelectTargets(state, effect, explicitTarget))
@@ -337,6 +348,45 @@ namespace GameLogic.Cultivation
                     state.AddBloodGuardHeal(effect.Value, Math.Max(1, effect.Duration));
                     state.Logs.Add(new BattleLogEntry($"{card.Name} 受击后回复 {effect.Value} HP，持续 {Math.Max(1, effect.Duration)} 回合。"));
                     break;
+                case CardEffectType.SpiritGain:
+                    state.Spirit += effect.Value;
+                    state.Logs.Add(new BattleLogEntry($"{card.Name} 获得 {effect.Value} 灵力，当前灵力 {state.Spirit}。"));
+                    break;
+                case CardEffectType.FlatDamageBonus:
+                    state.AddFlatDamageBonus(effect.Value, Math.Max(1, effect.Duration));
+                    state.Logs.Add(new BattleLogEntry($"{card.Name} 使伤害 +{effect.Value}，持续 {Math.Max(1, effect.Duration)} 回合。"));
+                    break;
+                case CardEffectType.FrenzyDamageBonus:
+                    state.AddFrenzyDamageBonus(effect.Value, Math.Max(1, effect.Duration));
+                    state.Logs.Add(new BattleLogEntry($"{card.Name} 获得癫狂：每损失 10% HP，伤害 +{effect.Value}%，持续 {Math.Max(1, effect.Duration)} 回合。"));
+                    break;
+                case CardEffectType.BloodlossRetaliation:
+                    state.AddBloodlossRetaliation(effect.Value, Math.Max(1, effect.Duration));
+                    state.Logs.Add(new BattleLogEntry($"{card.Name} 激活魔血沸腾：失去 HP 时反击 {effect.Value}% 伤害，持续 {Math.Max(1, effect.Duration)} 回合。"));
+                    break;
+                case CardEffectType.LowHpDodge:
+                    var lowHpDodgeThreshold = effect.ChancePercent > 0 ? effect.ChancePercent : 50;
+                    var lowHpBonusDodge = state.Player.IsCurrentHpAtOrBelowPercent(lowHpDodgeThreshold)
+                        ? effect.SecondaryValue
+                        : 0;
+                    state.AddDodgeCharges(effect.Value + lowHpBonusDodge);
+                    if (lowHpBonusDodge > 0)
+                    {
+                        state.Logs.Add(new BattleLogEntry($"{card.Name} 低血触发，额外获得 {lowHpBonusDodge} 次闪避。"));
+                    }
+
+                    break;
+                case CardEffectType.SelfDamageDodgeDraw:
+                    ResolveSelfDamageDodgeDraw(state, card, effect);
+                    break;
+                case CardEffectType.DeathWard:
+                    state.AddDeathWard(effect.Value, Math.Max(1, effect.Duration));
+                    state.Logs.Add(new BattleLogEntry($"{card.Name} 获得免死，触发时恢复 {effect.Value} HP，持续 {Math.Max(1, effect.Duration)} 回合。"));
+                    break;
+                case CardEffectType.DamageTakenHeal:
+                    state.AddDamageTakenHeal(effect.Value, Math.Max(1, effect.Duration));
+                    state.Logs.Add(new BattleLogEntry($"{card.Name} 受伤后恢复伤害的 {effect.Value}%，持续 {Math.Max(1, effect.Duration)} 回合。"));
+                    break;
                 case CardEffectType.SwordMark:
                     foreach (var enemy in SelectTargets(state, effect, explicitTarget))
                     {
@@ -360,8 +410,8 @@ namespace GameLogic.Cultivation
                             continue;
                         }
 
-                        var dealt = enemy.Body.TakeDamage(bonusDamage, state.Player.Sharpness);
-                        state.Logs.Add(new BattleLogEntry($"{card.Name} 根据 {enemy.Body.SwordMarkStacks} 层剑气印记追加 {dealt} 点伤害。"));
+                        var (dealt, chargeText, bonusText) = DealCardDamageValue(state, enemy, bonusDamage);
+                        state.Logs.Add(new BattleLogEntry($"{card.Name}{chargeText}{bonusText} 根据 {enemy.Body.SwordMarkStacks} 层剑气印记追加 {dealt} 点伤害。"));
                     }
 
                     break;
@@ -525,6 +575,99 @@ namespace GameLogic.Cultivation
             return Random.Next(100) < chancePercent;
         }
 
+        private int ApplySelfHpLoss(BattleState state, CardDefinition card, int amount, string reason)
+        {
+            var hpLost = state.Player.LoseHpAsCost(amount);
+            state.AddSelfHpLostThisTurn(hpLost);
+            state.Logs.Add(new BattleLogEntry($"{card.Name} {reason}失去 {hpLost} HP。"));
+            ResolveBloodlossRetaliation(state, card, hpLost);
+            return hpLost;
+        }
+
+        private void ResolveBloodlossRetaliation(BattleState state, CardDefinition card, int hpLost)
+        {
+            if (hpLost <= 0 || state.BloodlossRetaliationPercent <= 0 || state.BloodlossRetaliationTurns <= 0)
+            {
+                return;
+            }
+
+            var damage = hpLost * state.BloodlossRetaliationPercent / 100;
+            if (damage <= 0)
+            {
+                return;
+            }
+
+            var candidates = state.Enemies.Where(enemy => !enemy.Body.IsDefeated).ToList();
+            if (candidates.Count == 0)
+            {
+                return;
+            }
+
+            var target = candidates[Random.Next(candidates.Count)];
+            var dealt = target.Body.TakeDamage(damage, state.Player.Sharpness);
+            state.Logs.Add(new BattleLogEntry($"{card.Name} 引动魔血沸腾，对 {target.Body.Name} 造成 {dealt} 点反噬伤害。"));
+        }
+
+        private CardDefinition ConsumeSacrificeCandidate(BattleState state, CardDefinition sourceCard)
+        {
+            var candidate = state.Hand
+                .Where(card => card != null && card != sourceCard)
+                .OrderByDescending(card => card.SpiritCost)
+                .FirstOrDefault();
+            if (candidate == null)
+            {
+                state.Logs.Add(new BattleLogEntry($"{sourceCard.Name} 没有可献祭手牌。"));
+                return null;
+            }
+
+            state.Hand.Remove(candidate);
+            state.ExhaustPile.Add(candidate);
+            state.Logs.Add(new BattleLogEntry($"{sourceCard.Name} 献祭 {candidate.Name}。"));
+            return candidate;
+        }
+
+        private void ResolveSacrificeHandCardDamage(BattleState state, CardDefinition card, CardEffect effect, EnemyState explicitTarget)
+        {
+            var sacrificed = ConsumeSacrificeCandidate(state, card);
+            if (sacrificed == null)
+            {
+                return;
+            }
+
+            var damage = Math.Max(1, sacrificed.SpiritCost) * Math.Max(0, effect.Value);
+            foreach (var enemy in SelectTargets(state, effect, explicitTarget))
+            {
+                DealComputedCardDamage(state, card, enemy, damage, $"献祭 {sacrificed.Name}");
+            }
+        }
+
+        private void ResolveSacrificeHandCardHeal(BattleState state, CardDefinition card, CardEffect effect)
+        {
+            var sacrificed = ConsumeSacrificeCandidate(state, card);
+            if (sacrificed == null)
+            {
+                return;
+            }
+
+            state.Player.Heal(effect.Value);
+            state.Logs.Add(new BattleLogEntry($"{card.Name} 献祭回复 {effect.Value} HP。"));
+        }
+
+        private void ResolveSelfDamageDodgeDraw(BattleState state, CardDefinition card, CardEffect effect)
+        {
+            var threshold = Math.Max(1, effect.Value);
+            var stacks = state.SelfHpLostThisTurn / threshold;
+            if (stacks <= 0)
+            {
+                state.Logs.Add(new BattleLogEntry($"{card.Name} 未检测到足够自伤，未获得天魔遁收益。"));
+                return;
+            }
+
+            state.AddDodgeCharges(stacks);
+            DrawCards(state, stacks);
+            state.Logs.Add(new BattleLogEntry($"{card.Name} 根据本回合自伤 {state.SelfHpLostThisTurn} HP 获得 {stacks} 次闪避并抽 {stacks} 张牌。"));
+        }
+
         private void ResolveChanceDamageHits(BattleState state, CardDefinition card, CardEffect effect, EnemyState enemy, bool stunOnHit = false, bool chainOnEachHit = false)
         {
             for (var hit = 0; hit < effect.RepeatCount; hit++)
@@ -545,11 +688,9 @@ namespace GameLogic.Cultivation
                     continue;
                 }
 
-                var multiplier = state.TryConsumeChargedDamageMultiplier();
-                var dealt = enemy.Body.TakeDamage(damage * multiplier, state.Player.Sharpness);
+                var (dealt, chargeText, bonusText) = DealCardDamageValue(state, enemy, damage);
                 var resultText = triggered ? "暴击触发" : "暴击未触发";
-                var chargeText = multiplier > 1 ? $" 蓄力 x{multiplier}" : string.Empty;
-                state.Logs.Add(new BattleLogEntry($"{card.Name}{hitText} {resultText}{chargeText}，对 {enemy.Body.Name} 造成 {dealt} 点伤害。"));
+                state.Logs.Add(new BattleLogEntry($"{card.Name}{hitText} {resultText}{chargeText}{bonusText}，对 {enemy.Body.Name} 造成 {dealt} 点伤害。"));
 
                 if (triggered)
                 {
@@ -582,10 +723,8 @@ namespace GameLogic.Cultivation
                 return;
             }
 
-            var multiplier = state.TryConsumeChargedDamageMultiplier();
-            var dealt = enemy.Body.TakeDamage(effect.Value * multiplier, state.Player.Sharpness);
-            var chargeText = multiplier > 1 ? $" 蓄力 x{multiplier}" : string.Empty;
-            state.Logs.Add(new BattleLogEntry($"{card.Name}{chargeText} 对 {enemy.Body.Name} 造成 {dealt} 点伤害。"));
+            var (dealt, chargeText, bonusText) = DealCardDamageValue(state, enemy, effect.Value);
+            state.Logs.Add(new BattleLogEntry($"{card.Name}{chargeText}{bonusText} 对 {enemy.Body.Name} 造成 {dealt} 点伤害。"));
 
             if (!state.HasTriggeredCriticalThisTurn || effect.FallbackValue <= 0)
             {
@@ -597,15 +736,15 @@ namespace GameLogic.Cultivation
             {
                 foreach (var chainedEnemy in state.Enemies.Where(target => !target.Body.IsDefeated).ToList())
                 {
-                    var chainDealt = chainedEnemy.Body.TakeDamage(effect.FallbackValue, state.Player.Sharpness);
-                    state.Logs.Add(new BattleLogEntry($"{card.Name} 暴击奖励连锁至 {chainedEnemy.Body.Name}，造成 {chainDealt} 点伤害。"));
+                    var (chainDealt, chainChargeText, chainBonusText) = DealCardDamageValue(state, chainedEnemy, effect.FallbackValue);
+                    state.Logs.Add(new BattleLogEntry($"{card.Name}{chainChargeText}{chainBonusText} 暴击奖励连锁至 {chainedEnemy.Body.Name}，造成 {chainDealt} 点伤害。"));
                 }
 
                 return;
             }
 
-            var bonusDealt = enemy.Body.TakeDamage(effect.FallbackValue, state.Player.Sharpness);
-            state.Logs.Add(new BattleLogEntry($"{card.Name} 触发暴击奖励，对 {enemy.Body.Name} 额外造成 {bonusDealt} 点伤害。"));
+            var (bonusDealt, bonusChargeText, bonusBonusText) = DealCardDamageValue(state, enemy, effect.FallbackValue);
+            state.Logs.Add(new BattleLogEntry($"{card.Name}{bonusChargeText}{bonusBonusText} 触发暴击奖励，对 {enemy.Body.Name} 额外造成 {bonusDealt} 点伤害。"));
 
             if (stunOnBonus)
             {
@@ -621,10 +760,8 @@ namespace GameLogic.Cultivation
                 return;
             }
 
-            var multiplier = state.TryConsumeChargedDamageMultiplier();
-            var dealt = firstTarget.Body.TakeDamage(effect.Value * multiplier, state.Player.Sharpness);
-            var chargeText = multiplier > 1 ? $" 蓄力 x{multiplier}" : string.Empty;
-            state.Logs.Add(new BattleLogEntry($"{card.Name}{chargeText} 对 {firstTarget.Body.Name} 造成 {dealt} 点伤害。"));
+            var (dealt, chargeText, bonusText) = DealCardDamageValue(state, firstTarget, effect.Value);
+            state.Logs.Add(new BattleLogEntry($"{card.Name}{chargeText}{bonusText} 对 {firstTarget.Body.Name} 造成 {dealt} 点伤害。"));
 
             var chainedTargets = new HashSet<EnemyState> { firstTarget };
             var current = firstTarget;
@@ -649,8 +786,8 @@ namespace GameLogic.Cultivation
                     return;
                 }
 
-                var chainDealt = next.Body.TakeDamage(chainDamage, state.Player.Sharpness);
-                state.Logs.Add(new BattleLogEntry($"{card.Name} 从 {current.Body.Name} 连锁至 {next.Body.Name}，造成 {chainDealt} 点伤害。"));
+                var (chainDealt, chainChargeText, chainBonusText) = DealCardDamageValue(state, next, chainDamage);
+                state.Logs.Add(new BattleLogEntry($"{card.Name}{chainChargeText}{chainBonusText} 从 {current.Body.Name} 连锁至 {next.Body.Name}，造成 {chainDealt} 点伤害。"));
                 if (stunOnChain && RollChance(effect.FallbackValue))
                 {
                     next.Body.AddStun(Math.Max(1, effect.Duration));
@@ -690,19 +827,17 @@ namespace GameLogic.Cultivation
             }
 
             var next = candidates[Random.Next(candidates.Count)];
-            var dealt = next.Body.TakeDamage(chainDamage, state.Player.Sharpness);
-            state.Logs.Add(new BattleLogEntry($"{card.Name} 从 {sourceTarget.Body.Name} 连锁至 {next.Body.Name}，造成 {dealt} 点伤害。"));
+            var (dealt, chargeText, bonusText) = DealCardDamageValue(state, next, chainDamage);
+            state.Logs.Add(new BattleLogEntry($"{card.Name}{chargeText}{bonusText} 从 {sourceTarget.Body.Name} 连锁至 {next.Body.Name}，造成 {dealt} 点伤害。"));
         }
 
         private static void DealCardDamage(BattleState state, CardDefinition card, CardEffect effect, EnemyState enemy)
         {
             for (var hit = 0; hit < effect.RepeatCount; hit++)
             {
-                var multiplier = state.TryConsumeChargedDamageMultiplier();
-                var dealt = enemy.Body.TakeDamage(effect.Value * multiplier, state.Player.Sharpness);
+                var (dealt, chargeText, bonusText) = DealCardDamageValue(state, enemy, effect.Value);
                 var hitText = effect.RepeatCount > 1 ? $" 第 {hit + 1}/{effect.RepeatCount} 击" : string.Empty;
-                var chargeText = multiplier > 1 ? $" 蓄力 x{multiplier}" : string.Empty;
-                state.Logs.Add(new BattleLogEntry($"{card.Name}{hitText}{chargeText} 对 {enemy.Body.Name} 造成 {dealt} 点伤害。"));
+                state.Logs.Add(new BattleLogEntry($"{card.Name}{hitText}{chargeText}{bonusText} 对 {enemy.Body.Name} 造成 {dealt} 点伤害。"));
                 if (enemy.Body.IsDefeated)
                 {
                     break;
@@ -736,11 +871,36 @@ namespace GameLogic.Cultivation
                 return;
             }
 
-            var multiplier = state.TryConsumeChargedDamageMultiplier();
-            var dealt = enemy.Body.TakeDamage(Math.Max(0, damage) * multiplier, state.Player.Sharpness);
-            var chargeText = multiplier > 1 ? $" 蓄力 x{multiplier}" : string.Empty;
+            var (dealt, chargeText, bonusText) = DealCardDamageValue(state, enemy, damage);
             var detailText = string.IsNullOrEmpty(detail) ? string.Empty : $"（{detail}）";
-            state.Logs.Add(new BattleLogEntry($"{card.Name}{chargeText}{detailText} 对 {enemy.Body.Name} 造成 {dealt} 点伤害。"));
+            state.Logs.Add(new BattleLogEntry($"{card.Name}{chargeText}{bonusText}{detailText} 对 {enemy.Body.Name} 造成 {dealt} 点伤害。"));
+        }
+
+        private static (int dealt, string chargeText, string bonusText) DealCardDamageValue(BattleState state, EnemyState enemy, int baseDamage)
+        {
+            var damage = Math.Max(0, baseDamage) + state.FlatDamageBonus;
+            var frenzyPercent = state.Player.GetMissingHpTenthSteps() * state.FrenzyDamageBonusPerStepPercent;
+            if (frenzyPercent > 0)
+            {
+                damage += damage * frenzyPercent / 100;
+            }
+
+            var multiplier = state.TryConsumeChargedDamageMultiplier();
+            var dealt = enemy.Body.TakeDamage(damage * multiplier, state.Player.Sharpness);
+            var chargeText = multiplier > 1 ? $" 蓄力 x{multiplier}" : string.Empty;
+            var bonusParts = new List<string>();
+            if (state.FlatDamageBonus > 0)
+            {
+                bonusParts.Add($"+{state.FlatDamageBonus}");
+            }
+
+            if (frenzyPercent > 0)
+            {
+                bonusParts.Add($"癫狂 +{frenzyPercent}%");
+            }
+
+            var bonusText = bonusParts.Count > 0 ? $" [{string.Join(", ", bonusParts)}]" : string.Empty;
+            return (dealt, chargeText, bonusText);
         }
 
         private static IEnumerable<EnemyState> SelectTargets(BattleState state, CardEffect effect, EnemyState explicitTarget)
@@ -835,6 +995,18 @@ namespace GameLogic.Cultivation
             }
 
             var dealt = state.Player.TakeDamage(damage + enemy.AttackBonus);
+            var deathWardHeal = state.TryTriggerDeathWard();
+            if (deathWardHeal > 0)
+            {
+                state.Logs.Add(new BattleLogEntry($"不死魔身触发，玩家保留生机并恢复到 {state.Player.CurrentHp} HP。"));
+            }
+
+            var damageHeal = state.TriggerDamageTakenHeal(dealt);
+            if (damageHeal > 0)
+            {
+                state.Logs.Add(new BattleLogEntry($"血魔不灭在受伤后回复 {damageHeal} HP。"));
+            }
+
             ResolveAttackCounter(state, enemy);
             ResolvePoisonCounter(state, enemy);
             ResolveBloodGuardHeal(state, enemy);
@@ -2793,8 +2965,117 @@ namespace GameLogic.Cultivation
             "天魔解体",
             0,
             new CardEffect(CardEffectType.BloodSacrifice, 10, CardTarget.Self),
+            new CardEffect(CardEffectType.SpiritGain, 3, CardTarget.Self),
             new CardEffect(CardEffectType.ChargeDamage, 2, CardTarget.Self),
             new CardEffect(CardEffectType.Draw, 1, CardTarget.Self));
+
+        public static CardDefinition SoulDevourArt { get; } = new CardDefinition(
+            "soul_devour_art",
+            "噬魂术",
+            2,
+            new CardEffect(CardEffectType.Damage, 12),
+            new CardEffect(CardEffectType.Draw, 2, CardTarget.Self));
+
+        public static CardDefinition TenThousandDemonHeartBite { get; } = new CardDefinition(
+            "ten_thousand_demon_heart_bite",
+            "万魔噬心",
+            3,
+            new CardEffect(CardEffectType.BloodSacrifice, 15, CardTarget.Self),
+            new CardEffect(CardEffectType.Damage, 35),
+            new CardEffect(CardEffectType.BreakDefense, 3));
+
+        public static CardDefinition FrenzyBlood { get; } = new CardDefinition(
+            "frenzy_blood",
+            "癫狂之血",
+            2,
+            new CardEffect(CardEffectType.FrenzyDamageBonus, 5, CardTarget.Self, duration: 99),
+            new CardEffect(CardEffectType.Exhaust, 1, CardTarget.Self));
+
+        public static CardDefinition HeavenlyDemonDescent { get; } = new CardDefinition(
+            "heavenly_demon_descent",
+            "天魔降临",
+            4,
+            new CardEffect(CardEffectType.BloodSacrifice, 25, CardTarget.Self),
+            new CardEffect(CardEffectType.Damage, 50, CardTarget.EnemyAll),
+            new CardEffect(CardEffectType.Exhaust, 1, CardTarget.Self));
+
+        public static CardDefinition TenThousandDemonHomage { get; } = new CardDefinition(
+            "ten_thousand_demon_homage",
+            "万魔朝宗",
+            5,
+            new CardEffect(CardEffectType.BloodSacrifice, 30, CardTarget.Self),
+            new CardEffect(CardEffectType.Damage, 50),
+            new CardEffect(CardEffectType.ChargeDamage, 2, CardTarget.Self),
+            new CardEffect(CardEffectType.Draw, 3, CardTarget.Self));
+
+        public static CardDefinition BloodSacrificeHeal { get; } = new CardDefinition(
+            "blood_sacrifice_heal",
+            "血祭回复",
+            1,
+            new CardEffect(CardEffectType.SacrificeHandCardHeal, 15, CardTarget.Self));
+
+        public static CardDefinition DemonArmor { get; } = new CardDefinition(
+            "demon_armor",
+            "魔甲",
+            2,
+            new CardEffect(CardEffectType.LowHpShield, 12, CardTarget.Self, chancePercent: 50, secondaryValue: 12),
+            new CardEffect(CardEffectType.LowHpDodge, 0, CardTarget.Self, chancePercent: 50, secondaryValue: 1));
+
+        public static CardDefinition UndyingDemonBody { get; } = new CardDefinition(
+            "undying_demon_body",
+            "不死魔身",
+            3,
+            new CardEffect(CardEffectType.DeathWard, 20, CardTarget.Self, duration: 1),
+            new CardEffect(CardEffectType.Exhaust, 1, CardTarget.Self));
+
+        public static CardDefinition BloodDemonImmortality { get; } = new CardDefinition(
+            "blood_demon_immortality",
+            "血魔不灭",
+            3,
+            new CardEffect(CardEffectType.DamageTakenHeal, 30, CardTarget.Self, duration: 99),
+            new CardEffect(CardEffectType.Exhaust, 1, CardTarget.Self));
+
+        public static CardDefinition BloodShadowStep { get; } = new CardDefinition(
+            "blood_shadow_step",
+            "血影步",
+            1,
+            new CardEffect(CardEffectType.LowHpDodge, 1, CardTarget.Self, chancePercent: 50, secondaryValue: 1),
+            new CardEffect(CardEffectType.Draw, 1, CardTarget.Self));
+
+        public static CardDefinition HeavenlyDemonEscape { get; } = new CardDefinition(
+            "heavenly_demon_escape",
+            "天魔遁",
+            2,
+            new CardEffect(CardEffectType.SelfDamageDodgeDraw, 5, CardTarget.Self));
+
+        public static CardDefinition BloodSacrificeEmpower { get; } = new CardDefinition(
+            "blood_sacrifice_empower",
+            "血祭强化",
+            1,
+            new CardEffect(CardEffectType.BloodSacrifice, 5, CardTarget.Self),
+            new CardEffect(CardEffectType.FlatDamageBonus, 5, CardTarget.Self, duration: 1),
+            new CardEffect(CardEffectType.Exhaust, 1, CardTarget.Self));
+
+        public static CardDefinition DemonBloodBoil { get; } = new CardDefinition(
+            "demon_blood_boil",
+            "魔血沸腾",
+            2,
+            new CardEffect(CardEffectType.BloodlossRetaliation, 100, CardTarget.Self, duration: 99),
+            new CardEffect(CardEffectType.Exhaust, 1, CardTarget.Self));
+
+        public static CardDefinition HeavenlyDemonTrueUnderstanding { get; } = new CardDefinition(
+            "heavenly_demon_true_understanding",
+            "天魔真解",
+            3,
+            new CardEffect(CardEffectType.BloodlossRetaliation, 100, CardTarget.Self, duration: 99),
+            new CardEffect(CardEffectType.FrenzyDamageBonus, 5, CardTarget.Self, duration: 99),
+            new CardEffect(CardEffectType.Exhaust, 1, CardTarget.Self));
+
+        public static CardDefinition SacrificeArt { get; } = new CardDefinition(
+            "sacrifice_art",
+            "献祭术",
+            1,
+            new CardEffect(CardEffectType.SacrificeHandCardDamage, 8));
 
         public static PillDefinition SmallRestorePillItem { get; } = new PillDefinition(
             "small_restore_pill",
@@ -3154,6 +3435,21 @@ namespace GameLogic.Cultivation
                 new CultivationRunReward("reward_blood_sacrifice_rite", BloodSacrificeRite),
                 new CultivationRunReward("reward_blood_frenzy", BloodFrenzy),
                 new CultivationRunReward("reward_heavenly_demon_disintegration", HeavenlyDemonDisintegration),
+                new CultivationRunReward("reward_sacrifice_art", SacrificeArt),
+                new CultivationRunReward("reward_soul_devour_art", SoulDevourArt),
+                new CultivationRunReward("reward_ten_thousand_demon_heart_bite", TenThousandDemonHeartBite),
+                new CultivationRunReward("reward_frenzy_blood", FrenzyBlood),
+                new CultivationRunReward("reward_heavenly_demon_descent", HeavenlyDemonDescent),
+                new CultivationRunReward("reward_ten_thousand_demon_homage", TenThousandDemonHomage),
+                new CultivationRunReward("reward_blood_sacrifice_heal", BloodSacrificeHeal),
+                new CultivationRunReward("reward_demon_armor", DemonArmor),
+                new CultivationRunReward("reward_undying_demon_body", UndyingDemonBody),
+                new CultivationRunReward("reward_blood_demon_immortality", BloodDemonImmortality),
+                new CultivationRunReward("reward_blood_shadow_step", BloodShadowStep),
+                new CultivationRunReward("reward_heavenly_demon_escape", HeavenlyDemonEscape),
+                new CultivationRunReward("reward_blood_sacrifice_empower", BloodSacrificeEmpower),
+                new CultivationRunReward("reward_demon_blood_boil", DemonBloodBoil),
+                new CultivationRunReward("reward_heavenly_demon_true_understanding", HeavenlyDemonTrueUnderstanding),
                 new CultivationRunReward("reward_healing_pill", HealingPill),
             };
         }

@@ -501,6 +501,10 @@ namespace GameLogic.Cultivation
                     return incomingAttack ? effect.Value * Math.Max(1, effect.Duration) * 5 : effect.Value * 2;
                 case CardEffectType.BloodSacrifice:
                     return ScoreBloodSacrifice(effect.Value, currentHp, maxHp);
+                case CardEffectType.SacrificeHandCardDamage:
+                    return effect.Value * 2;
+                case CardEffectType.SacrificeHandCardHeal:
+                    return Math.Min(effect.Value, missingHp) * 2 - 5;
                 case CardEffectType.LowHpDamage:
                     return currentHp * 100 <= maxHp * Math.Max(1, effect.ChancePercent)
                         ? effect.Value + (effect.SecondaryValue > 0 ? effect.SecondaryValue : effect.Value)
@@ -517,6 +521,24 @@ namespace GameLogic.Cultivation
                     return incomingAttack ? shield * 2 : shield;
                 case CardEffectType.BloodGuardHeal:
                     return incomingAttack ? Math.Min(effect.Value, missingHp + 4) * Math.Max(1, effect.Duration) * 2 : effect.Value;
+                case CardEffectType.SpiritGain:
+                    return effect.Value * 8;
+                case CardEffectType.FlatDamageBonus:
+                    return effect.Value * Math.Max(1, effect.Duration) * 3;
+                case CardEffectType.FrenzyDamageBonus:
+                    return effect.Value * Math.Max(1, Math.Max(0, maxHp - currentHp) * 10 / Math.Max(1, maxHp));
+                case CardEffectType.BloodlossRetaliation:
+                    return effect.Value / 10;
+                case CardEffectType.LowHpDodge:
+                    return currentHp * 100 <= maxHp * Math.Max(1, effect.ChancePercent)
+                        ? (effect.Value + effect.SecondaryValue) * (incomingAttack ? 14 : 5)
+                        : effect.Value * (incomingAttack ? 14 : 5);
+                case CardEffectType.SelfDamageDodgeDraw:
+                    return Math.Max(0, maxHp - currentHp) / Math.Max(1, effect.Value) * 8;
+                case CardEffectType.DeathWard:
+                    return currentHp <= maxHp / 3 ? 90 : 25;
+                case CardEffectType.DamageTakenHeal:
+                    return incomingAttack ? effect.Value * 2 : effect.Value / 2;
                 case CardEffectType.SwordMark:
                     return effect.Value * 7;
                 case CardEffectType.Sharpness:
