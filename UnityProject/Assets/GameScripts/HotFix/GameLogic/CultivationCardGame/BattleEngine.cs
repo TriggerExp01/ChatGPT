@@ -777,6 +777,12 @@ namespace GameLogic.Cultivation
             "战斗内消耗品：恢复 10 HP。",
             effectValue: 10);
 
+        public static PillDefinition BigRestorePillItem { get; } = new PillDefinition(
+            "big_restore_pill",
+            "大还丹",
+            "战斗内消耗品：恢复 15 HP。",
+            effectValue: 15);
+
         public static PillDefinition SpiritBoostPillItem { get; } = new PillDefinition(
             "spirit_boost_pill",
             "增元丹",
@@ -868,6 +874,7 @@ namespace GameLogic.Cultivation
                 new CultivationMarketItem("market_cloud_guard", CloudGuard, 20),
                 new CultivationMarketItem("market_thrust", Thrust, 25),
                 new CultivationMarketItem("market_small_restore_pill", SmallRestorePillItem, 15),
+                new CultivationMarketItem("market_big_restore_pill", BigRestorePillItem, 35),
                 new CultivationMarketItem("market_spirit_boost_pill", SpiritBoostPillItem, 35),
                 new CultivationMarketItem("market_cleanse_pill", CleansePillItem, 15),
                 new CultivationMarketItem("market_breakthrough_pill", BreakthroughPillItem, 90),

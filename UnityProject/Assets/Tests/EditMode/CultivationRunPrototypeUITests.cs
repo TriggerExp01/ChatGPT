@@ -141,7 +141,7 @@ namespace GameLogic.Tests
         }
 
         [Test]
-        public void PrototypeUiCanUseSpiritPillInNextBattle()
+        public void PrototypeUiCanUseBigRestorePillInNextBattle()
         {
             ForceCurrentBattleVictory();
             _ui.ResolveBattle();
@@ -151,6 +151,27 @@ namespace GameLogic.Tests
             _ui.ChooseRoute(0);
             SetRunSpiritStones(40);
             _ui.BuyMarketItem(3);
+            _ui.LeaveMarket();
+            DamageCurrentBattlePlayer(20);
+
+            _ui.UsePillInBattle(0);
+
+            Assert.AreEqual(95, _ui.Snapshot.PlayerHp);
+            Assert.AreEqual(0, _ui.Snapshot.PillCount);
+            StringAssert.Contains("使用 大还丹，恢复 15 HP", GetCurrentBattleLogText());
+        }
+
+        [Test]
+        public void PrototypeUiCanUseSpiritPillInNextBattle()
+        {
+            ForceCurrentBattleVictory();
+            _ui.ResolveBattle();
+            _ui.SkipReward();
+            _ui.ChooseRoute(1);
+            _ui.Rest();
+            _ui.ChooseRoute(0);
+            SetRunSpiritStones(40);
+            _ui.BuyMarketItem(4);
             _ui.LeaveMarket();
             var spiritBefore = GetCurrentBattleSpirit();
 
@@ -171,7 +192,7 @@ namespace GameLogic.Tests
             _ui.Rest();
             _ui.ChooseRoute(0);
             SetRunSpiritStones(20);
-            _ui.BuyMarketItem(4);
+            _ui.BuyMarketItem(5);
             _ui.LeaveMarket();
             DamageCurrentBattlePlayer(6);
             AddCurrentBattlePlayerNegativeStatuses();
@@ -196,7 +217,7 @@ namespace GameLogic.Tests
             _ui.Rest();
             _ui.ChooseRoute(0);
             SetRunSpiritStones(95);
-            _ui.BuyMarketItem(5);
+            _ui.BuyMarketItem(6);
             _ui.LeaveMarket();
 
             _ui.UsePillInBattle(0);
@@ -217,7 +238,7 @@ namespace GameLogic.Tests
             _ui.ChooseRoute(0);
             SetRunSpiritStones(75);
             SetRunPlayerCurrentHp(50);
-            _ui.BuyMarketItem(6);
+            _ui.BuyMarketItem(7);
 
             _ui.UsePillInRun(0);
 
