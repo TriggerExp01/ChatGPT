@@ -12,6 +12,47 @@ namespace GameLogic.Cultivation
             return CultivationRunPrototypeUI.Open(parent ?? ResolveMainRunParent());
         }
 
+        public static CultivationRunPrototypeUI OpenMainRunWindowOrFallback()
+        {
+            return TryOpenMainRunWindow(out var ui) ? ui : OpenMainRunUI();
+        }
+
+        public static bool TryOpenMainRunWindow(out CultivationRunPrototypeUI ui)
+        {
+            ui = null;
+
+            if (!Application.isPlaying)
+            {
+                return false;
+            }
+
+            if (UIModule.UIRoot == null && GameObject.Find("UIRoot") == null)
+            {
+                return false;
+            }
+
+            var uiModule = GameModule.UI;
+            if (UIModule.UIRoot == null)
+            {
+                return false;
+            }
+
+            EnsureMainRunWindowResourceLoader();
+            uiModule.ShowUI<CultivationRunWindow>();
+            ui = FindMainRunUI(UIModule.UIRoot);
+            return ui != null;
+        }
+
+        public static void EnsureMainRunWindowResourceLoader()
+        {
+            if (UIModule.Resource is CultivationRunWindowResourceLoader)
+            {
+                return;
+            }
+
+            UIModule.Resource = new CultivationRunWindowResourceLoader(UIModule.Resource);
+        }
+
         public static bool IsMainRunUIOpen(Transform parent = null)
         {
             return FindMainRunUI(parent) != null;
@@ -19,6 +60,11 @@ namespace GameLogic.Cultivation
 
         public static bool CloseMainRunUI(Transform parent = null)
         {
+            if (parent == null && CloseMainRunWindow())
+            {
+                return true;
+            }
+
             var ui = FindMainRunUI(parent);
             if (ui == null)
             {
@@ -34,6 +80,17 @@ namespace GameLogic.Cultivation
                 Object.DestroyImmediate(ui.gameObject);
             }
 
+            return true;
+        }
+
+        public static bool CloseMainRunWindow()
+        {
+            if (!UIModule.IsValid || !GameModule.UI.HasWindow<CultivationRunWindow>())
+            {
+                return false;
+            }
+
+            GameModule.UI.CloseUI<CultivationRunWindow>();
             return true;
         }
 
@@ -68,7 +125,12 @@ namespace GameLogic.Cultivation
             if (parent != null)
             {
                 var child = parent.Find(CultivationRunPrototypeUI.RootName);
-                return child != null ? child.GetComponent<CultivationRunPrototypeUI>() : null;
+                if (child != null)
+                {
+                    return child.GetComponent<CultivationRunPrototypeUI>();
+                }
+
+                return parent.GetComponentInChildren<CultivationRunPrototypeUI>(true);
             }
 
             var resolvedParent = ResolveMainRunParent();
@@ -78,6 +140,12 @@ namespace GameLogic.Cultivation
                 if (child != null)
                 {
                     return child.GetComponent<CultivationRunPrototypeUI>();
+                }
+
+                var nested = resolvedParent.GetComponentInChildren<CultivationRunPrototypeUI>(true);
+                if (nested != null)
+                {
+                    return nested;
                 }
             }
 

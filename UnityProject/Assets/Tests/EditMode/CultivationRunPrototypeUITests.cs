@@ -1,6 +1,8 @@
 using GameLogic.Cultivation;
 using NUnit.Framework;
+using System.Reflection;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace GameLogic.Tests
 {
@@ -63,6 +65,47 @@ namespace GameLogic.Tests
             Assert.IsTrue(CultivationRunUIService.CloseMainRunUI(_root.transform));
             Assert.IsFalse(CultivationRunUIService.IsMainRunUIOpen(_root.transform));
             Assert.IsNull(_root.transform.Find(CultivationRunPrototypeUI.RootName));
+        }
+
+        [Test]
+        public void RunWindowMetadataUsesGeneratedMainRunPanel()
+        {
+            var attribute = typeof(CultivationRunWindow).GetCustomAttribute<WindowAttribute>();
+
+            Assert.NotNull(attribute);
+            Assert.AreEqual((int)UILayer.UI, attribute.WindowLayer);
+            Assert.AreEqual(CultivationRunWindow.AssetLocation, attribute.Location);
+            Assert.IsTrue(attribute.FullScreen);
+        }
+
+        [Test]
+        public void RunWindowResourceLoaderCreatesWindowCompatiblePanel()
+        {
+            var loader = new CultivationRunWindowResourceLoader(null);
+            var panel = loader.LoadGameObject(CultivationRunWindow.AssetLocation, _root.transform);
+
+            Assert.AreEqual(CultivationRunWindow.AssetLocation, panel.name);
+            Assert.AreSame(_root.transform, panel.transform.parent);
+            Assert.NotNull(panel.GetComponent<Canvas>());
+            Assert.NotNull(panel.GetComponent<GraphicRaycaster>());
+
+            var ui = CultivationRunPrototypeUI.Open(panel.transform);
+
+            Assert.NotNull(ui);
+            Assert.AreEqual(CultivationRunStatus.InBattle, ui.Snapshot.Status);
+            Assert.NotNull(panel.transform.Find(CultivationRunPrototypeUI.RootName));
+        }
+
+        [Test]
+        public void RunWindowEntryFallsBackOutsidePlayMode()
+        {
+            var ui = CultivationRunUIService.OpenMainRunWindowOrFallback();
+
+            Assert.NotNull(ui);
+            Assert.AreEqual(CultivationRunStatus.InBattle, ui.Snapshot.Status);
+            Assert.IsFalse(UIModule.IsValid);
+
+            CultivationRunUIService.CloseMainRunUI();
         }
 
         [Test]

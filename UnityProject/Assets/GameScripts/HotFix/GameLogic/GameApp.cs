@@ -38,7 +38,7 @@ public partial class GameApp
     {
         Log.Warning(
             "======= Cultivation run UI ready: battle, route, rest, chest, market, mystic =======");
-        CultivationRunUIService.OpenMainRunUI();
+        CultivationRunUIService.OpenMainRunWindowOrFallback();
     }
     
     private static void Release()
