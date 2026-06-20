@@ -18,6 +18,7 @@ namespace GameLogic.Cultivation
         SwordMark,
         Sharpness,
         Exhaust,
+        DamagePerSwordMark,
     }
 
     public enum EnemyIntentType

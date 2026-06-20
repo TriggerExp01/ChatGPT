@@ -62,6 +62,8 @@ namespace GameLogic.Cultivation
                     return $"锋锐 {effect.Value} / {effect.Duration} 回合";
                 case CardEffectType.Exhaust:
                     return "消耗";
+                case CardEffectType.DamagePerSwordMark:
+                    return $"每层剑气印记 +{effect.Value} 伤害";
                 default:
                     return effect.Type.ToString();
             }

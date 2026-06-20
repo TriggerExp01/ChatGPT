@@ -185,6 +185,21 @@ namespace GameLogic.Cultivation
                     }
 
                     break;
+                case CardEffectType.DamagePerSwordMark:
+                    foreach (var enemy in SelectTargets(state, effect, explicitTarget))
+                    {
+                        var bonusDamage = enemy.Body.SwordMarkStacks * effect.Value;
+                        if (bonusDamage <= 0)
+                        {
+                            state.Logs.Add(new BattleLogEntry($"{card.Name} 未触发剑气印记追加伤害。"));
+                            continue;
+                        }
+
+                        var dealt = enemy.Body.TakeDamage(bonusDamage, state.Player.Sharpness);
+                        state.Logs.Add(new BattleLogEntry($"{card.Name} 根据 {enemy.Body.SwordMarkStacks} 层剑气印记追加 {dealt} 点伤害。"));
+                    }
+
+                    break;
                 case CardEffectType.Sharpness:
                     state.Player.AddSharpness(effect.Value, Math.Max(1, effect.Duration));
                     state.Logs.Add(new BattleLogEntry($"{card.Name} 获得锋锐 {effect.Value}，持续 {Math.Max(1, effect.Duration)} 回合。"));
@@ -658,6 +673,46 @@ namespace GameLogic.Cultivation
             },
             new CardEffect(CardEffectType.Heal, 6, CardTarget.Self));
 
+        public static CardDefinition Thrust { get; } = new CardDefinition(
+            "thrust",
+            "刺击",
+            1,
+            new[]
+            {
+                new CardUpgradeOption(
+                    "thrust_damage_1",
+                    "深刺",
+                    "造成 8 伤害并施加 1 层剑气印记。",
+                    new CardDefinition("thrust_damage_1", "深刺", 1, new CardEffect(CardEffectType.Damage, 8), new CardEffect(CardEffectType.SwordMark, 1))),
+                new CardUpgradeOption(
+                    "thrust_mark_1",
+                    "透骨刺",
+                    "造成 5 伤害并施加 2 层剑气印记。",
+                    new CardDefinition("thrust_mark_1", "透骨刺", 1, new CardEffect(CardEffectType.Damage, 5), new CardEffect(CardEffectType.SwordMark, 2))),
+            },
+            new CardEffect(CardEffectType.Damage, 5),
+            new CardEffect(CardEffectType.SwordMark, 1));
+
+        public static CardDefinition SevenfoldSwordQi { get; } = new CardDefinition(
+            "sevenfold_sword_qi",
+            "七绝剑气",
+            2,
+            new[]
+            {
+                new CardUpgradeOption(
+                    "sevenfold_sword_qi_mark_bonus_1",
+                    "九绝剑气",
+                    "造成 7 伤害，目标每有 1 层剑气印记，额外造成 5 伤害。",
+                    new CardDefinition("sevenfold_sword_qi_mark_bonus_1", "九绝剑气", 2, new CardEffect(CardEffectType.Damage, 7), new CardEffect(CardEffectType.DamagePerSwordMark, 5))),
+                new CardUpgradeOption(
+                    "sevenfold_sword_qi_base_1",
+                    "连环剑气",
+                    "造成 12 伤害，目标每有 1 层剑气印记，额外造成 3 伤害。",
+                    new CardDefinition("sevenfold_sword_qi_base_1", "连环剑气", 2, new CardEffect(CardEffectType.Damage, 12), new CardEffect(CardEffectType.DamagePerSwordMark, 3))),
+            },
+            new CardEffect(CardEffectType.Damage, 7),
+            new CardEffect(CardEffectType.DamagePerSwordMark, 3));
+
         public static CardDefinition FlyingSword { get; } = new CardDefinition(
             "flying_sword",
             "御剑式",
@@ -767,6 +822,8 @@ namespace GameLogic.Cultivation
                 new CultivationRunReward("reward_small_restore_pill", SmallRestorePill),
                 new CultivationRunReward("reward_sword_step", SwordStep),
                 new CultivationRunReward("reward_break_armor", BreakArmor),
+                new CultivationRunReward("reward_thrust", Thrust),
+                new CultivationRunReward("reward_sevenfold_sword_qi", SevenfoldSwordQi),
             };
         }
 

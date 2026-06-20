@@ -60,7 +60,8 @@ namespace GameLogic.Tests
                 new CardEffect(CardEffectType.Damage, 6, repeatCount: 2),
                 new CardEffect(CardEffectType.SwordMark, 1),
                 new CardEffect(CardEffectType.Sharpness, 3, CardTarget.Self, 2),
-                new CardEffect(CardEffectType.Exhaust, 1, CardTarget.Self));
+                new CardEffect(CardEffectType.Exhaust, 1, CardTarget.Self),
+                new CardEffect(CardEffectType.DamagePerSwordMark, 3));
 
             var summary = CultivationRunPrototypePresenter.FormatCardSummary(card);
 
@@ -68,6 +69,7 @@ namespace GameLogic.Tests
             StringAssert.Contains("剑气印记 1", summary);
             StringAssert.Contains("锋锐 3 / 2 回合", summary);
             StringAssert.Contains("消耗", summary);
+            StringAssert.Contains("每层剑气印记 +3 伤害", summary);
         }
 
         private static void PlayFirstCard(CultivationRunState run)

@@ -100,6 +100,20 @@ namespace GameLogic.Tests
         }
 
         [Test]
+        public void SevenfoldSwordQiScalesWithSwordMarkStacks()
+        {
+            var engine = new BattleEngine(1);
+            var state = CreateOrderedBattle(engine, CultivationSeedData.Thrust, CultivationSeedData.SevenfoldSwordQi);
+            var enemy = state.Enemies[0];
+
+            engine.PlayCard(state, state.Hand[0], enemy);
+            engine.PlayCard(state, state.Hand[0], enemy);
+
+            Assert.AreEqual(1, enemy.Body.SwordMarkStacks);
+            Assert.AreEqual(31, enemy.Body.CurrentHp);
+        }
+
+        [Test]
         public void SharpnessIgnoresEnemyDefenseForCardDamage()
         {
             var engine = new BattleEngine(1);

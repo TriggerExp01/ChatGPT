@@ -314,6 +314,15 @@ namespace GameLogic.Tests
         }
 
         [Test]
+        public void SwordSectRewardPoolIncludesSwordMarkEntryAndPayoffCards()
+        {
+            var rewards = CultivationSeedData.CreateSwordSectRewardPool();
+
+            Assert.IsTrue(rewards.Any(reward => reward.Card.Id == "thrust"));
+            Assert.IsTrue(rewards.Any(reward => reward.Card.Id == "sevenfold_sword_qi"));
+        }
+
+        [Test]
         public void SkippingFinalRewardCompletesRun()
         {
             var engine = new CultivationRunEngine(new BattleEngine(1));
