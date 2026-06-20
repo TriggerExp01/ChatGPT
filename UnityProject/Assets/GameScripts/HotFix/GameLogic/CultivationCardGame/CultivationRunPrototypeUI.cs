@@ -171,6 +171,17 @@ namespace GameLogic.Cultivation
             Refresh();
         }
 
+        public void RemoveDeckCardAtMarket(int deckIndex)
+        {
+            if (_run == null || _run.Status != CultivationRunStatus.Market)
+            {
+                return;
+            }
+
+            _runEngine.RemoveDeckCardAtMarket(_run, deckIndex);
+            Refresh();
+        }
+
         public void LeaveMarket()
         {
             if (_run == null || _run.Status != CultivationRunStatus.Market)
@@ -377,6 +388,21 @@ namespace GameLogic.Cultivation
         private void RebuildHand()
         {
             ClearChildren(_handRoot);
+
+            if (_run.Status == CultivationRunStatus.Market)
+            {
+                for (var i = 0; i < _run.Deck.Count; i++)
+                {
+                    var index = i;
+                    var card = _run.Deck[i];
+                    var button = CreateButton($"RemoveDeck_{i}_{card.Id}", _handRoot, $"移除\n{card.Name}\n{CultivationRunEngine.MarketCardRemovalCost} 灵石");
+                    button.interactable = _run.Deck.Count > 1 && _run.SpiritStones >= CultivationRunEngine.MarketCardRemovalCost;
+                    button.onClick.AddListener(() => RemoveDeckCardAtMarket(index));
+                    SetLayout(button.gameObject, flexibleWidth: 1, preferredHeight: 130);
+                }
+
+                return;
+            }
 
             if (_run.Status != CultivationRunStatus.InBattle || _run.CurrentBattle == null)
             {

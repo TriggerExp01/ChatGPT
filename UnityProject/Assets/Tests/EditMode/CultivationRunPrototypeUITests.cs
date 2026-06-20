@@ -98,6 +98,26 @@ namespace GameLogic.Tests
             Assert.AreEqual(1, _ui.Snapshot.PurchasedMarketItemCount);
         }
 
+        [Test]
+        public void PrototypeUiCanRemoveDeckCardInMarket()
+        {
+            ForceCurrentBattleVictory();
+            _ui.ResolveBattle();
+            _ui.SkipReward();
+            _ui.ChooseRoute(1);
+            _ui.Rest();
+            _ui.ChooseRoute(0);
+            SetRunSpiritStones(40);
+
+            var stonesBefore = _ui.Snapshot.SpiritStones;
+            var deckBefore = _ui.Snapshot.DeckCount;
+            _ui.RemoveDeckCardAtMarket(0);
+
+            Assert.AreEqual(stonesBefore - CultivationRunEngine.MarketCardRemovalCost, _ui.Snapshot.SpiritStones);
+            Assert.AreEqual(deckBefore - 1, _ui.Snapshot.DeckCount);
+            Assert.AreEqual(1, _ui.Snapshot.RemovedMarketCardCount);
+        }
+
         private void SetRunSpiritStones(int value)
         {
             var battleField = typeof(CultivationRunPrototypeUI)

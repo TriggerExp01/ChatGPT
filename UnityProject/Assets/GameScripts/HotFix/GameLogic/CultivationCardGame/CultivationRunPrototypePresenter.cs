@@ -71,7 +71,7 @@ namespace GameLogic.Cultivation
 
         private static string BuildRunText(CultivationRunState state)
         {
-            return $"状态：{state.Status}\n节点：{state.CurrentNodeIndex + 1}/{state.Route.Count}\nHP：{state.PlayerCurrentHp}/{state.PlayerMaxHp}\n灵石：{state.SpiritStones}\n牌组：{state.Deck.Count} 张\n已拿奖励：{state.ClaimedRewards.Count}";
+            return $"状态：{state.Status}\n节点：{state.CurrentNodeIndex + 1}/{state.Route.Count}\nHP：{state.PlayerCurrentHp}/{state.PlayerMaxHp}\n灵石：{state.SpiritStones}\n牌组：{state.Deck.Count} 张\n已拿奖励：{state.ClaimedRewards.Count}\n坊市删牌：{state.RemovedMarketCards.Count}";
         }
 
         private static string BuildNodeText(CultivationRunState state)
@@ -104,6 +104,8 @@ namespace GameLogic.Cultivation
                     var item = state.CurrentMarketItems[i];
                     builder.Append(i + 1).Append(". ").Append(item.Card.Name).Append(" / ").Append(item.Price).Append(" 灵石").AppendLine();
                 }
+
+                builder.Append("移除卡牌：").Append(CultivationRunEngine.MarketCardRemovalCost).Append(" 灵石 / 已移除 ").Append(state.RemovedMarketCards.Count).Append(" 张").AppendLine();
             }
 
             return builder.ToString();
@@ -222,6 +224,8 @@ namespace GameLogic.Cultivation
 
         public int PurchasedMarketItemCount { get; private set; }
 
+        public int RemovedMarketCardCount { get; private set; }
+
         public BattleOutcome BattleOutcome { get; private set; }
 
         public static RunPrototypeSnapshot From(CultivationRunState state)
@@ -246,6 +250,7 @@ namespace GameLogic.Cultivation
                 RouteChoiceCount = state.CurrentRouteChoices.Count,
                 MarketItemCount = state.CurrentMarketItems.Count,
                 PurchasedMarketItemCount = state.PurchasedMarketItems.Count,
+                RemovedMarketCardCount = state.RemovedMarketCards.Count,
                 BattleOutcome = state.CurrentBattle?.Outcome ?? BattleOutcome.InProgress,
             };
         }

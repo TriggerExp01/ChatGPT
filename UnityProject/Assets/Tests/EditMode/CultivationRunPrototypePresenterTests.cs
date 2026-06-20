@@ -66,7 +66,23 @@ namespace GameLogic.Tests
             Assert.AreEqual(1, snapshot.MarketItemCount);
             StringAssert.Contains("坊市商品", text.NodeText);
             StringAssert.Contains("流云护身 / 20 灵石", text.NodeText);
+            StringAssert.Contains("移除卡牌：35 灵石", text.NodeText);
             StringAssert.Contains("等待操作：Market", text.BattleText);
+        }
+
+        [Test]
+        public void CreateSnapshotCountsRemovedMarketCards()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var run = engine.StartRun(CreateInstantWinDeck(), CreateMarketRoute(), initialSpiritStones: 40);
+
+            engine.RemoveDeckCardAtMarket(run, 0);
+            var snapshot = CultivationRunPrototypePresenter.CreateSnapshot(run);
+            var text = CultivationRunPrototypePresenter.BuildText(run);
+
+            Assert.AreEqual(1, snapshot.RemovedMarketCardCount);
+            StringAssert.Contains("坊市删牌：1", text.RunText);
+            StringAssert.Contains("已移除 1 张", text.NodeText);
         }
 
         [Test]

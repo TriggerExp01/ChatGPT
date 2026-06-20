@@ -7,6 +7,7 @@ namespace GameLogic.Cultivation
     public sealed class CultivationRunEngine
     {
         private const int RewardChoiceCount = 3;
+        public const int MarketCardRemovalCost = 35;
 
         private readonly BattleEngine _battleEngine;
         private readonly Random _rewardRandom;
@@ -152,6 +153,31 @@ namespace GameLogic.Cultivation
             state.Deck.Add(item.Card);
             state.PurchasedMarketItems.Add(item);
             state.CurrentMarketItems.RemoveAt(itemIndex);
+        }
+
+        public void RemoveDeckCardAtMarket(CultivationRunState state, int deckIndex)
+        {
+            EnsureMarketState(state);
+
+            if (deckIndex < 0 || deckIndex >= state.Deck.Count)
+            {
+                throw new ArgumentOutOfRangeException(nameof(deckIndex), "Deck index is outside the run deck.");
+            }
+
+            if (state.Deck.Count <= 1)
+            {
+                throw new InvalidOperationException("Cannot remove the last card from the run deck.");
+            }
+
+            if (state.SpiritStones < MarketCardRemovalCost)
+            {
+                throw new InvalidOperationException("Not enough spirit stones to remove a deck card.");
+            }
+
+            var removedCard = state.Deck[deckIndex];
+            state.SpiritStones -= MarketCardRemovalCost;
+            state.Deck.RemoveAt(deckIndex);
+            state.RemovedMarketCards.Add(removedCard);
         }
 
         public void LeaveMarket(CultivationRunState state)

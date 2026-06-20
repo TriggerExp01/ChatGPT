@@ -393,6 +393,60 @@ namespace GameLogic.Tests
         }
 
         [Test]
+        public void MarketCardRemovalCostsSpiritStonesAndRemovesSelectedDeckCard()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var deck = CreateUniqueTestDeck();
+            var run = engine.StartRun(deck, CreateMarketRoute(), initialSpiritStones: 40);
+            var deckCount = run.Deck.Count;
+            var removedCard = run.Deck[1];
+
+            engine.RemoveDeckCardAtMarket(run, 1);
+
+            Assert.AreEqual(5, run.SpiritStones);
+            Assert.AreEqual(deckCount - 1, run.Deck.Count);
+            Assert.AreSame(removedCard, run.RemovedMarketCards.Single());
+            Assert.IsFalse(run.Deck.Contains(removedCard));
+        }
+
+        [Test]
+        public void MarketCardRemovalRejectsWithoutEnoughSpiritStones()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var run = engine.StartRun(CreateInstantWinDeck(), CreateMarketRoute(), initialSpiritStones: 34);
+
+            Assert.Throws<System.InvalidOperationException>(() => engine.RemoveDeckCardAtMarket(run, 0));
+            Assert.AreEqual(34, run.SpiritStones);
+            Assert.AreEqual(5, run.Deck.Count);
+            Assert.AreEqual(0, run.RemovedMarketCards.Count);
+        }
+
+        [Test]
+        public void MarketCardRemovalRejectsInvalidDeckIndex()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var run = engine.StartRun(CreateInstantWinDeck(), CreateMarketRoute(), initialSpiritStones: 40);
+
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => engine.RemoveDeckCardAtMarket(run, 99));
+            Assert.AreEqual(40, run.SpiritStones);
+            Assert.AreEqual(5, run.Deck.Count);
+            Assert.AreEqual(0, run.RemovedMarketCards.Count);
+        }
+
+        [Test]
+        public void MarketCardRemovalRejectsLastDeckCard()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var oneCard = new[] { new CardDefinition("only_card", "only_card", 0, new CardEffect(CardEffectType.Damage, 1)) };
+            var run = engine.StartRun(oneCard, CreateMarketRoute(), initialSpiritStones: 40);
+
+            Assert.Throws<System.InvalidOperationException>(() => engine.RemoveDeckCardAtMarket(run, 0));
+            Assert.AreEqual(40, run.SpiritStones);
+            Assert.AreEqual(1, run.Deck.Count);
+            Assert.AreEqual(0, run.RemovedMarketCards.Count);
+        }
+
+        [Test]
         public void LeavingMarketAdvancesToNextNode()
         {
             var engine = new CultivationRunEngine(new BattleEngine(1));
@@ -482,6 +536,18 @@ namespace GameLogic.Tests
                 instantWin,
                 instantWin,
                 instantWin,
+            };
+        }
+
+        private static IReadOnlyList<CardDefinition> CreateUniqueTestDeck()
+        {
+            return new[]
+            {
+                new CardDefinition("unique_card_1", "unique_card_1", 0, new CardEffect(CardEffectType.Damage, 1)),
+                new CardDefinition("unique_card_2", "unique_card_2", 0, new CardEffect(CardEffectType.Damage, 1)),
+                new CardDefinition("unique_card_3", "unique_card_3", 0, new CardEffect(CardEffectType.Damage, 1)),
+                new CardDefinition("unique_card_4", "unique_card_4", 0, new CardEffect(CardEffectType.Damage, 1)),
+                new CardDefinition("unique_card_5", "unique_card_5", 0, new CardEffect(CardEffectType.Damage, 1)),
             };
         }
 

@@ -15,6 +15,7 @@ namespace GameLogic.Cultivation
             CurrentRouteChoices = new List<CultivationRunRouteChoice>();
             CurrentMarketItems = new List<CultivationMarketItem>();
             PurchasedMarketItems = new List<CultivationMarketItem>();
+            RemovedMarketCards = new List<CardDefinition>();
 
             if (Deck.Count == 0)
             {
@@ -68,6 +69,8 @@ namespace GameLogic.Cultivation
         public List<CultivationMarketItem> CurrentMarketItems { get; }
 
         public List<CultivationMarketItem> PurchasedMarketItems { get; }
+
+        public List<CardDefinition> RemovedMarketCards { get; }
 
         public CultivationRunNode CurrentNode => Route[CurrentNodeIndex];
     }
