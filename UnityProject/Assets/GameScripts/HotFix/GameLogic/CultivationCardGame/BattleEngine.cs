@@ -527,5 +527,41 @@ namespace GameLogic.Cultivation
                 new CultivationRunNode("node_stone_demon_leader", "石魔首领", CultivationRunNodeType.Elite, StoneDemonLeader, rewards),
             };
         }
+
+        public static IReadOnlyList<CultivationRunNode> CreateFirstPrototypeBranchingRoute()
+        {
+            var rewards = CreateSwordSectRewardPool();
+            return new List<CultivationRunNode>
+            {
+                new CultivationRunNode(
+                    "node_stone_demon",
+                    "山门石魔",
+                    CultivationRunNodeType.Battle,
+                    StoneDemon,
+                    rewards,
+                    nextNodeIndices: new[] { 1, 2 }),
+                new CultivationRunNode(
+                    "node_fire_bat",
+                    "火蝠洞",
+                    CultivationRunNodeType.Battle,
+                    FireBat,
+                    rewards,
+                    nextNodeIndices: new[] { 3 }),
+                new CultivationRunNode(
+                    "node_meditation",
+                    "闭关调息",
+                    CultivationRunNodeType.Rest,
+                    null,
+                    null,
+                    restHealAmount: 30,
+                    nextNodeIndices: new[] { 3 }),
+                new CultivationRunNode(
+                    "node_stone_demon_leader",
+                    "石魔首领",
+                    CultivationRunNodeType.Elite,
+                    StoneDemonLeader,
+                    rewards),
+            };
+        }
     }
 }

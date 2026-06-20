@@ -57,7 +57,7 @@ namespace GameLogic.Cultivation
         {
             _battleEngine = new BattleEngine(20260620);
             _runEngine = new CultivationRunEngine(_battleEngine);
-            _run = _runEngine.StartRun(CultivationSeedData.CreateSwordSectStarterDeck(), CreatePrototypeRoute());
+            _run = _runEngine.StartRun(CultivationSeedData.CreateSwordSectStarterDeck(), CultivationSeedData.CreateFirstPrototypeBranchingRoute());
             _run.CurrentBattle.Logs.Add(new BattleLogEntry("Phase 7 Run 原型界面已连接战斗、奖励、闭关升级和路线选择。"));
             Refresh();
         }
@@ -472,18 +472,6 @@ namespace GameLogic.Cultivation
                 default:
                     return effect.Type.ToString();
             }
-        }
-
-        private static IReadOnlyList<CultivationRunNode> CreatePrototypeRoute()
-        {
-            var rewards = CultivationSeedData.CreateSwordSectRewardPool();
-            return new List<CultivationRunNode>
-            {
-                new CultivationRunNode("node_stone_demon", "山门石魔", CultivationRunNodeType.Battle, CultivationSeedData.StoneDemon, rewards, nextNodeIndices: new[] { 1, 2 }),
-                new CultivationRunNode("node_fire_bat", "火蝠洞", CultivationRunNodeType.Battle, CultivationSeedData.FireBat, rewards, nextNodeIndices: new[] { 3 }),
-                new CultivationRunNode("node_meditation", "闭关调息", CultivationRunNodeType.Rest, null, null, restHealAmount: 30, nextNodeIndices: new[] { 3 }),
-                new CultivationRunNode("node_stone_demon_leader", "石魔首领", CultivationRunNodeType.Elite, CultivationSeedData.StoneDemonLeader, rewards),
-            };
         }
 
         private static Transform ResolveParent()

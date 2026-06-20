@@ -224,6 +224,21 @@ namespace GameLogic.Tests
         }
 
         [Test]
+        public void SeedBranchingPrototypeRouteOffersFireBatOrRestAfterFirstBattle()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var run = engine.StartRun(CreateInstantWinDeck(), CultivationSeedData.CreateFirstPrototypeBranchingRoute());
+
+            WinCurrentBattle(engine, run);
+            engine.SkipReward(run);
+
+            Assert.AreEqual(CultivationRunStatus.RouteChoice, run.Status);
+            Assert.AreEqual(2, run.CurrentRouteChoices.Count);
+            Assert.AreEqual("node_fire_bat", run.CurrentRouteChoices[0].TargetNode.Id);
+            Assert.AreEqual("node_meditation", run.CurrentRouteChoices[1].TargetNode.Id);
+        }
+
+        [Test]
         public void SkippingFinalRewardCompletesRun()
         {
             var engine = new CultivationRunEngine(new BattleEngine(1));
