@@ -118,6 +118,8 @@ namespace GameLogic.Cultivation
 
         public int DeckLimit { get; private set; }
 
+        public int FatalDamageSurviveCharges { get; private set; }
+
         public List<PillDefinition> Pills { get; }
 
         public List<PillDefinition> PurchasedMarketPills { get; }
@@ -162,6 +164,16 @@ namespace GameLogic.Cultivation
         public void AddDeckLimitBonus(int amount)
         {
             DeckLimit += Math.Max(0, amount);
+        }
+
+        public void AddFatalDamageSurviveCharges(int amount)
+        {
+            FatalDamageSurviveCharges += Math.Max(0, amount);
+        }
+
+        public void SetFatalDamageSurviveCharges(int amount)
+        {
+            FatalDamageSurviveCharges = Math.Max(0, amount);
         }
 
         public bool NeedsGoldenCorePassiveChoice => CurrentRealm >= CultivationRealm.GoldenCore

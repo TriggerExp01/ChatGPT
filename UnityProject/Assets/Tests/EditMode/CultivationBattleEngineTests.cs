@@ -1094,6 +1094,54 @@ namespace GameLogic.Tests
         }
 
         [Test]
+        public void ImmortalGoldenCoreSurvivesFatalEnemyAttackOnce()
+        {
+            var engine = new BattleEngine(1);
+            var deadlyEnemy = new EnemyDefinition(
+                "immortal_core_enemy",
+                "immortal_core_enemy",
+                20,
+                0,
+                new EnemyIntent(EnemyIntentType.Attack, 150),
+                new EnemyIntent(EnemyIntentType.Attack, 150));
+            var state = new BattleState(
+                new CombatantState("cultivator", 100),
+                Enumerable.Repeat(CultivationSeedData.GuardQi, 12),
+                new[] { new EnemyState(deadlyEnemy) });
+            engine.StartPlayerTurn(state);
+            state.AddArtifactFatalDamageSurviveCharges(1);
+
+            engine.EndPlayerTurn(state);
+
+            Assert.AreEqual(1, state.Player.CurrentHp);
+            Assert.AreEqual(0, state.ArtifactFatalDamageSurviveCharges);
+            Assert.IsTrue(state.HasTriggeredArtifactFatalDamageSurvive);
+            Assert.AreEqual(BattleOutcome.InProgress, state.Outcome);
+            Assert.IsTrue(state.Logs.Any(log => log.Message.Contains("Immortal Golden Core triggered")));
+
+            engine.EndPlayerTurn(state);
+
+            Assert.AreEqual(BattleOutcome.Defeat, state.Outcome);
+        }
+
+        [Test]
+        public void ImmortalGoldenCoreSurvivesFatalTurnStartDamage()
+        {
+            var engine = new BattleEngine(1);
+            var state = new BattleState(
+                new CombatantState("cultivator", 100, currentHp: 2),
+                Enumerable.Repeat(CultivationSeedData.GuardQi, 12),
+                new[] { new EnemyState(new EnemyDefinition("patient_enemy", "patient_enemy", 20, 0, new EnemyIntent(EnemyIntentType.Buff))) });
+            state.Player.AddBurn(3, 2);
+            state.AddArtifactFatalDamageSurviveCharges(1);
+            engine.StartPlayerTurn(state);
+
+            Assert.AreEqual(1, state.Player.CurrentHp);
+            Assert.AreEqual(0, state.ArtifactFatalDamageSurviveCharges);
+            Assert.AreEqual(BattleOutcome.InProgress, state.Outcome);
+        }
+
+        [Test]
         public void FireCloudArtifactsApplyTurnStartBurnAndBonusDamage()
         {
             var engine = new BattleEngine(1);

@@ -119,6 +119,10 @@ namespace GameLogic.Cultivation
 
         public int ArtifactHealOnEnemyKillAmount { get; private set; }
 
+        public int ArtifactFatalDamageSurviveCharges { get; private set; }
+
+        public bool HasTriggeredArtifactFatalDamageSurvive { get; private set; }
+
         public int ArtifactFirstBattlePillDoubleNoConsumeCharges { get; private set; }
 
         public int ArtifactPoisonStackLimitBonus { get; private set; }
@@ -548,6 +552,24 @@ namespace GameLogic.Cultivation
         public void AddArtifactHealOnEnemyKill(int amount)
         {
             ArtifactHealOnEnemyKillAmount += Math.Max(0, amount);
+        }
+
+        public void AddArtifactFatalDamageSurviveCharges(int amount)
+        {
+            ArtifactFatalDamageSurviveCharges += Math.Max(0, amount);
+        }
+
+        public bool TryTriggerArtifactFatalDamageSurvive()
+        {
+            if (ArtifactFatalDamageSurviveCharges <= 0 || Player.CurrentHp > 0)
+            {
+                return false;
+            }
+
+            ArtifactFatalDamageSurviveCharges--;
+            HasTriggeredArtifactFatalDamageSurvive = true;
+            Player.Heal(1);
+            return true;
         }
 
         public int TryTriggerArtifactHealOnEnemyKill(EnemyState enemy)

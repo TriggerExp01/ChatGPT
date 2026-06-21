@@ -50,6 +50,7 @@ namespace GameLogic.Cultivation
             switch (state.CurrentBattle.Outcome)
             {
                 case BattleOutcome.Victory:
+                    state.SetFatalDamageSurviveCharges(state.CurrentBattle.ArtifactFatalDamageSurviveCharges);
                     state.PlayerCurrentHp = state.CurrentBattle.Player.CurrentHp;
                     var artifactHeal = GetHealAfterVictory(state);
                     if (artifactHeal > 0)
@@ -85,6 +86,7 @@ namespace GameLogic.Cultivation
                     state.CurrentRewards.AddRange(CreateRewardChoices(state.CurrentNode));
                     break;
                 case BattleOutcome.Defeat:
+                    state.SetFatalDamageSurviveCharges(state.CurrentBattle.ArtifactFatalDamageSurviveCharges);
                     state.PlayerCurrentHp = 0;
                     state.Status = CultivationRunStatus.Defeated;
                     state.CurrentRewards.Clear();
@@ -517,6 +519,10 @@ namespace GameLogic.Cultivation
                         state.CurrentBattle.AddExtraDrawPerTurn(artifact.ExtraDrawPerTurn);
                         state.CurrentBattle.Logs.Add(new BattleLogEntry($"{artifact.Name} active: extra draw +{artifact.ExtraDrawPerTurn}."));
                         break;
+                    case ArtifactEffectType.FatalDamageSurviveOncePerRun:
+                        state.CurrentBattle.AddArtifactFatalDamageSurviveCharges(state.FatalDamageSurviveCharges);
+                        state.CurrentBattle.Logs.Add(new BattleLogEntry($"{artifact.Name} active: survive fatal damage {state.FatalDamageSurviveCharges} time(s) this run."));
+                        break;
                     case ArtifactEffectType.PreventFirstSelfHpLossEachBattle:
                         state.CurrentBattle.AddPreventSelfHpLossCharges(artifact.PreventFirstSelfHpLossEachBattleCharges);
                         state.CurrentBattle.Logs.Add(new BattleLogEntry($"{artifact.Name} 生效：本场战斗前 {artifact.PreventFirstSelfHpLossEachBattleCharges} 次自伤被免疫。"));
@@ -654,6 +660,9 @@ namespace GameLogic.Cultivation
             {
                 case ArtifactEffectType.DeckLimitBonus:
                     state.AddDeckLimitBonus(artifact.DeckLimitBonus);
+                    break;
+                case ArtifactEffectType.FatalDamageSurviveOncePerRun:
+                    state.AddFatalDamageSurviveCharges(artifact.FatalDamageSurviveOncePerRunCharges);
                     break;
                 default:
                     break;
@@ -839,7 +848,7 @@ namespace GameLogic.Cultivation
                         throw new InvalidOperationException("Mystic event artifact option does not have an artifact reward.");
                     }
 
-                    state.Artifacts.Add(option.ArtifactReward);
+                    AddArtifact(state, option.ArtifactReward);
                     break;
                 case MysticEventEffectType.Leave:
                     break;

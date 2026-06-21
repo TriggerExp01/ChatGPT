@@ -287,6 +287,7 @@ namespace GameLogic.Tests
             CollectionAssert.Contains(swordArtifacts, CultivationSeedData.FiveElementsArrayArtifact.Id);
             CollectionAssert.Contains(swordArtifacts, CultivationSeedData.TenThousandSoulBannerArtifact.Id);
             CollectionAssert.Contains(swordArtifacts, CultivationSeedData.HeavenlyDaoStoneArtifact.Id);
+            CollectionAssert.Contains(swordArtifacts, CultivationSeedData.ImmortalGoldenCoreArtifact.Id);
             CollectionAssert.Contains(fireArtifacts, CultivationSeedData.FireCloudTokenArtifact.Id);
             CollectionAssert.Contains(fireArtifacts, CultivationSeedData.BurningHeavenFurnaceArtifact.Id);
             CollectionAssert.Contains(thunderArtifacts, CultivationSeedData.ThunderSpiritPearlArtifact.Id);
@@ -1816,7 +1817,7 @@ namespace GameLogic.Tests
                 new CultivationRunNode("deadly", "deadly", CultivationRunNodeType.Battle, deadlyEnemy, CultivationSeedData.CreateSwordSectRewardPool()),
             };
             var engine = new CultivationRunEngine(new BattleEngine(1));
-            var run = engine.StartRun(CultivationSeedData.CreateSwordSectStarterDeck(), route);
+            var run = engine.StartRun(CreateInstantWinDeck(), route);
 
             var battleEngine = new BattleEngine(1);
             battleEngine.EndPlayerTurn(run.CurrentBattle);
@@ -1827,6 +1828,70 @@ namespace GameLogic.Tests
             Assert.AreEqual(0, run.SpiritStones);
             Assert.IsNull(run.CurrentBattle);
             Assert.AreEqual(0, run.CurrentRewards.Count);
+        }
+
+        [Test]
+        public void ImmortalGoldenCoreSurvivesOneRunFatalDamageAndThenDefeat()
+        {
+            var deadlyEnemy = new EnemyDefinition(
+                "immortal_core_deadly_enemy",
+                "immortal_core_deadly_enemy",
+                10,
+                0,
+                new EnemyIntent(EnemyIntentType.Attack, 150));
+            var route = new[]
+            {
+                new CultivationRunNode(
+                    "core_chest",
+                    "core_chest",
+                    CultivationRunNodeType.Chest,
+                    null,
+                    null,
+                    nextNodeIndices: new[] { 1 },
+                    artifactRewardPool: new[] { CultivationSeedData.ImmortalGoldenCoreArtifact }),
+                new CultivationRunNode(
+                    "deadly_a",
+                    "deadly_a",
+                    CultivationRunNodeType.Battle,
+                    deadlyEnemy,
+                    CultivationSeedData.CreateSwordSectRewardPool(),
+                    nextNodeIndices: new[] { 2 }),
+                new CultivationRunNode(
+                    "deadly_b",
+                    "deadly_b",
+                    CultivationRunNodeType.Battle,
+                    deadlyEnemy,
+                    CultivationSeedData.CreateSwordSectRewardPool()),
+            };
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var run = engine.StartRun(CreateInstantWinDeck(), route);
+
+            var artifact = engine.OpenChest(run);
+
+            Assert.AreSame(CultivationSeedData.ImmortalGoldenCoreArtifact, artifact);
+            Assert.AreEqual(1, run.FatalDamageSurviveCharges);
+            Assert.AreEqual(1, run.CurrentBattle.ArtifactFatalDamageSurviveCharges);
+
+            new BattleEngine(1).EndPlayerTurn(run.CurrentBattle);
+            Assert.AreEqual(BattleOutcome.InProgress, run.CurrentBattle.Outcome);
+            Assert.AreEqual(1, run.CurrentBattle.Player.CurrentHp);
+            Assert.AreEqual(0, run.CurrentBattle.ArtifactFatalDamageSurviveCharges);
+            Assert.IsTrue(run.CurrentBattle.Logs.Any(log => log.Message.Contains("Immortal Golden Core triggered")));
+            PlayFirstCard(run);
+            engine.ResolveBattleResult(run);
+
+            Assert.AreEqual(CultivationRunStatus.Reward, run.Status);
+            Assert.AreEqual(1, run.PlayerCurrentHp);
+            Assert.AreEqual(0, run.FatalDamageSurviveCharges);
+
+            engine.SkipReward(run);
+            Assert.AreEqual(0, run.CurrentBattle.ArtifactFatalDamageSurviveCharges);
+            new BattleEngine(1).EndPlayerTurn(run.CurrentBattle);
+            engine.ResolveBattleResult(run);
+
+            Assert.AreEqual(CultivationRunStatus.Defeated, run.Status);
+            Assert.AreEqual(0, run.PlayerCurrentHp);
+            Assert.AreEqual(0, run.FatalDamageSurviveCharges);
         }
 
         private static void WinCurrentBattle(CultivationRunEngine engine, CultivationRunState run)

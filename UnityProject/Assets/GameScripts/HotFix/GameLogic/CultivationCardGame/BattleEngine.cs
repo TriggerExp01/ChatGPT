@@ -108,12 +108,16 @@ namespace GameLogic.Cultivation
                 state.Logs.Add(new BattleLogEntry($"玩家受到灼烧 {burnDamage} 点伤害。"));
             }
 
+            TryResolveFatalProtection(state);
+
             var poisonDamage = state.Player.ResolvePoisonAtTurnStart();
             if (poisonDamage > 0)
             {
                 state.MarkPoisonDamageTriggered();
                 state.Logs.Add(new BattleLogEntry($"玩家受到中毒 {poisonDamage} 点伤害。"));
             }
+
+            TryResolveFatalProtection(state);
 
             var stunned = state.Player.ResolveStunAtTurnStart();
             if (stunned)
@@ -1206,6 +1210,8 @@ namespace GameLogic.Cultivation
                 state.Logs.Add(new BattleLogEntry($"不死魔身触发，玩家保留生机并恢复到 {state.Player.CurrentHp} HP。"));
             }
 
+            TryResolveFatalProtection(state);
+
             var damageHeal = state.TriggerDamageTakenHeal(dealt);
             if (damageHeal > 0)
             {
@@ -1217,6 +1223,21 @@ namespace GameLogic.Cultivation
             ResolveBloodGuardHeal(state, enemy);
             state.Logs.Add(new BattleLogEntry($"{enemy.Body.Name} 对玩家造成 {dealt} 点伤害。"));
             return true;
+        }
+
+        private static void TryResolveFatalProtection(BattleState state)
+        {
+            var deathWardHeal = state.TryTriggerDeathWard();
+            if (deathWardHeal > 0)
+            {
+                state.Logs.Add(new BattleLogEntry($"Death Ward triggered: player recovered to {state.Player.CurrentHp} HP."));
+                return;
+            }
+
+            if (state.TryTriggerArtifactFatalDamageSurvive())
+            {
+                state.Logs.Add(new BattleLogEntry("Immortal Golden Core triggered: player survived fatal damage at 1 HP."));
+            }
         }
 
         private void ResolveAttackCounter(BattleState state, EnemyState enemy)
@@ -3395,6 +3416,13 @@ namespace GameLogic.Cultivation
             ArtifactEffectType.ExtraDrawPerTurn,
             1);
 
+        public static ArtifactDefinition ImmortalGoldenCoreArtifact { get; } = new ArtifactDefinition(
+            "immortal_golden_core",
+            "Immortal Golden Core",
+            "Artifact: survive fatal damage at 1 HP once per run.",
+            ArtifactEffectType.FatalDamageSurviveOncePerRun,
+            1);
+
         public static ArtifactDefinition BloodDemonOrbArtifact { get; } = new ArtifactDefinition(
             "blood_demon_orb",
             "血魔珠",
@@ -3860,6 +3888,7 @@ namespace GameLogic.Cultivation
                 FiveElementsArrayArtifact,
                 TenThousandSoulBannerArtifact,
                 HeavenlyDaoStoneArtifact,
+                ImmortalGoldenCoreArtifact,
             };
         }
 

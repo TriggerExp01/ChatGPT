@@ -383,6 +383,23 @@ namespace GameLogic.Tests
         }
 
         [Test]
+        public void BuildViewModelIncludesImmortalGoldenCoreStatus()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var run = engine.StartRun(CreateArtifactDisplayDeck(), CreateSingleArtifactChestRoute(CultivationSeedData.ImmortalGoldenCoreArtifact));
+
+            engine.OpenChest(run);
+            var viewBefore = CultivationRunPrototypePresenter.BuildViewModel(run);
+            run.CurrentBattle.Player.TakeDirectDamage(999);
+            run.CurrentBattle.TryTriggerArtifactFatalDamageSurvive();
+            var viewAfter = CultivationRunPrototypePresenter.BuildViewModel(run);
+
+            Assert.AreEqual("artifact_immortal_core", viewBefore.ArtifactItems[0].IconKey);
+            Assert.AreEqual("致命保护剩余 1 次", viewBefore.ArtifactItems[0].StatusSummary);
+            Assert.AreEqual("致命保护已消耗", viewAfter.ArtifactItems[0].StatusSummary);
+        }
+
+        [Test]
         public void FormatArtifactEffectSummaryCoversExclusiveArtifactKeywords()
         {
             StringAssert.Contains("牌库上限 +3", CultivationRunPrototypePresenter.FormatArtifactEffectSummary(CultivationSeedData.StorageBagArtifact));
@@ -826,6 +843,26 @@ namespace GameLogic.Tests
                     "common_artifact_battle",
                     CultivationRunNodeType.Battle,
                     new EnemyDefinition("common_artifact_enemy", "common_artifact_enemy", 40, 0, new EnemyIntent(EnemyIntentType.Attack, 6)),
+                    CultivationSeedData.CreateSwordSectRewardPool()),
+            };
+        }
+
+        private static IReadOnlyList<CultivationRunNode> CreateSingleArtifactChestRoute(ArtifactDefinition artifact)
+        {
+            return new List<CultivationRunNode>
+            {
+                new CultivationRunNode(
+                    "single_artifact_chest",
+                    "single_artifact_chest",
+                    CultivationRunNodeType.Chest,
+                    null,
+                    null,
+                    artifactRewardPool: new[] { artifact }),
+                new CultivationRunNode(
+                    "single_artifact_battle",
+                    "single_artifact_battle",
+                    CultivationRunNodeType.Battle,
+                    new EnemyDefinition("single_artifact_enemy", "single_artifact_enemy", 40, 0, new EnemyIntent(EnemyIntentType.Attack, 6)),
                     CultivationSeedData.CreateSwordSectRewardPool()),
             };
         }

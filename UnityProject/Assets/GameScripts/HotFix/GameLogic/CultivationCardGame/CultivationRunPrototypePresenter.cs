@@ -359,6 +359,8 @@ namespace GameLogic.Cultivation
                     return $"击杀敌人恢复 {artifact.HealOnEnemyKillAmount} HP";
                 case ArtifactEffectType.ExtraDrawPerTurn:
                     return $"每回合额外抽 {artifact.ExtraDrawPerTurn} 张牌";
+                case ArtifactEffectType.FatalDamageSurviveOncePerRun:
+                    return "致命伤害保留 1 HP / 每 Run 1 次";
                 case ArtifactEffectType.PreventFirstSelfHpLossEachBattle:
                     return $"每战免疫前 {artifact.PreventFirstSelfHpLossEachBattleCharges} 次自伤";
                 case ArtifactEffectType.MissingHpDamageBonus:
@@ -417,6 +419,8 @@ namespace GameLogic.Cultivation
                     return "artifact_soul_banner";
                 case ArtifactEffectType.ExtraDrawPerTurn:
                     return "artifact_heavenly_dao";
+                case ArtifactEffectType.FatalDamageSurviveOncePerRun:
+                    return "artifact_immortal_core";
                 case ArtifactEffectType.PreventFirstSelfHpLossEachBattle:
                     return "artifact_blood";
                 case ArtifactEffectType.MissingHpDamageBonus:
@@ -503,6 +507,10 @@ namespace GameLogic.Cultivation
                     return $"击杀敌人恢复 {battle.ArtifactHealOnEnemyKillAmount} HP";
                 case ArtifactEffectType.ExtraDrawPerTurn:
                     return $"每回合额外抽牌 +{battle.ExtraDrawPerTurn}";
+                case ArtifactEffectType.FatalDamageSurviveOncePerRun:
+                    return battle.ArtifactFatalDamageSurviveCharges > 0
+                        ? $"致命保护剩余 {battle.ArtifactFatalDamageSurviveCharges} 次"
+                        : "致命保护已消耗";
                 case ArtifactEffectType.PreventFirstSelfHpLossEachBattle:
                     return battle.PreventSelfHpLossCharges > 0
                         ? $"本战剩余免疫自伤 {battle.PreventSelfHpLossCharges} 次"
