@@ -288,6 +288,7 @@ namespace GameLogic.Tests
             CollectionAssert.Contains(swordArtifacts, CultivationSeedData.TenThousandSoulBannerArtifact.Id);
             CollectionAssert.Contains(swordArtifacts, CultivationSeedData.HeavenlyDaoStoneArtifact.Id);
             CollectionAssert.Contains(swordArtifacts, CultivationSeedData.ImmortalGoldenCoreArtifact.Id);
+            CollectionAssert.Contains(swordArtifacts, CultivationSeedData.SpiritBeastBagArtifact.Id);
             CollectionAssert.Contains(fireArtifacts, CultivationSeedData.FireCloudTokenArtifact.Id);
             CollectionAssert.Contains(fireArtifacts, CultivationSeedData.BurningHeavenFurnaceArtifact.Id);
             CollectionAssert.Contains(thunderArtifacts, CultivationSeedData.ThunderSpiritPearlArtifact.Id);
@@ -1059,7 +1060,7 @@ namespace GameLogic.Tests
             var run = engine.StartRun(CreateInstantWinDeck(), CreateMarketRoute(), initialSpiritStones: 25);
 
             Assert.AreEqual(CultivationRunStatus.Market, run.Status);
-            Assert.AreEqual(16, run.CurrentMarketItems.Count);
+            Assert.AreEqual(17, run.CurrentMarketItems.Count);
 
             var deckCount = run.Deck.Count;
             engine.BuyMarketItem(run, 0);
@@ -1068,7 +1069,7 @@ namespace GameLogic.Tests
             Assert.AreEqual(deckCount + 1, run.Deck.Count);
             Assert.AreEqual("cloud_guard", run.Deck.Last().Id);
             Assert.AreEqual(1, run.PurchasedMarketItems.Count);
-            Assert.AreEqual(15, run.CurrentMarketItems.Count);
+            Assert.AreEqual(16, run.CurrentMarketItems.Count);
         }
 
         [Test]
@@ -1085,7 +1086,7 @@ namespace GameLogic.Tests
             Assert.AreEqual(1, run.Pills.Count);
             Assert.AreEqual(1, run.PurchasedMarketPills.Count);
             Assert.AreEqual("small_restore_pill", run.Pills[0].Id);
-            Assert.AreEqual(15, run.CurrentMarketItems.Count);
+            Assert.AreEqual(16, run.CurrentMarketItems.Count);
         }
 
         [Test]
@@ -1101,7 +1102,7 @@ namespace GameLogic.Tests
             Assert.AreEqual(20, run.SpiritStones);
             Assert.AreEqual(5, run.Deck.Count);
             Assert.AreEqual(3, run.Pills.Count);
-            Assert.AreEqual(16, run.CurrentMarketItems.Count);
+            Assert.AreEqual(17, run.CurrentMarketItems.Count);
             Assert.AreEqual(0, run.PurchasedMarketPills.Count);
         }
 
@@ -1294,6 +1295,19 @@ namespace GameLogic.Tests
         }
 
         [Test]
+        public void MarketBuyingSpiritBeastBagCostsFiftySpiritStones()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var run = engine.StartRun(CreateInstantWinDeck(), CreateMarketRoute(), initialSpiritStones: 50);
+
+            engine.BuyMarketItem(run, 11);
+
+            Assert.AreEqual(0, run.SpiritStones);
+            Assert.AreEqual("spirit_beast_bag", run.Artifacts[0].Id);
+            Assert.AreEqual(1, run.PurchasedMarketArtifacts.Count);
+        }
+
+        [Test]
         public void ChoosingRewardRejectsWhenDeckLimitReached()
         {
             var engine = new CultivationRunEngine(new BattleEngine(1), rewardSeed: 3);
@@ -1319,7 +1333,7 @@ namespace GameLogic.Tests
             Assert.Throws<System.InvalidOperationException>(() => engine.BuyMarketItem(run, 0));
             Assert.AreEqual(25, run.SpiritStones);
             Assert.AreEqual(CultivationRunState.DefaultDeckLimit, run.Deck.Count);
-            Assert.AreEqual(16, run.CurrentMarketItems.Count);
+            Assert.AreEqual(17, run.CurrentMarketItems.Count);
             Assert.AreEqual(0, run.PurchasedMarketItems.Count);
         }
 
@@ -1334,6 +1348,65 @@ namespace GameLogic.Tests
             Assert.AreSame(CultivationSeedData.StorageBagArtifact, artifact);
             Assert.AreEqual(CultivationRunState.DefaultDeckLimit + 3, run.DeckLimit);
             Assert.AreEqual(1, run.ChestArtifacts.Count);
+        }
+
+        [Test]
+        public void SpiritBeastBagGrantsRandomPillAfterThreeVictories()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1), rewardSeed: 0);
+            var run = engine.StartRun(CreateInstantWinDeck(), CreateSpiritBeastBagBattleRoute());
+
+            engine.OpenChest(run);
+            WinCurrentBattle(engine, run);
+
+            Assert.AreEqual(1, run.SpiritBeastBagVictoryCounter);
+            Assert.AreEqual(0, run.Pills.Count);
+
+            engine.SkipReward(run);
+            WinCurrentBattle(engine, run);
+
+            Assert.AreEqual(2, run.SpiritBeastBagVictoryCounter);
+            Assert.AreEqual(0, run.Pills.Count);
+
+            engine.SkipReward(run);
+            WinCurrentBattle(engine, run);
+
+            Assert.AreEqual(0, run.SpiritBeastBagVictoryCounter);
+            Assert.AreEqual(1, run.Pills.Count);
+            CollectionAssert.Contains(
+                CultivationSeedData.CreateBasicPillRewardPool().Select(pill => pill.Id).ToArray(),
+                run.Pills[0].Id);
+            Assert.IsTrue(run.CurrentBattle.Logs.Any(log => log.Message.Contains("Spirit Beast Bag grants pill")));
+        }
+
+        [Test]
+        public void SpiritBeastBagKeepsReadyCounterWhenPillSlotsAreFull()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1), rewardSeed: 0);
+            var run = engine.StartRun(CreateInstantWinDeck(), CreateSpiritBeastBagBattleRoute());
+
+            engine.OpenChest(run);
+            run.Pills.Add(CultivationSeedData.SmallRestorePillItem);
+            run.Pills.Add(CultivationSeedData.BigRestorePillItem);
+            run.Pills.Add(CultivationSeedData.CleansePillItem);
+
+            WinCurrentBattle(engine, run);
+            engine.SkipReward(run);
+            WinCurrentBattle(engine, run);
+            engine.SkipReward(run);
+            WinCurrentBattle(engine, run);
+
+            Assert.AreEqual(3, run.SpiritBeastBagVictoryCounter);
+            Assert.AreEqual(3, run.Pills.Count);
+            Assert.IsTrue(run.CurrentBattle.Logs.Any(log => log.Message.Contains("pill slots are full")));
+
+            run.Pills.RemoveAt(0);
+            engine.SkipReward(run);
+            WinCurrentBattle(engine, run);
+
+            Assert.AreEqual(0, run.SpiritBeastBagVictoryCounter);
+            Assert.AreEqual(3, run.Pills.Count);
+            Assert.IsTrue(run.CurrentBattle.Logs.Any(log => log.Message.Contains("Spirit Beast Bag grants pill")));
         }
 
         [Test]
@@ -2139,6 +2212,7 @@ namespace GameLogic.Tests
                         new CultivationMarketItem("market_spirit_stone_mine", CultivationSeedData.SpiritStoneMineArtifact, 25),
                         new CultivationMarketItem("market_rejuvenation_jade", CultivationSeedData.RejuvenationJadeArtifact, 30),
                         new CultivationMarketItem("market_storage_bag", CultivationSeedData.StorageBagArtifact, 30),
+                        new CultivationMarketItem("market_spirit_beast_bag", CultivationSeedData.SpiritBeastBagArtifact, 50),
                         new CultivationMarketItem("market_spirit_gathering_array", CultivationSeedData.SpiritGatheringArrayArtifact, 40),
                         new CultivationMarketItem("market_heart_protecting_mirror", CultivationSeedData.HeartProtectingMirrorArtifact, 55),
                         new CultivationMarketItem("market_flying_sword_token", CultivationSeedData.FlyingSwordTokenArtifact, 55),
@@ -2193,6 +2267,50 @@ namespace GameLogic.Tests
                     CultivationRunNodeType.Battle,
                     battleEnemy ?? CultivationSeedData.StoneDemon,
                     CultivationSeedData.CreateDemonicSectRewardPool()),
+            };
+        }
+
+        private static IReadOnlyList<CultivationRunNode> CreateSpiritBeastBagBattleRoute()
+        {
+            var rewards = CultivationSeedData.CreateSwordSectRewardPool();
+            var enemy = new EnemyDefinition("spirit_beast_bag_enemy", "spirit_beast_bag_enemy", 1, 0, new EnemyIntent(EnemyIntentType.Attack, 1));
+            return new List<CultivationRunNode>
+            {
+                new CultivationRunNode(
+                    "spirit_beast_bag_chest",
+                    "spirit_beast_bag_chest",
+                    CultivationRunNodeType.Chest,
+                    null,
+                    null,
+                    nextNodeIndices: new[] { 1 },
+                    artifactRewardPool: new[] { CultivationSeedData.SpiritBeastBagArtifact }),
+                new CultivationRunNode(
+                    "spirit_beast_bag_battle_1",
+                    "spirit_beast_bag_battle_1",
+                    CultivationRunNodeType.Battle,
+                    enemy,
+                    rewards,
+                    nextNodeIndices: new[] { 2 }),
+                new CultivationRunNode(
+                    "spirit_beast_bag_battle_2",
+                    "spirit_beast_bag_battle_2",
+                    CultivationRunNodeType.Battle,
+                    enemy,
+                    rewards,
+                    nextNodeIndices: new[] { 3 }),
+                new CultivationRunNode(
+                    "spirit_beast_bag_battle_3",
+                    "spirit_beast_bag_battle_3",
+                    CultivationRunNodeType.Battle,
+                    enemy,
+                    rewards,
+                    nextNodeIndices: new[] { 4 }),
+                new CultivationRunNode(
+                    "spirit_beast_bag_battle_4",
+                    "spirit_beast_bag_battle_4",
+                    CultivationRunNodeType.Battle,
+                    enemy,
+                    rewards),
             };
         }
 

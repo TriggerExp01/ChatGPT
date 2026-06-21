@@ -120,6 +120,8 @@ namespace GameLogic.Cultivation
 
         public int FatalDamageSurviveCharges { get; private set; }
 
+        public int SpiritBeastBagVictoryCounter { get; private set; }
+
         public List<PillDefinition> Pills { get; }
 
         public List<PillDefinition> PurchasedMarketPills { get; }
@@ -174,6 +176,16 @@ namespace GameLogic.Cultivation
         public void SetFatalDamageSurviveCharges(int amount)
         {
             FatalDamageSurviveCharges = Math.Max(0, amount);
+        }
+
+        public void IncrementSpiritBeastBagVictoryCounter()
+        {
+            SpiritBeastBagVictoryCounter++;
+        }
+
+        public void ResetSpiritBeastBagVictoryCounter()
+        {
+            SpiritBeastBagVictoryCounter = 0;
         }
 
         public bool NeedsGoldenCorePassiveChoice => CurrentRealm >= CultivationRealm.GoldenCore

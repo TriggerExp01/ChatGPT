@@ -326,7 +326,7 @@ namespace GameLogic.Cultivation
                     false,
                     BuildArtifactIconKey(artifact),
                     BuildArtifactSourceTag(state, artifact),
-                    BuildArtifactStatusSummary(state.CurrentBattle, artifact)))
+                    BuildArtifactStatusSummary(state, artifact)))
                 .ToArray();
         }
 
@@ -359,6 +359,8 @@ namespace GameLogic.Cultivation
                     return $"击杀敌人恢复 {artifact.HealOnEnemyKillAmount} HP";
                 case ArtifactEffectType.ExtraDrawPerTurn:
                     return $"每回合额外抽 {artifact.ExtraDrawPerTurn} 张牌";
+                case ArtifactEffectType.PillEveryThirdVictory:
+                    return $"每 {artifact.PillEveryThirdVictoryInterval} 场胜利获得 1 颗随机丹药";
                 case ArtifactEffectType.FatalDamageSurviveOncePerRun:
                     return "致命伤害保留 1 HP / 每 Run 1 次";
                 case ArtifactEffectType.PreventFirstSelfHpLossEachBattle:
@@ -419,6 +421,8 @@ namespace GameLogic.Cultivation
                     return "artifact_soul_banner";
                 case ArtifactEffectType.ExtraDrawPerTurn:
                     return "artifact_heavenly_dao";
+                case ArtifactEffectType.PillEveryThirdVictory:
+                    return "artifact_spirit_beast_bag";
                 case ArtifactEffectType.FatalDamageSurviveOncePerRun:
                     return "artifact_immortal_core";
                 case ArtifactEffectType.PreventFirstSelfHpLossEachBattle:
@@ -471,13 +475,23 @@ namespace GameLogic.Cultivation
             return "秘境/其他";
         }
 
-        private static string BuildArtifactStatusSummary(BattleState battle, ArtifactDefinition artifact)
+        private static string BuildArtifactStatusSummary(CultivationRunState state, ArtifactDefinition artifact)
         {
             if (artifact == null)
             {
                 return string.Empty;
             }
 
+            if (artifact.EffectType == ArtifactEffectType.PillEveryThirdVictory)
+            {
+                var interval = artifact.PillEveryThirdVictoryInterval;
+                var counter = Math.Min(state.SpiritBeastBagVictoryCounter, interval);
+                return counter >= interval
+                    ? "丹药待领取，槽位满时保留进度"
+                    : $"胜利计数 {counter}/{interval}";
+            }
+
+            var battle = state.CurrentBattle;
             if (battle == null)
             {
                 return FormatArtifactEffectSummary(artifact);
@@ -838,7 +852,7 @@ namespace GameLogic.Cultivation
 
                 builder.Append(artifact.Name)
                     .Append('(')
-                    .Append(BuildArtifactStatusSummary(state.CurrentBattle, artifact))
+                    .Append(BuildArtifactStatusSummary(state, artifact))
                     .Append(')');
             }
 

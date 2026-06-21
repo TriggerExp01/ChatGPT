@@ -400,6 +400,29 @@ namespace GameLogic.Tests
         }
 
         [Test]
+        public void BuildViewModelIncludesSpiritBeastBagStatus()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var run = engine.StartRun(CreateArtifactDisplayDeck(), CreateSpiritBeastBagDisplayRoute());
+
+            engine.OpenChest(run);
+            var viewBefore = CultivationRunPrototypePresenter.BuildViewModel(run);
+            PlayFirstCard(run);
+            engine.ResolveBattleResult(run);
+            var viewAfterOneVictory = CultivationRunPrototypePresenter.BuildViewModel(run);
+
+            Assert.AreEqual("artifact_spirit_beast_bag", viewBefore.ArtifactItems[0].IconKey);
+            Assert.AreEqual("胜利计数 0/3", viewBefore.ArtifactItems[0].StatusSummary);
+            Assert.AreEqual("胜利计数 1/3", viewAfterOneVictory.ArtifactItems[0].StatusSummary);
+        }
+
+        [Test]
+        public void FormatArtifactEffectSummaryIncludesSpiritBeastBag()
+        {
+            StringAssert.Contains("每 3 场胜利获得 1 颗随机丹药", CultivationRunPrototypePresenter.FormatArtifactEffectSummary(CultivationSeedData.SpiritBeastBagArtifact));
+        }
+
+        [Test]
         public void FormatArtifactEffectSummaryCoversExclusiveArtifactKeywords()
         {
             StringAssert.Contains("牌库上限 +3", CultivationRunPrototypePresenter.FormatArtifactEffectSummary(CultivationSeedData.StorageBagArtifact));
@@ -863,6 +886,27 @@ namespace GameLogic.Tests
                     "single_artifact_battle",
                     CultivationRunNodeType.Battle,
                     new EnemyDefinition("single_artifact_enemy", "single_artifact_enemy", 40, 0, new EnemyIntent(EnemyIntentType.Attack, 6)),
+                    CultivationSeedData.CreateSwordSectRewardPool()),
+            };
+        }
+
+        private static IReadOnlyList<CultivationRunNode> CreateSpiritBeastBagDisplayRoute()
+        {
+            return new List<CultivationRunNode>
+            {
+                new CultivationRunNode(
+                    "spirit_beast_bag_display_chest",
+                    "spirit_beast_bag_display_chest",
+                    CultivationRunNodeType.Chest,
+                    null,
+                    null,
+                    nextNodeIndices: new[] { 1 },
+                    artifactRewardPool: new[] { CultivationSeedData.SpiritBeastBagArtifact }),
+                new CultivationRunNode(
+                    "spirit_beast_bag_display_battle",
+                    "spirit_beast_bag_display_battle",
+                    CultivationRunNodeType.Battle,
+                    new EnemyDefinition("spirit_beast_bag_display_enemy", "spirit_beast_bag_display_enemy", 1, 0, new EnemyIntent(EnemyIntentType.Attack, 1)),
                     CultivationSeedData.CreateSwordSectRewardPool()),
             };
         }

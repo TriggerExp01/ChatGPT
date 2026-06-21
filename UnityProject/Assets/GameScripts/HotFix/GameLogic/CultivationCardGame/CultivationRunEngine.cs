@@ -79,6 +79,7 @@ namespace GameLogic.Cultivation
                         state.CurrentBattle.Logs.Add(new BattleLogEntry($"法宝额外获得 {artifactSpiritStoneReward} 灵石。"));
                     }
 
+                    TryAwardPillFromSpiritBeastBag(state);
                     AwardArtifactAfterEliteVictory(state);
                     RemoveExhaustedCardsFromDeck(state);
                     state.Status = CultivationRunStatus.Reward;
@@ -641,6 +642,42 @@ namespace GameLogic.Cultivation
         private static int GetHealAfterVictory(CultivationRunState state)
         {
             return state.Artifacts.Sum(artifact => artifact.HealAfterVictoryAmount);
+        }
+
+        private void TryAwardPillFromSpiritBeastBag(CultivationRunState state)
+        {
+            var interval = state.Artifacts
+                .Where(artifact => artifact.EffectType == ArtifactEffectType.PillEveryThirdVictory)
+                .Select(artifact => artifact.PillEveryThirdVictoryInterval)
+                .DefaultIfEmpty(0)
+                .Min();
+            if (interval <= 0)
+            {
+                return;
+            }
+
+            state.IncrementSpiritBeastBagVictoryCounter();
+            if (state.SpiritBeastBagVictoryCounter < interval)
+            {
+                return;
+            }
+
+            if (state.Pills.Count >= state.PillSlotLimit)
+            {
+                state.CurrentBattle.Logs.Add(new BattleLogEntry("Spirit Beast Bag ready, but pill slots are full."));
+                return;
+            }
+
+            var pillPool = CultivationSeedData.CreateBasicPillRewardPool();
+            if (pillPool.Count == 0)
+            {
+                return;
+            }
+
+            var pill = pillPool[_rewardRandom.Next(pillPool.Count)];
+            state.Pills.Add(pill);
+            state.ResetSpiritBeastBagVictoryCounter();
+            state.CurrentBattle.Logs.Add(new BattleLogEntry($"Spirit Beast Bag grants pill: {pill.Name}."));
         }
 
         private static void AddArtifact(CultivationRunState state, ArtifactDefinition artifact)

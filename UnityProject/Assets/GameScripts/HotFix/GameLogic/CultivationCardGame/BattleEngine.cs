@@ -3346,6 +3346,19 @@ namespace GameLogic.Cultivation
             PillEffectType.MaxHp,
             10);
 
+        public static IReadOnlyList<PillDefinition> CreateBasicPillRewardPool()
+        {
+            return new[]
+            {
+                SmallRestorePillItem,
+                BigRestorePillItem,
+                SpiritBoostPillItem,
+                CleansePillItem,
+                BreakthroughPillItem,
+                FoundationPillItem,
+            };
+        }
+
         public static ArtifactDefinition StorageBagArtifact { get; } = new ArtifactDefinition(
             "storage_bag",
             "储物袋",
@@ -3359,6 +3372,13 @@ namespace GameLogic.Cultivation
             "法宝：每场战斗首回合额外获得 1 灵力。",
             ArtifactEffectType.FirstTurnSpiritBonus,
             1);
+
+        public static ArtifactDefinition SpiritBeastBagArtifact { get; } = new ArtifactDefinition(
+            "spirit_beast_bag",
+            "Spirit Beast Bag",
+            "Artifact: after every 3 battle victories, gain 1 random pill.",
+            ArtifactEffectType.PillEveryThirdVictory,
+            3);
 
         public static ArtifactDefinition SpiritStoneMineArtifact { get; } = new ArtifactDefinition(
             "spirit_stone_mine",
@@ -3867,6 +3887,7 @@ namespace GameLogic.Cultivation
                 new CultivationMarketItem("market_rejuvenation_jade", RejuvenationJadeArtifact, 30),
                 new CultivationMarketItem("market_storage_bag", StorageBagArtifact, 30),
                 new CultivationMarketItem("market_spirit_gathering_array", SpiritGatheringArrayArtifact, 40),
+                new CultivationMarketItem("market_spirit_beast_bag", SpiritBeastBagArtifact, 50),
                 new CultivationMarketItem("market_heart_protecting_mirror", HeartProtectingMirrorArtifact, 55),
                 new CultivationMarketItem("market_flying_sword_token", FlyingSwordTokenArtifact, 55),
                 new CultivationMarketItem("market_azure_underworld_sword", AzureUnderworldSwordArtifact, 80),
@@ -3880,6 +3901,7 @@ namespace GameLogic.Cultivation
             {
                 StorageBagArtifact,
                 SpiritGatheringArrayArtifact,
+                SpiritBeastBagArtifact,
                 SpiritStoneMineArtifact,
                 RejuvenationJadeArtifact,
                 HeartProtectingMirrorArtifact,

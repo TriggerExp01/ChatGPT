@@ -138,7 +138,8 @@ namespace GameLogic.Cultivation
         TurnStartAllEnemyDamage,
         HealOnEnemyKill,
         ExtraDrawPerTurn,
-        FatalDamageSurviveOncePerRun
+        FatalDamageSurviveOncePerRun,
+        PillEveryThirdVictory
     }
 
     public sealed class ArtifactDefinition
@@ -217,6 +218,8 @@ namespace GameLogic.Cultivation
         public int ExtraDrawPerTurn => EffectType == ArtifactEffectType.ExtraDrawPerTurn ? EffectValue : 0;
 
         public int FatalDamageSurviveOncePerRunCharges => EffectType == ArtifactEffectType.FatalDamageSurviveOncePerRun ? Math.Max(1, EffectValue) : 0;
+
+        public int PillEveryThirdVictoryInterval => EffectType == ArtifactEffectType.PillEveryThirdVictory ? Math.Max(1, EffectValue) : 0;
     }
 
     public sealed class CultivationMarketItem
