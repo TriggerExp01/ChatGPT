@@ -142,7 +142,15 @@ namespace GameLogic.Cultivation
                 if (enemyPoisonDamage > 0)
                 {
                     state.MarkPoisonDamageTriggered();
+                    TryResolveArtifactEnemyKillHeal(state, enemy);
                     state.Logs.Add(new BattleLogEntry($"{enemy.Body.Name} 受到中毒 {enemyPoisonDamage} 点伤害。"));
+                }
+
+                if (state.ArtifactTurnStartAllEnemyDamage > 0 && !enemy.Body.IsDefeated)
+                {
+                    var dealt = enemy.Body.TakeDirectDamage(state.ArtifactTurnStartAllEnemyDamage);
+                    state.Logs.Add(new BattleLogEntry($"Five Elements Array dealt {dealt} to {enemy.Body.Name}."));
+                    TryResolveArtifactEnemyKillHeal(state, enemy);
                 }
             }
 
@@ -957,7 +965,9 @@ namespace GameLogic.Cultivation
             }
 
             var multiplier = state.TryConsumeChargedDamageMultiplier();
-            var dealt = enemy.Body.TakeDamage(damage * multiplier, state.Player.Sharpness);
+            var artifactMultiplier = state.TryConsumeArtifactFirstAttackDamageMultiplier();
+            var dealt = enemy.Body.TakeDamage(damage * multiplier * artifactMultiplier, state.Player.Sharpness);
+            TryResolveArtifactEnemyKillHeal(state, enemy);
             var chargeText = multiplier > 1 ? $" 蓄力 x{multiplier}" : string.Empty;
             var bonusParts = new List<string>();
             if (state.FlatDamageBonus > 0)
@@ -990,8 +1000,22 @@ namespace GameLogic.Cultivation
                 bonusParts.Add($"万剑归宗剑 +{attackArtifactPercent}%");
             }
 
+            if (artifactMultiplier > 1)
+            {
+                bonusParts.Add($"Azure Underworld Sword x{artifactMultiplier}");
+            }
+
             var bonusText = bonusParts.Count > 0 ? $" [{string.Join(", ", bonusParts)}]" : string.Empty;
             return (dealt, chargeText, bonusText);
+        }
+
+        private static void TryResolveArtifactEnemyKillHeal(BattleState state, EnemyState enemy)
+        {
+            var healed = state.TryTriggerArtifactHealOnEnemyKill(enemy);
+            if (healed > 0)
+            {
+                state.Logs.Add(new BattleLogEntry($"Ten Thousand Soul Banner healed {healed} HP."));
+            }
         }
 
         private static int ApplyArtifactBurnDamageBonus(BattleState state, EnemyState enemy, int baseDamage)
@@ -3343,6 +3367,34 @@ namespace GameLogic.Cultivation
             ArtifactEffectType.FirstAttackFlatDamageBonusEachBattle,
             5);
 
+        public static ArtifactDefinition AzureUnderworldSwordArtifact { get; } = new ArtifactDefinition(
+            "azure_underworld_sword",
+            "青冥剑",
+            "法宝：每场战斗首次攻击伤害翻倍。",
+            ArtifactEffectType.FirstAttackDamageMultiplierEachBattle,
+            2);
+
+        public static ArtifactDefinition FiveElementsArrayArtifact { get; } = new ArtifactDefinition(
+            "five_elements_array",
+            "五行法阵",
+            "法宝：每回合开始对全体敌人造成 2 点伤害。",
+            ArtifactEffectType.TurnStartAllEnemyDamage,
+            2);
+
+        public static ArtifactDefinition TenThousandSoulBannerArtifact { get; } = new ArtifactDefinition(
+            "ten_thousand_soul_banner",
+            "万魂幡",
+            "法宝：击杀敌人时恢复 5 HP。",
+            ArtifactEffectType.HealOnEnemyKill,
+            5);
+
+        public static ArtifactDefinition HeavenlyDaoStoneArtifact { get; } = new ArtifactDefinition(
+            "heavenly_dao_stone",
+            "天道石",
+            "法宝：每回合额外抽 1 张牌。",
+            ArtifactEffectType.ExtraDrawPerTurn,
+            1);
+
         public static ArtifactDefinition BloodDemonOrbArtifact { get; } = new ArtifactDefinition(
             "blood_demon_orb",
             "血魔珠",
@@ -3789,6 +3841,8 @@ namespace GameLogic.Cultivation
                 new CultivationMarketItem("market_spirit_gathering_array", SpiritGatheringArrayArtifact, 40),
                 new CultivationMarketItem("market_heart_protecting_mirror", HeartProtectingMirrorArtifact, 55),
                 new CultivationMarketItem("market_flying_sword_token", FlyingSwordTokenArtifact, 55),
+                new CultivationMarketItem("market_azure_underworld_sword", AzureUnderworldSwordArtifact, 80),
+                new CultivationMarketItem("market_five_elements_array", FiveElementsArrayArtifact, 85),
             };
         }
 
@@ -3802,6 +3856,10 @@ namespace GameLogic.Cultivation
                 RejuvenationJadeArtifact,
                 HeartProtectingMirrorArtifact,
                 FlyingSwordTokenArtifact,
+                AzureUnderworldSwordArtifact,
+                FiveElementsArrayArtifact,
+                TenThousandSoulBannerArtifact,
+                HeavenlyDaoStoneArtifact,
             };
         }
 

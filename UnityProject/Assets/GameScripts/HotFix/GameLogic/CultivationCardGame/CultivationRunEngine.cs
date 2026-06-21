@@ -501,6 +501,22 @@ namespace GameLogic.Cultivation
                         state.CurrentBattle.AddArtifactFirstAttackFlatDamageBonus(artifact.FirstAttackFlatDamageBonusEachBattle);
                         state.CurrentBattle.Logs.Add(new BattleLogEntry($"{artifact.Name} 生效：本场首次攻击伤害 +{artifact.FirstAttackFlatDamageBonusEachBattle}。"));
                         break;
+                    case ArtifactEffectType.FirstAttackDamageMultiplierEachBattle:
+                        state.CurrentBattle.AddArtifactFirstAttackDamageMultiplier(artifact.FirstAttackDamageMultiplierEachBattle);
+                        state.CurrentBattle.Logs.Add(new BattleLogEntry($"{artifact.Name} active: first attack damage x{artifact.FirstAttackDamageMultiplierEachBattle}."));
+                        break;
+                    case ArtifactEffectType.TurnStartAllEnemyDamage:
+                        state.CurrentBattle.AddArtifactTurnStartAllEnemyDamage(artifact.TurnStartAllEnemyDamage);
+                        state.CurrentBattle.Logs.Add(new BattleLogEntry($"{artifact.Name} active: turn start all enemy damage {artifact.TurnStartAllEnemyDamage}."));
+                        break;
+                    case ArtifactEffectType.HealOnEnemyKill:
+                        state.CurrentBattle.AddArtifactHealOnEnemyKill(artifact.HealOnEnemyKillAmount);
+                        state.CurrentBattle.Logs.Add(new BattleLogEntry($"{artifact.Name} active: heal {artifact.HealOnEnemyKillAmount} HP on enemy kill."));
+                        break;
+                    case ArtifactEffectType.ExtraDrawPerTurn:
+                        state.CurrentBattle.AddExtraDrawPerTurn(artifact.ExtraDrawPerTurn);
+                        state.CurrentBattle.Logs.Add(new BattleLogEntry($"{artifact.Name} active: extra draw +{artifact.ExtraDrawPerTurn}."));
+                        break;
                     case ArtifactEffectType.PreventFirstSelfHpLossEachBattle:
                         state.CurrentBattle.AddPreventSelfHpLossCharges(artifact.PreventFirstSelfHpLossEachBattleCharges);
                         state.CurrentBattle.Logs.Add(new BattleLogEntry($"{artifact.Name} 生效：本场战斗前 {artifact.PreventFirstSelfHpLossEachBattleCharges} 次自伤被免疫。"));

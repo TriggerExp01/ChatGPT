@@ -97,6 +97,10 @@ namespace GameLogic.Cultivation
 
         public bool HasTriggeredArtifactFirstAttackFlatDamageBonus { get; private set; }
 
+        public int ArtifactFirstAttackDamageMultiplier { get; private set; } = 1;
+
+        public bool HasTriggeredArtifactFirstAttackDamageMultiplier { get; private set; }
+
         public int ArtifactFirstAttackSwordMarkStacks { get; private set; }
 
         public bool HasTriggeredArtifactFirstAttackSwordMarkThisTurn { get; private set; }
@@ -110,6 +114,10 @@ namespace GameLogic.Cultivation
         public int ArtifactTurnStartBurnStacks { get; private set; }
 
         public int ArtifactBurnDamageBonusPercent { get; private set; }
+
+        public int ArtifactTurnStartAllEnemyDamage { get; private set; }
+
+        public int ArtifactHealOnEnemyKillAmount { get; private set; }
 
         public int ArtifactFirstBattlePillDoubleNoConsumeCharges { get; private set; }
 
@@ -134,6 +142,8 @@ namespace GameLogic.Cultivation
         public int TurnNumber { get; set; }
 
         public BattleOutcome Outcome { get; set; } = BattleOutcome.InProgress;
+
+        private readonly HashSet<EnemyState> _artifactKillHealClaimedEnemies = new HashSet<EnemyState>();
 
         public void AddSpiritCostReduction(int amount)
         {
@@ -462,6 +472,22 @@ namespace GameLogic.Cultivation
             return ArtifactFirstAttackFlatDamageBonus;
         }
 
+        public void AddArtifactFirstAttackDamageMultiplier(int multiplier)
+        {
+            ArtifactFirstAttackDamageMultiplier = Math.Max(ArtifactFirstAttackDamageMultiplier, Math.Max(1, multiplier));
+        }
+
+        public int TryConsumeArtifactFirstAttackDamageMultiplier()
+        {
+            if (ArtifactFirstAttackDamageMultiplier <= 1 || HasTriggeredArtifactFirstAttackDamageMultiplier)
+            {
+                return 1;
+            }
+
+            HasTriggeredArtifactFirstAttackDamageMultiplier = true;
+            return ArtifactFirstAttackDamageMultiplier;
+        }
+
         public void AddArtifactFirstAttackSwordMark(int stacks)
         {
             ArtifactFirstAttackSwordMarkStacks += Math.Max(0, stacks);
@@ -512,6 +538,28 @@ namespace GameLogic.Cultivation
         public void AddArtifactBurnDamageBonus(int percent)
         {
             ArtifactBurnDamageBonusPercent += Math.Max(0, percent);
+        }
+
+        public void AddArtifactTurnStartAllEnemyDamage(int amount)
+        {
+            ArtifactTurnStartAllEnemyDamage += Math.Max(0, amount);
+        }
+
+        public void AddArtifactHealOnEnemyKill(int amount)
+        {
+            ArtifactHealOnEnemyKillAmount += Math.Max(0, amount);
+        }
+
+        public int TryTriggerArtifactHealOnEnemyKill(EnemyState enemy)
+        {
+            if (ArtifactHealOnEnemyKillAmount <= 0 || enemy == null || !enemy.Body.IsDefeated || !_artifactKillHealClaimedEnemies.Add(enemy))
+            {
+                return 0;
+            }
+
+            var before = Player.CurrentHp;
+            Player.Heal(ArtifactHealOnEnemyKillAmount);
+            return Player.CurrentHp - before;
         }
 
         public void AddArtifactFirstBattlePillDoubleNoConsumeCharges(int amount)

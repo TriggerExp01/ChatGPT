@@ -351,6 +351,14 @@ namespace GameLogic.Cultivation
                     return $"每战首次受击伤害 -{artifact.FirstDamageReductionEachBattlePercent}%";
                 case ArtifactEffectType.FirstAttackFlatDamageBonusEachBattle:
                     return $"每战首次攻击伤害 +{artifact.FirstAttackFlatDamageBonusEachBattle}";
+                case ArtifactEffectType.FirstAttackDamageMultiplierEachBattle:
+                    return $"每战首次攻击伤害 x{artifact.FirstAttackDamageMultiplierEachBattle}";
+                case ArtifactEffectType.TurnStartAllEnemyDamage:
+                    return $"每回合开始对全体敌人造成 {artifact.TurnStartAllEnemyDamage} 伤害";
+                case ArtifactEffectType.HealOnEnemyKill:
+                    return $"击杀敌人恢复 {artifact.HealOnEnemyKillAmount} HP";
+                case ArtifactEffectType.ExtraDrawPerTurn:
+                    return $"每回合额外抽 {artifact.ExtraDrawPerTurn} 张牌";
                 case ArtifactEffectType.PreventFirstSelfHpLossEachBattle:
                     return $"每战免疫前 {artifact.PreventFirstSelfHpLossEachBattleCharges} 次自伤";
                 case ArtifactEffectType.MissingHpDamageBonus:
@@ -401,6 +409,14 @@ namespace GameLogic.Cultivation
                     return "artifact_mirror";
                 case ArtifactEffectType.FirstAttackFlatDamageBonusEachBattle:
                     return "artifact_flying_sword";
+                case ArtifactEffectType.FirstAttackDamageMultiplierEachBattle:
+                    return "artifact_azure_sword";
+                case ArtifactEffectType.TurnStartAllEnemyDamage:
+                    return "artifact_five_elements";
+                case ArtifactEffectType.HealOnEnemyKill:
+                    return "artifact_soul_banner";
+                case ArtifactEffectType.ExtraDrawPerTurn:
+                    return "artifact_heavenly_dao";
                 case ArtifactEffectType.PreventFirstSelfHpLossEachBattle:
                     return "artifact_blood";
                 case ArtifactEffectType.MissingHpDamageBonus:
@@ -477,6 +493,16 @@ namespace GameLogic.Cultivation
                     return battle.HasTriggeredArtifactFirstAttackFlatDamageBonus
                         ? "本战首次攻击加伤已触发"
                         : $"本战首次攻击伤害 +{battle.ArtifactFirstAttackFlatDamageBonus}";
+                case ArtifactEffectType.FirstAttackDamageMultiplierEachBattle:
+                    return battle.HasTriggeredArtifactFirstAttackDamageMultiplier
+                        ? "本战首次攻击翻倍已触发"
+                        : $"本战首次攻击伤害 x{battle.ArtifactFirstAttackDamageMultiplier}";
+                case ArtifactEffectType.TurnStartAllEnemyDamage:
+                    return $"回合开始全体敌人伤害 {battle.ArtifactTurnStartAllEnemyDamage}";
+                case ArtifactEffectType.HealOnEnemyKill:
+                    return $"击杀敌人恢复 {battle.ArtifactHealOnEnemyKillAmount} HP";
+                case ArtifactEffectType.ExtraDrawPerTurn:
+                    return $"每回合额外抽牌 +{battle.ExtraDrawPerTurn}";
                 case ArtifactEffectType.PreventFirstSelfHpLossEachBattle:
                     return battle.PreventSelfHpLossCharges > 0
                         ? $"本战剩余免疫自伤 {battle.PreventSelfHpLossCharges} 次"

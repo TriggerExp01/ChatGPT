@@ -1024,6 +1024,76 @@ namespace GameLogic.Tests
         }
 
         [Test]
+        public void AzureUnderworldSwordDoublesOnlyFirstAttackDamage()
+        {
+            var engine = new BattleEngine(1);
+            var strike = new CardDefinition("azure_sword_strike", "azure_sword_strike", 0, new CardEffect(CardEffectType.Damage, 10));
+            var state = CreateOrderedBattle(engine, strike, strike);
+            var enemy = state.Enemies[0];
+            state.AddArtifactFirstAttackDamageMultiplier(2);
+
+            engine.PlayCard(state, state.Hand[0], enemy);
+            var hpAfterFirstAttack = enemy.Body.CurrentHp;
+            engine.PlayCard(state, state.Hand[0], enemy);
+
+            Assert.AreEqual(22, hpAfterFirstAttack);
+            Assert.AreEqual(14, enemy.Body.CurrentHp);
+            Assert.IsTrue(state.HasTriggeredArtifactFirstAttackDamageMultiplier);
+        }
+
+        [Test]
+        public void FiveElementsArrayDamagesAllEnemiesAtTurnStart()
+        {
+            var engine = new BattleEngine(1);
+            var state = CreateMultiEnemyBattle(engine, CultivationSeedData.GuardQi, CultivationSeedData.GuardQi);
+            state.AddArtifactTurnStartAllEnemyDamage(2);
+
+            engine.EndPlayerTurn(state);
+
+            Assert.IsTrue(state.Enemies.All(enemy => enemy.Body.CurrentHp == 38));
+            Assert.IsTrue(state.Logs.Any(log => log.Message.Contains("Five Elements Array")));
+        }
+
+        [Test]
+        public void TenThousandSoulBannerHealsOncePerKilledEnemy()
+        {
+            var engine = new BattleEngine(1);
+            var strike = new CardDefinition("soul_banner_strike", "soul_banner_strike", 0, new CardEffect(CardEffectType.Damage, 20));
+            var state = new BattleState(
+                new CombatantState("修士", 100, currentHp: 50),
+                new[] { strike, strike, CultivationSeedData.GuardQi, CultivationSeedData.GuardQi, CultivationSeedData.GuardQi },
+                new[] { new EnemyState(new EnemyDefinition("soul_banner_target", "soul_banner_target", 10, 0, new EnemyIntent(EnemyIntentType.Attack, 1))) });
+            engine.StartPlayerTurn(state);
+            state.AddArtifactHealOnEnemyKill(5);
+
+            engine.PlayCard(state, state.Hand[0], state.Enemies[0]);
+            var hpAfterKill = state.Player.CurrentHp;
+            var repeatedHeal = state.TryTriggerArtifactHealOnEnemyKill(state.Enemies[0]);
+
+            Assert.AreEqual(55, hpAfterKill);
+            Assert.AreEqual(0, repeatedHeal);
+            Assert.IsTrue(state.Logs.Any(log => log.Message.Contains("Ten Thousand Soul Banner")));
+        }
+
+        [Test]
+        public void HeavenlyDaoStoneDrawsExtraCardFromNextTurn()
+        {
+            var engine = new BattleEngine(1);
+            var deck = Enumerable.Repeat(CultivationSeedData.GuardQi, 12).ToArray();
+            var state = new BattleState(
+                new CombatantState("修士", 100),
+                deck,
+                new[] { new EnemyState(new EnemyDefinition("dao_stone_target", "dao_stone_target", 80, 0, new EnemyIntent(EnemyIntentType.Buff))) });
+            engine.StartPlayerTurn(state);
+            state.AddExtraDrawPerTurn(1);
+
+            engine.EndPlayerTurn(state);
+
+            Assert.AreEqual(6, state.Hand.Count);
+            Assert.AreEqual(1, state.ExtraDrawPerTurn);
+        }
+
+        [Test]
         public void FireCloudArtifactsApplyTurnStartBurnAndBonusDamage()
         {
             var engine = new BattleEngine(1);

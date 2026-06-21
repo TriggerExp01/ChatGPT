@@ -283,6 +283,10 @@ namespace GameLogic.Tests
 
             CollectionAssert.Contains(swordArtifacts, CultivationSeedData.SwordHeartJadeArtifact.Id);
             CollectionAssert.Contains(swordArtifacts, CultivationSeedData.TenThousandSwordsArtifact.Id);
+            CollectionAssert.Contains(swordArtifacts, CultivationSeedData.AzureUnderworldSwordArtifact.Id);
+            CollectionAssert.Contains(swordArtifacts, CultivationSeedData.FiveElementsArrayArtifact.Id);
+            CollectionAssert.Contains(swordArtifacts, CultivationSeedData.TenThousandSoulBannerArtifact.Id);
+            CollectionAssert.Contains(swordArtifacts, CultivationSeedData.HeavenlyDaoStoneArtifact.Id);
             CollectionAssert.Contains(fireArtifacts, CultivationSeedData.FireCloudTokenArtifact.Id);
             CollectionAssert.Contains(fireArtifacts, CultivationSeedData.BurningHeavenFurnaceArtifact.Id);
             CollectionAssert.Contains(thunderArtifacts, CultivationSeedData.ThunderSpiritPearlArtifact.Id);
@@ -1054,7 +1058,7 @@ namespace GameLogic.Tests
             var run = engine.StartRun(CreateInstantWinDeck(), CreateMarketRoute(), initialSpiritStones: 25);
 
             Assert.AreEqual(CultivationRunStatus.Market, run.Status);
-            Assert.AreEqual(14, run.CurrentMarketItems.Count);
+            Assert.AreEqual(16, run.CurrentMarketItems.Count);
 
             var deckCount = run.Deck.Count;
             engine.BuyMarketItem(run, 0);
@@ -1063,7 +1067,7 @@ namespace GameLogic.Tests
             Assert.AreEqual(deckCount + 1, run.Deck.Count);
             Assert.AreEqual("cloud_guard", run.Deck.Last().Id);
             Assert.AreEqual(1, run.PurchasedMarketItems.Count);
-            Assert.AreEqual(13, run.CurrentMarketItems.Count);
+            Assert.AreEqual(15, run.CurrentMarketItems.Count);
         }
 
         [Test]
@@ -1080,7 +1084,7 @@ namespace GameLogic.Tests
             Assert.AreEqual(1, run.Pills.Count);
             Assert.AreEqual(1, run.PurchasedMarketPills.Count);
             Assert.AreEqual("small_restore_pill", run.Pills[0].Id);
-            Assert.AreEqual(13, run.CurrentMarketItems.Count);
+            Assert.AreEqual(15, run.CurrentMarketItems.Count);
         }
 
         [Test]
@@ -1096,7 +1100,7 @@ namespace GameLogic.Tests
             Assert.AreEqual(20, run.SpiritStones);
             Assert.AreEqual(5, run.Deck.Count);
             Assert.AreEqual(3, run.Pills.Count);
-            Assert.AreEqual(14, run.CurrentMarketItems.Count);
+            Assert.AreEqual(16, run.CurrentMarketItems.Count);
             Assert.AreEqual(0, run.PurchasedMarketPills.Count);
         }
 
@@ -1314,7 +1318,7 @@ namespace GameLogic.Tests
             Assert.Throws<System.InvalidOperationException>(() => engine.BuyMarketItem(run, 0));
             Assert.AreEqual(25, run.SpiritStones);
             Assert.AreEqual(CultivationRunState.DefaultDeckLimit, run.Deck.Count);
-            Assert.AreEqual(14, run.CurrentMarketItems.Count);
+            Assert.AreEqual(16, run.CurrentMarketItems.Count);
             Assert.AreEqual(0, run.PurchasedMarketItems.Count);
         }
 
@@ -1399,6 +1403,39 @@ namespace GameLogic.Tests
             Assert.AreEqual(33, enemy.Body.CurrentHp);
             Assert.IsTrue(battle.HasTriggeredArtifactFirstAttackFlatDamageBonus);
             Assert.IsTrue(battle.Logs.Any(log => log.Message.Contains("飞剑令 +5")));
+        }
+
+        [Test]
+        public void HighTierCommonArtifactsFromChestApplyBattleEffects()
+        {
+            var battleEngine = new BattleEngine(1);
+            var engine = new CultivationRunEngine(battleEngine);
+            var enemyDefinition = new EnemyDefinition(
+                "high_tier_common_target",
+                "high_tier_common_target",
+                40,
+                0,
+                new EnemyIntent(EnemyIntentType.Attack, 1));
+            var route = new[]
+            {
+                new CultivationRunNode("azure", "azure", CultivationRunNodeType.Chest, null, null, artifactRewardPool: new[] { CultivationSeedData.AzureUnderworldSwordArtifact }),
+                new CultivationRunNode("array", "array", CultivationRunNodeType.Chest, null, null, artifactRewardPool: new[] { CultivationSeedData.FiveElementsArrayArtifact }),
+                new CultivationRunNode("banner", "banner", CultivationRunNodeType.Chest, null, null, artifactRewardPool: new[] { CultivationSeedData.TenThousandSoulBannerArtifact }),
+                new CultivationRunNode("dao", "dao", CultivationRunNodeType.Chest, null, null, artifactRewardPool: new[] { CultivationSeedData.HeavenlyDaoStoneArtifact }),
+                new CultivationRunNode("battle", "battle", CultivationRunNodeType.Battle, enemyDefinition, CultivationSeedData.CreateSwordSectRewardPool()),
+            };
+            var run = engine.StartRun(CreateWeakAttackDeck(), route, playerCurrentHp: 80);
+
+            engine.OpenChest(run);
+            engine.OpenChest(run);
+            engine.OpenChest(run);
+            engine.OpenChest(run);
+
+            Assert.AreEqual(2, run.CurrentBattle.ArtifactFirstAttackDamageMultiplier);
+            Assert.AreEqual(2, run.CurrentBattle.ArtifactTurnStartAllEnemyDamage);
+            Assert.AreEqual(5, run.CurrentBattle.ArtifactHealOnEnemyKillAmount);
+            Assert.AreEqual(1, run.CurrentBattle.ExtraDrawPerTurn);
+            Assert.AreEqual(4, run.ChestArtifacts.Count);
         }
 
         [Test]
@@ -2040,6 +2077,8 @@ namespace GameLogic.Tests
                         new CultivationMarketItem("market_spirit_gathering_array", CultivationSeedData.SpiritGatheringArrayArtifact, 40),
                         new CultivationMarketItem("market_heart_protecting_mirror", CultivationSeedData.HeartProtectingMirrorArtifact, 55),
                         new CultivationMarketItem("market_flying_sword_token", CultivationSeedData.FlyingSwordTokenArtifact, 55),
+                        new CultivationMarketItem("market_azure_underworld_sword", CultivationSeedData.AzureUnderworldSwordArtifact, 80),
+                        new CultivationMarketItem("market_five_elements_array", CultivationSeedData.FiveElementsArrayArtifact, 85),
                     }),
                 new CultivationRunNode(
                     "after_market",

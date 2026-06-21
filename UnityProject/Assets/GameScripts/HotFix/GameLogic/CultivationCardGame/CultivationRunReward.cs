@@ -133,7 +133,11 @@ namespace GameLogic.Cultivation
         FirstChanceFailureOverride,
         ChainDamageNoDecay,
         BattleStartShield,
-        AttackCounterPierceAndFirstDamageReduction
+        AttackCounterPierceAndFirstDamageReduction,
+        FirstAttackDamageMultiplierEachBattle,
+        TurnStartAllEnemyDamage,
+        HealOnEnemyKill,
+        ExtraDrawPerTurn
     }
 
     public sealed class ArtifactDefinition
@@ -202,6 +206,14 @@ namespace GameLogic.Cultivation
         public int BattleStartShield => EffectType == ArtifactEffectType.BattleStartShield ? EffectValue : 0;
 
         public int AttackCounterPierceAndFirstDamageReductionPercent => EffectType == ArtifactEffectType.AttackCounterPierceAndFirstDamageReduction ? EffectValue : 0;
+
+        public int FirstAttackDamageMultiplierEachBattle => EffectType == ArtifactEffectType.FirstAttackDamageMultiplierEachBattle ? Math.Max(2, EffectValue) : 0;
+
+        public int TurnStartAllEnemyDamage => EffectType == ArtifactEffectType.TurnStartAllEnemyDamage ? EffectValue : 0;
+
+        public int HealOnEnemyKillAmount => EffectType == ArtifactEffectType.HealOnEnemyKill ? EffectValue : 0;
+
+        public int ExtraDrawPerTurn => EffectType == ArtifactEffectType.ExtraDrawPerTurn ? EffectValue : 0;
     }
 
     public sealed class CultivationMarketItem

@@ -360,12 +360,39 @@ namespace GameLogic.Tests
         }
 
         [Test]
+        public void BuildViewModelIncludesHighTierCommonArtifactMetadataAndBattleStatus()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var run = engine.StartRun(CreateArtifactDisplayDeck(), CreateHighTierCommonArtifactDisplayRoute());
+
+            engine.OpenChest(run);
+            engine.OpenChest(run);
+            engine.OpenChest(run);
+            engine.OpenChest(run);
+            var view = CultivationRunPrototypePresenter.BuildViewModel(run);
+
+            Assert.AreEqual(4, view.ArtifactItems.Length);
+            Assert.AreEqual("artifact_azure_sword", view.ArtifactItems[0].IconKey);
+            Assert.AreEqual("本战首次攻击伤害 x2", view.ArtifactItems[0].StatusSummary);
+            Assert.AreEqual("artifact_five_elements", view.ArtifactItems[1].IconKey);
+            Assert.AreEqual("回合开始全体敌人伤害 2", view.ArtifactItems[1].StatusSummary);
+            Assert.AreEqual("artifact_soul_banner", view.ArtifactItems[2].IconKey);
+            Assert.AreEqual("击杀敌人恢复 5 HP", view.ArtifactItems[2].StatusSummary);
+            Assert.AreEqual("artifact_heavenly_dao", view.ArtifactItems[3].IconKey);
+            Assert.AreEqual("每回合额外抽牌 +1", view.ArtifactItems[3].StatusSummary);
+        }
+
+        [Test]
         public void FormatArtifactEffectSummaryCoversExclusiveArtifactKeywords()
         {
             StringAssert.Contains("牌库上限 +3", CultivationRunPrototypePresenter.FormatArtifactEffectSummary(CultivationSeedData.StorageBagArtifact));
             StringAssert.Contains("每战首回合灵力 +1", CultivationRunPrototypePresenter.FormatArtifactEffectSummary(CultivationSeedData.SpiritGatheringArrayArtifact));
             StringAssert.Contains("每战首次受击伤害 -50%", CultivationRunPrototypePresenter.FormatArtifactEffectSummary(CultivationSeedData.HeartProtectingMirrorArtifact));
             StringAssert.Contains("每战首次攻击伤害 +5", CultivationRunPrototypePresenter.FormatArtifactEffectSummary(CultivationSeedData.FlyingSwordTokenArtifact));
+            StringAssert.Contains("每战首次攻击伤害 x2", CultivationRunPrototypePresenter.FormatArtifactEffectSummary(CultivationSeedData.AzureUnderworldSwordArtifact));
+            StringAssert.Contains("每回合开始对全体敌人造成 2 伤害", CultivationRunPrototypePresenter.FormatArtifactEffectSummary(CultivationSeedData.FiveElementsArrayArtifact));
+            StringAssert.Contains("击杀敌人恢复 5 HP", CultivationRunPrototypePresenter.FormatArtifactEffectSummary(CultivationSeedData.TenThousandSoulBannerArtifact));
+            StringAssert.Contains("每回合额外抽 1 张牌", CultivationRunPrototypePresenter.FormatArtifactEffectSummary(CultivationSeedData.HeavenlyDaoStoneArtifact));
             StringAssert.Contains("首次攻击附带 1 层剑气印记", CultivationRunPrototypePresenter.FormatArtifactEffectSummary(CultivationSeedData.SwordHeartJadeArtifact));
             StringAssert.Contains("伤害 +50%", CultivationRunPrototypePresenter.FormatArtifactEffectSummary(CultivationSeedData.TenThousandSwordsArtifact));
             StringAssert.Contains("施加 1 层灼烧", CultivationRunPrototypePresenter.FormatArtifactEffectSummary(CultivationSeedData.FireCloudTokenArtifact));
@@ -799,6 +826,47 @@ namespace GameLogic.Tests
                     "common_artifact_battle",
                     CultivationRunNodeType.Battle,
                     new EnemyDefinition("common_artifact_enemy", "common_artifact_enemy", 40, 0, new EnemyIntent(EnemyIntentType.Attack, 6)),
+                    CultivationSeedData.CreateSwordSectRewardPool()),
+            };
+        }
+
+        private static IReadOnlyList<CultivationRunNode> CreateHighTierCommonArtifactDisplayRoute()
+        {
+            return new List<CultivationRunNode>
+            {
+                new CultivationRunNode(
+                    "high_tier_common_artifact_azure",
+                    "high_tier_common_artifact_azure",
+                    CultivationRunNodeType.Chest,
+                    null,
+                    null,
+                    artifactRewardPool: new[] { CultivationSeedData.AzureUnderworldSwordArtifact }),
+                new CultivationRunNode(
+                    "high_tier_common_artifact_array",
+                    "high_tier_common_artifact_array",
+                    CultivationRunNodeType.Chest,
+                    null,
+                    null,
+                    artifactRewardPool: new[] { CultivationSeedData.FiveElementsArrayArtifact }),
+                new CultivationRunNode(
+                    "high_tier_common_artifact_banner",
+                    "high_tier_common_artifact_banner",
+                    CultivationRunNodeType.Chest,
+                    null,
+                    null,
+                    artifactRewardPool: new[] { CultivationSeedData.TenThousandSoulBannerArtifact }),
+                new CultivationRunNode(
+                    "high_tier_common_artifact_dao",
+                    "high_tier_common_artifact_dao",
+                    CultivationRunNodeType.Chest,
+                    null,
+                    null,
+                    artifactRewardPool: new[] { CultivationSeedData.HeavenlyDaoStoneArtifact }),
+                new CultivationRunNode(
+                    "high_tier_common_artifact_battle",
+                    "high_tier_common_artifact_battle",
+                    CultivationRunNodeType.Battle,
+                    new EnemyDefinition("high_tier_common_artifact_enemy", "high_tier_common_artifact_enemy", 40, 0, new EnemyIntent(EnemyIntentType.Attack, 6)),
                     CultivationSeedData.CreateSwordSectRewardPool()),
             };
         }
