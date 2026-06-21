@@ -116,8 +116,12 @@ namespace GameLogic.Cultivation
 
     public enum ArtifactEffectType
     {
+        DeckLimitBonus,
+        FirstTurnSpiritBonus,
         BonusSpiritStonesOnVictory,
         HealAfterVictory,
+        FirstDamageReductionEachBattle,
+        FirstAttackFlatDamageBonusEachBattle,
         PreventFirstSelfHpLossEachBattle,
         MissingHpDamageBonus,
         FirstAttackSwordMarkEachTurn,
@@ -163,9 +167,17 @@ namespace GameLogic.Cultivation
 
         public int EffectValue { get; }
 
+        public int DeckLimitBonus => EffectType == ArtifactEffectType.DeckLimitBonus ? EffectValue : 0;
+
+        public int FirstTurnSpiritBonus => EffectType == ArtifactEffectType.FirstTurnSpiritBonus ? EffectValue : 0;
+
         public int BonusSpiritStonesOnVictory => EffectType == ArtifactEffectType.BonusSpiritStonesOnVictory ? EffectValue : 0;
 
         public int HealAfterVictoryAmount => EffectType == ArtifactEffectType.HealAfterVictory ? EffectValue : 0;
+
+        public int FirstDamageReductionEachBattlePercent => EffectType == ArtifactEffectType.FirstDamageReductionEachBattle ? EffectValue : 0;
+
+        public int FirstAttackFlatDamageBonusEachBattle => EffectType == ArtifactEffectType.FirstAttackFlatDamageBonusEachBattle ? EffectValue : 0;
 
         public int PreventFirstSelfHpLossEachBattleCharges => EffectType == ArtifactEffectType.PreventFirstSelfHpLossEachBattle ? Math.Max(1, EffectValue) : 0;
 

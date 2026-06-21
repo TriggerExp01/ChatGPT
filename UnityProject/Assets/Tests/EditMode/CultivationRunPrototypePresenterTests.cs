@@ -40,6 +40,7 @@ namespace GameLogic.Tests
             Assert.AreEqual(100, snapshot.PlayerMaxHp);
             Assert.AreEqual(12, snapshot.SpiritStones);
             Assert.AreEqual(12, snapshot.DeckCount);
+            Assert.AreEqual(CultivationRunState.DefaultDeckLimit, snapshot.DeckLimit);
             Assert.AreEqual(5, snapshot.HandCount);
         }
 
@@ -201,6 +202,22 @@ namespace GameLogic.Tests
         }
 
         [Test]
+        public void BuildViewModelIncludesDeckLimitResourceStat()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var run = engine.StartRun(CreateInstantWinDeck(), CreateMarketRouteWithPill(), initialSpiritStones: 40);
+
+            var initialView = CultivationRunPrototypePresenter.BuildViewModel(run);
+            engine.BuyMarketItem(run, 9);
+            var updatedSnapshot = CultivationRunPrototypePresenter.CreateSnapshot(run);
+            var updatedView = CultivationRunPrototypePresenter.BuildViewModel(run);
+
+            Assert.AreEqual(CultivationRunState.DefaultDeckLimit + 3, updatedSnapshot.DeckLimit);
+            Assert.IsTrue(initialView.Stats.Any(stat => stat.Label == "牌组" && stat.Value == "5/15 张"));
+            Assert.IsTrue(updatedView.Stats.Any(stat => stat.Label == "牌组" && stat.Value == "5/18 张"));
+        }
+
+        [Test]
         public void BuildTextIncludesMarketPillsAndPillSlots()
         {
             var engine = new CultivationRunEngine(new BattleEngine(1));
@@ -312,8 +329,43 @@ namespace GameLogic.Tests
         }
 
         [Test]
+        public void BuildViewModelIncludesCommonArtifactMetadataAndBattleStatus()
+        {
+            var battleEngine = new BattleEngine(1);
+            var engine = new CultivationRunEngine(battleEngine);
+            var run = engine.StartRun(CreateArtifactDisplayDeck(), CreateCommonArtifactDisplayRoute());
+
+            engine.OpenChest(run);
+            engine.OpenChest(run);
+            engine.OpenChest(run);
+            engine.OpenChest(run);
+            var viewBefore = CultivationRunPrototypePresenter.BuildViewModel(run);
+
+            Assert.AreEqual(4, viewBefore.ArtifactItems.Length);
+            Assert.AreEqual("artifact_storage", viewBefore.ArtifactItems[0].IconKey);
+            Assert.AreEqual("牌库上限 +3", viewBefore.ArtifactItems[0].StatusSummary);
+            Assert.AreEqual("artifact_spirit_array", viewBefore.ArtifactItems[1].IconKey);
+            Assert.AreEqual("首回合灵力 +1，当前灵力 4/3", viewBefore.ArtifactItems[1].StatusSummary);
+            Assert.AreEqual("artifact_mirror", viewBefore.ArtifactItems[2].IconKey);
+            Assert.AreEqual("本战首次受击 -50%", viewBefore.ArtifactItems[2].StatusSummary);
+            Assert.AreEqual("artifact_flying_sword", viewBefore.ArtifactItems[3].IconKey);
+            Assert.AreEqual("本战首次攻击伤害 +5", viewBefore.ArtifactItems[3].StatusSummary);
+
+            battleEngine.PlayCard(run.CurrentBattle, run.CurrentBattle.Hand[0], run.CurrentBattle.Enemies[0]);
+            battleEngine.EndPlayerTurn(run.CurrentBattle);
+            var viewAfter = CultivationRunPrototypePresenter.BuildViewModel(run);
+
+            Assert.AreEqual("本战首次受击减伤已触发", viewAfter.ArtifactItems[2].StatusSummary);
+            Assert.AreEqual("本战首次攻击加伤已触发", viewAfter.ArtifactItems[3].StatusSummary);
+        }
+
+        [Test]
         public void FormatArtifactEffectSummaryCoversExclusiveArtifactKeywords()
         {
+            StringAssert.Contains("牌库上限 +3", CultivationRunPrototypePresenter.FormatArtifactEffectSummary(CultivationSeedData.StorageBagArtifact));
+            StringAssert.Contains("每战首回合灵力 +1", CultivationRunPrototypePresenter.FormatArtifactEffectSummary(CultivationSeedData.SpiritGatheringArrayArtifact));
+            StringAssert.Contains("每战首次受击伤害 -50%", CultivationRunPrototypePresenter.FormatArtifactEffectSummary(CultivationSeedData.HeartProtectingMirrorArtifact));
+            StringAssert.Contains("每战首次攻击伤害 +5", CultivationRunPrototypePresenter.FormatArtifactEffectSummary(CultivationSeedData.FlyingSwordTokenArtifact));
             StringAssert.Contains("首次攻击附带 1 层剑气印记", CultivationRunPrototypePresenter.FormatArtifactEffectSummary(CultivationSeedData.SwordHeartJadeArtifact));
             StringAssert.Contains("伤害 +50%", CultivationRunPrototypePresenter.FormatArtifactEffectSummary(CultivationSeedData.TenThousandSwordsArtifact));
             StringAssert.Contains("施加 1 层灼烧", CultivationRunPrototypePresenter.FormatArtifactEffectSummary(CultivationSeedData.FireCloudTokenArtifact));
@@ -655,6 +707,10 @@ namespace GameLogic.Tests
                         new CultivationMarketItem("market_foundation_pill", CultivationSeedData.FoundationPillItem, 70),
                         new CultivationMarketItem("market_spirit_stone_mine", CultivationSeedData.SpiritStoneMineArtifact, 25),
                         new CultivationMarketItem("market_rejuvenation_jade", CultivationSeedData.RejuvenationJadeArtifact, 30),
+                        new CultivationMarketItem("market_storage_bag", CultivationSeedData.StorageBagArtifact, 30),
+                        new CultivationMarketItem("market_spirit_gathering_array", CultivationSeedData.SpiritGatheringArrayArtifact, 40),
+                        new CultivationMarketItem("market_heart_protecting_mirror", CultivationSeedData.HeartProtectingMirrorArtifact, 55),
+                        new CultivationMarketItem("market_flying_sword_token", CultivationSeedData.FlyingSwordTokenArtifact, 55),
                     }),
             };
         }
@@ -702,6 +758,47 @@ namespace GameLogic.Tests
                     "artifact_display_battle",
                     CultivationRunNodeType.Battle,
                     new EnemyDefinition("artifact_display_enemy", "artifact_display_enemy", 120, 0, new EnemyIntent(EnemyIntentType.Attack, 1)),
+                    CultivationSeedData.CreateSwordSectRewardPool()),
+            };
+        }
+
+        private static IReadOnlyList<CultivationRunNode> CreateCommonArtifactDisplayRoute()
+        {
+            return new List<CultivationRunNode>
+            {
+                new CultivationRunNode(
+                    "common_artifact_storage",
+                    "common_artifact_storage",
+                    CultivationRunNodeType.Chest,
+                    null,
+                    null,
+                    artifactRewardPool: new[] { CultivationSeedData.StorageBagArtifact }),
+                new CultivationRunNode(
+                    "common_artifact_spirit",
+                    "common_artifact_spirit",
+                    CultivationRunNodeType.Chest,
+                    null,
+                    null,
+                    artifactRewardPool: new[] { CultivationSeedData.SpiritGatheringArrayArtifact }),
+                new CultivationRunNode(
+                    "common_artifact_mirror",
+                    "common_artifact_mirror",
+                    CultivationRunNodeType.Chest,
+                    null,
+                    null,
+                    artifactRewardPool: new[] { CultivationSeedData.HeartProtectingMirrorArtifact }),
+                new CultivationRunNode(
+                    "common_artifact_sword",
+                    "common_artifact_sword",
+                    CultivationRunNodeType.Chest,
+                    null,
+                    null,
+                    artifactRewardPool: new[] { CultivationSeedData.FlyingSwordTokenArtifact }),
+                new CultivationRunNode(
+                    "common_artifact_battle",
+                    "common_artifact_battle",
+                    CultivationRunNodeType.Battle,
+                    new EnemyDefinition("common_artifact_enemy", "common_artifact_enemy", 40, 0, new EnemyIntent(EnemyIntentType.Attack, 6)),
                     CultivationSeedData.CreateSwordSectRewardPool()),
             };
         }

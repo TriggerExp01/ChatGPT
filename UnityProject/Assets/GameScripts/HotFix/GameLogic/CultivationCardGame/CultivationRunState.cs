@@ -8,6 +8,7 @@ namespace GameLogic.Cultivation
         public const int DefaultPillSlotLimit = 3;
         public const int DefaultSpiritMax = 3;
         public const int DefaultHandLimit = 5;
+        public const int DefaultDeckLimit = 15;
 
         public CultivationRunState(IEnumerable<CardDefinition> deck, IEnumerable<CultivationRunNode> route, int playerMaxHp = 100, int? playerCurrentHp = null, int initialSpiritStones = 0, CultivationSect sect = CultivationSect.Sword)
         {
@@ -60,6 +61,7 @@ namespace GameLogic.Cultivation
             CurrentRealm = Route[0].Realm;
             SpiritMax = DefaultSpiritMax;
             HandLimit = DefaultHandLimit;
+            DeckLimit = DefaultDeckLimit;
         }
 
         public List<CardDefinition> Deck { get; }
@@ -114,6 +116,8 @@ namespace GameLogic.Cultivation
 
         public int HandLimit { get; private set; }
 
+        public int DeckLimit { get; private set; }
+
         public List<PillDefinition> Pills { get; }
 
         public List<PillDefinition> PurchasedMarketPills { get; }
@@ -149,9 +153,15 @@ namespace GameLogic.Cultivation
             RealmBreakthroughCount += realmDelta;
             SpiritMax += realmDelta;
             HandLimit += realmDelta;
+            DeckLimit += 2 * realmDelta;
             IncreasePlayerMaxHp(10 * realmDelta);
             PlayerCurrentHp = PlayerMaxHp;
             return true;
+        }
+
+        public void AddDeckLimitBonus(int amount)
+        {
+            DeckLimit += Math.Max(0, amount);
         }
 
         public bool NeedsGoldenCorePassiveChoice => CurrentRealm >= CultivationRealm.GoldenCore

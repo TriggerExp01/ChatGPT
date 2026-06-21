@@ -175,7 +175,7 @@ namespace GameLogic.Cultivation
             var playerHp = state.CurrentBattle?.Player.CurrentHp ?? state.PlayerCurrentHp;
             var playerMaxHp = state.CurrentBattle?.Player.MaxHp ?? state.PlayerMaxHp;
             var passive = state.SelectedGoldenCorePassive?.Name ?? (state.CurrentGoldenCorePassiveChoices.Count > 0 ? "待选择" : "未获得");
-            return $"门派：{FormatSectName(state.Sect)}\n状态：{FormatStatusName(state.Status)}\n境界：{FormatRealmName(state.CurrentRealm)}\n金丹被动：{passive}\n节点：{state.CurrentNodeIndex + 1}/{state.Route.Count}\nHP：{playerHp}/{playerMaxHp}\n灵力上限：{state.SpiritMax}\n手牌上限：{state.HandLimit}\n灵石：{state.SpiritStones}\n牌组：{state.Deck.Count} 张\n丹药：{state.Pills.Count}/{state.PillSlotLimit}\n法宝：{state.Artifacts.Count}\n精英法宝：{state.DroppedArtifacts.Count}\n宝箱法宝：{state.ChestArtifacts.Count}\n已拿奖励：{state.ClaimedRewards.Count}\n已突破：{state.RealmBreakthroughCount}\n坊市删牌：{state.RemovedMarketCards.Count}\n坊市售牌：{state.SoldMarketCards.Count}";
+            return $"门派：{FormatSectName(state.Sect)}\n状态：{FormatStatusName(state.Status)}\n境界：{FormatRealmName(state.CurrentRealm)}\n金丹被动：{passive}\n节点：{state.CurrentNodeIndex + 1}/{state.Route.Count}\nHP：{playerHp}/{playerMaxHp}\n灵力上限：{state.SpiritMax}\n手牌上限：{state.HandLimit}\n牌库上限：{state.DeckLimit}\n灵石：{state.SpiritStones}\n牌组：{state.Deck.Count} 张\n丹药：{state.Pills.Count}/{state.PillSlotLimit}\n法宝：{state.Artifacts.Count}\n精英法宝：{state.DroppedArtifacts.Count}\n宝箱法宝：{state.ChestArtifacts.Count}\n已拿奖励：{state.ClaimedRewards.Count}\n已突破：{state.RealmBreakthroughCount}\n坊市删牌：{state.RemovedMarketCards.Count}\n坊市售牌：{state.SoldMarketCards.Count}";
         }
 
         private static string BuildNodeText(CultivationRunState state)
@@ -267,7 +267,7 @@ namespace GameLogic.Cultivation
                 new RunPrototypeStat("灵力", spirit, $"上限 {state.SpiritMax}"),
                 new RunPrototypeStat("手牌", state.HandLimit.ToString(), "上限"),
                 new RunPrototypeStat("灵石", state.SpiritStones.ToString(), "坊市资源"),
-                new RunPrototypeStat("牌组", $"{state.Deck.Count} 张", $"{state.ClaimedRewards.Count} 奖励"),
+                new RunPrototypeStat("牌组", $"{state.Deck.Count}/{state.DeckLimit} 张", $"{state.ClaimedRewards.Count} 奖励"),
                 new RunPrototypeStat("丹药", $"{state.Pills.Count}/{state.PillSlotLimit}", $"{state.PurchasedMarketPills.Count} 购入"),
                 new RunPrototypeStat("法宝", state.Artifacts.Count.ToString(), $"掉落 {state.DroppedArtifacts.Count} / 宝箱 {state.ChestArtifacts.Count}"),
             };
@@ -339,10 +339,18 @@ namespace GameLogic.Cultivation
 
             switch (artifact.EffectType)
             {
+                case ArtifactEffectType.DeckLimitBonus:
+                    return $"牌库上限 +{artifact.DeckLimitBonus}";
+                case ArtifactEffectType.FirstTurnSpiritBonus:
+                    return $"每战首回合灵力 +{artifact.FirstTurnSpiritBonus}";
                 case ArtifactEffectType.BonusSpiritStonesOnVictory:
                     return $"胜利灵石 +{artifact.BonusSpiritStonesOnVictory}";
                 case ArtifactEffectType.HealAfterVictory:
                     return $"战后恢复 {artifact.HealAfterVictoryAmount} HP";
+                case ArtifactEffectType.FirstDamageReductionEachBattle:
+                    return $"每战首次受击伤害 -{artifact.FirstDamageReductionEachBattlePercent}%";
+                case ArtifactEffectType.FirstAttackFlatDamageBonusEachBattle:
+                    return $"每战首次攻击伤害 +{artifact.FirstAttackFlatDamageBonusEachBattle}";
                 case ArtifactEffectType.PreventFirstSelfHpLossEachBattle:
                     return $"每战免疫前 {artifact.PreventFirstSelfHpLossEachBattleCharges} 次自伤";
                 case ArtifactEffectType.MissingHpDamageBonus:
@@ -381,10 +389,18 @@ namespace GameLogic.Cultivation
 
             switch (artifact.EffectType)
             {
+                case ArtifactEffectType.DeckLimitBonus:
+                    return "artifact_storage";
+                case ArtifactEffectType.FirstTurnSpiritBonus:
+                    return "artifact_spirit_array";
                 case ArtifactEffectType.BonusSpiritStonesOnVictory:
                     return "artifact_spirit_stone";
                 case ArtifactEffectType.HealAfterVictory:
                     return "artifact_heal";
+                case ArtifactEffectType.FirstDamageReductionEachBattle:
+                    return "artifact_mirror";
+                case ArtifactEffectType.FirstAttackFlatDamageBonusEachBattle:
+                    return "artifact_flying_sword";
                 case ArtifactEffectType.PreventFirstSelfHpLossEachBattle:
                     return "artifact_blood";
                 case ArtifactEffectType.MissingHpDamageBonus:
@@ -449,6 +465,18 @@ namespace GameLogic.Cultivation
 
             switch (artifact.EffectType)
             {
+                case ArtifactEffectType.DeckLimitBonus:
+                    return FormatArtifactEffectSummary(artifact);
+                case ArtifactEffectType.FirstTurnSpiritBonus:
+                    return $"首回合灵力 +{artifact.FirstTurnSpiritBonus}，当前灵力 {battle.Spirit}/{battle.SpiritMax}";
+                case ArtifactEffectType.FirstDamageReductionEachBattle:
+                    return battle.HasTriggeredArtifactFirstDamageReductionEachBattle
+                        ? "本战首次受击减伤已触发"
+                        : $"本战首次受击 -{battle.ArtifactFirstDamageReductionPercent}%";
+                case ArtifactEffectType.FirstAttackFlatDamageBonusEachBattle:
+                    return battle.HasTriggeredArtifactFirstAttackFlatDamageBonus
+                        ? "本战首次攻击加伤已触发"
+                        : $"本战首次攻击伤害 +{battle.ArtifactFirstAttackFlatDamageBonus}";
                 case ArtifactEffectType.PreventFirstSelfHpLossEachBattle:
                     return battle.PreventSelfHpLossCharges > 0
                         ? $"本战剩余免疫自伤 {battle.PreventSelfHpLossCharges} 次"
@@ -1065,6 +1093,8 @@ namespace GameLogic.Cultivation
 
         public int HandLimit { get; private set; }
 
+        public int DeckLimit { get; private set; }
+
         public int DeckCount { get; private set; }
 
         public int PillCount { get; private set; }
@@ -1129,6 +1159,7 @@ namespace GameLogic.Cultivation
                 RealmBreakthroughCount = state.RealmBreakthroughCount,
                 SpiritMax = state.SpiritMax,
                 HandLimit = state.HandLimit,
+                DeckLimit = state.DeckLimit,
                 DeckCount = state.Deck.Count,
                 PillCount = state.Pills.Count,
                 PillSlotLimit = state.PillSlotLimit,

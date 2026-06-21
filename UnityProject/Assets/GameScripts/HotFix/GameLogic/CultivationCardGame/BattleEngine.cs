@@ -924,6 +924,12 @@ namespace GameLogic.Cultivation
         private static (int dealt, string chargeText, string bonusText) DealCardDamageValue(BattleState state, EnemyState enemy, int baseDamage)
         {
             var damage = Math.Max(0, baseDamage) + state.FlatDamageBonus;
+            var firstAttackFlatBonus = state.TryConsumeArtifactFirstAttackFlatDamageBonus();
+            if (firstAttackFlatBonus > 0)
+            {
+                damage += firstAttackFlatBonus;
+            }
+
             var frenzyPercent = state.Player.GetMissingHpTenthSteps() * state.FrenzyDamageBonusPerStepPercent;
             if (frenzyPercent > 0)
             {
@@ -957,6 +963,11 @@ namespace GameLogic.Cultivation
             if (state.FlatDamageBonus > 0)
             {
                 bonusParts.Add($"+{state.FlatDamageBonus}");
+            }
+
+            if (firstAttackFlatBonus > 0)
+            {
+                bonusParts.Add($"飞剑令 +{firstAttackFlatBonus}");
             }
 
             if (frenzyPercent > 0)
@@ -1151,6 +1162,13 @@ namespace GameLogic.Cultivation
             }
 
             var incomingDamage = damage + enemy.AttackBonus;
+            var firstDamageReductionPercent = state.TryConsumeArtifactFirstDamageReductionEachBattle();
+            if (firstDamageReductionPercent > 0)
+            {
+                incomingDamage = Math.Max(0, incomingDamage * (100 - firstDamageReductionPercent) / 100);
+                state.Logs.Add(new BattleLogEntry($"护心镜触发，本场首次受击伤害降至 {incomingDamage}。"));
+            }
+
             if (state.TryTriggerArtifactFirstDamageReduction())
             {
                 incomingDamage = Math.Max(0, incomingDamage * (100 - state.ArtifactAttackCounterPierceDamageReductionPercent) / 100);
@@ -3283,6 +3301,20 @@ namespace GameLogic.Cultivation
             PillEffectType.MaxHp,
             10);
 
+        public static ArtifactDefinition StorageBagArtifact { get; } = new ArtifactDefinition(
+            "storage_bag",
+            "储物袋",
+            "法宝：牌库上限 +3。",
+            ArtifactEffectType.DeckLimitBonus,
+            3);
+
+        public static ArtifactDefinition SpiritGatheringArrayArtifact { get; } = new ArtifactDefinition(
+            "spirit_gathering_array",
+            "聚灵阵",
+            "法宝：每场战斗首回合额外获得 1 灵力。",
+            ArtifactEffectType.FirstTurnSpiritBonus,
+            1);
+
         public static ArtifactDefinition SpiritStoneMineArtifact { get; } = new ArtifactDefinition(
             "spirit_stone_mine",
             "灵石矿",
@@ -3296,6 +3328,20 @@ namespace GameLogic.Cultivation
             "法宝：每场战斗结束后恢复 3 HP。",
             ArtifactEffectType.HealAfterVictory,
             3);
+
+        public static ArtifactDefinition HeartProtectingMirrorArtifact { get; } = new ArtifactDefinition(
+            "heart_protecting_mirror",
+            "护心镜",
+            "法宝：每场战斗首次受到伤害 -50%。",
+            ArtifactEffectType.FirstDamageReductionEachBattle,
+            50);
+
+        public static ArtifactDefinition FlyingSwordTokenArtifact { get; } = new ArtifactDefinition(
+            "flying_sword_token",
+            "飞剑令",
+            "法宝：每场战斗首次攻击伤害 +5。",
+            ArtifactEffectType.FirstAttackFlatDamageBonusEachBattle,
+            5);
 
         public static ArtifactDefinition BloodDemonOrbArtifact { get; } = new ArtifactDefinition(
             "blood_demon_orb",
@@ -3739,6 +3785,10 @@ namespace GameLogic.Cultivation
                 new CultivationMarketItem("market_foundation_pill", FoundationPillItem, 70),
                 new CultivationMarketItem("market_spirit_stone_mine", SpiritStoneMineArtifact, 25),
                 new CultivationMarketItem("market_rejuvenation_jade", RejuvenationJadeArtifact, 30),
+                new CultivationMarketItem("market_storage_bag", StorageBagArtifact, 30),
+                new CultivationMarketItem("market_spirit_gathering_array", SpiritGatheringArrayArtifact, 40),
+                new CultivationMarketItem("market_heart_protecting_mirror", HeartProtectingMirrorArtifact, 55),
+                new CultivationMarketItem("market_flying_sword_token", FlyingSwordTokenArtifact, 55),
             };
         }
 
@@ -3746,8 +3796,12 @@ namespace GameLogic.Cultivation
         {
             return new List<ArtifactDefinition>
             {
+                StorageBagArtifact,
+                SpiritGatheringArrayArtifact,
                 SpiritStoneMineArtifact,
                 RejuvenationJadeArtifact,
+                HeartProtectingMirrorArtifact,
+                FlyingSwordTokenArtifact,
             };
         }
 

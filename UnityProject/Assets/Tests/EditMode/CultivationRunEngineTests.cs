@@ -498,6 +498,7 @@ namespace GameLogic.Tests
             Assert.AreEqual(110, run.PlayerCurrentHp);
             Assert.AreEqual(4, run.SpiritMax);
             Assert.AreEqual(6, run.HandLimit);
+            Assert.AreEqual(17, run.DeckLimit);
             Assert.AreEqual(4, run.CurrentBattle.SpiritMax);
             Assert.AreEqual(6, run.CurrentBattle.HandLimit);
             Assert.AreEqual(5, run.CurrentBattle.Hand.Count);
@@ -571,6 +572,7 @@ namespace GameLogic.Tests
             Assert.AreEqual(120, run.PlayerCurrentHp);
             Assert.AreEqual(5, run.SpiritMax);
             Assert.AreEqual(7, run.HandLimit);
+            Assert.AreEqual(19, run.DeckLimit);
             Assert.IsNull(run.CurrentBattle);
             Assert.AreEqual(3, run.CurrentGoldenCorePassiveChoices.Count);
             Assert.IsTrue(run.NeedsGoldenCorePassiveChoice);
@@ -1052,7 +1054,7 @@ namespace GameLogic.Tests
             var run = engine.StartRun(CreateInstantWinDeck(), CreateMarketRoute(), initialSpiritStones: 25);
 
             Assert.AreEqual(CultivationRunStatus.Market, run.Status);
-            Assert.AreEqual(10, run.CurrentMarketItems.Count);
+            Assert.AreEqual(14, run.CurrentMarketItems.Count);
 
             var deckCount = run.Deck.Count;
             engine.BuyMarketItem(run, 0);
@@ -1061,7 +1063,7 @@ namespace GameLogic.Tests
             Assert.AreEqual(deckCount + 1, run.Deck.Count);
             Assert.AreEqual("cloud_guard", run.Deck.Last().Id);
             Assert.AreEqual(1, run.PurchasedMarketItems.Count);
-            Assert.AreEqual(9, run.CurrentMarketItems.Count);
+            Assert.AreEqual(13, run.CurrentMarketItems.Count);
         }
 
         [Test]
@@ -1078,7 +1080,7 @@ namespace GameLogic.Tests
             Assert.AreEqual(1, run.Pills.Count);
             Assert.AreEqual(1, run.PurchasedMarketPills.Count);
             Assert.AreEqual("small_restore_pill", run.Pills[0].Id);
-            Assert.AreEqual(9, run.CurrentMarketItems.Count);
+            Assert.AreEqual(13, run.CurrentMarketItems.Count);
         }
 
         [Test]
@@ -1094,8 +1096,22 @@ namespace GameLogic.Tests
             Assert.AreEqual(20, run.SpiritStones);
             Assert.AreEqual(5, run.Deck.Count);
             Assert.AreEqual(3, run.Pills.Count);
-            Assert.AreEqual(10, run.CurrentMarketItems.Count);
+            Assert.AreEqual(14, run.CurrentMarketItems.Count);
             Assert.AreEqual(0, run.PurchasedMarketPills.Count);
+        }
+
+        [Test]
+        public void RunStartsWithDeckLimitAndBreakthroughIncreasesIt()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var run = engine.StartRun(CreateInstantWinDeck(), CultivationSeedData.CreateFirstPrototypeBranchingRoute());
+
+            Assert.AreEqual(CultivationRunState.DefaultDeckLimit, run.DeckLimit);
+
+            ReachFoundationSwordCultivator(engine, run);
+
+            Assert.AreEqual(CultivationRealm.Foundation, run.CurrentRealm);
+            Assert.AreEqual(CultivationRunState.DefaultDeckLimit + 2, run.DeckLimit);
         }
 
         [Test]
@@ -1256,6 +1272,133 @@ namespace GameLogic.Tests
 
             Assert.AreEqual(10, run.SpiritStones);
             Assert.IsTrue(run.CurrentBattle.Logs.Any(log => log.Message.Contains("法宝额外获得 5 灵石")));
+        }
+
+        [Test]
+        public void MarketBuyingStorageBagIncreasesDeckLimit()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var run = engine.StartRun(CreateInstantWinDeck(), CreateMarketRoute(), initialSpiritStones: 40);
+
+            engine.BuyMarketItem(run, 10);
+
+            Assert.AreEqual(10, run.SpiritStones);
+            Assert.AreEqual(CultivationRunState.DefaultDeckLimit + 3, run.DeckLimit);
+            Assert.AreEqual("storage_bag", run.Artifacts[0].Id);
+            Assert.AreEqual(1, run.PurchasedMarketArtifacts.Count);
+        }
+
+        [Test]
+        public void ChoosingRewardRejectsWhenDeckLimitReached()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1), rewardSeed: 3);
+            var run = engine.StartRun(CreateDeckAtDefaultLimit(), CreateTestRoute());
+
+            WinCurrentBattle(engine, run);
+            var deckCount = run.Deck.Count;
+            var rewardCount = run.CurrentRewards.Count;
+
+            Assert.Throws<System.InvalidOperationException>(() => engine.ChooseReward(run, 0));
+            Assert.AreEqual(CultivationRunStatus.Reward, run.Status);
+            Assert.AreEqual(deckCount, run.Deck.Count);
+            Assert.AreEqual(rewardCount, run.CurrentRewards.Count);
+            Assert.AreEqual(0, run.ClaimedRewards.Count);
+        }
+
+        [Test]
+        public void MarketBuyingCardRejectsWhenDeckLimitReached()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var run = engine.StartRun(CreateDeckAtDefaultLimit(), CreateMarketRoute(), initialSpiritStones: 25);
+
+            Assert.Throws<System.InvalidOperationException>(() => engine.BuyMarketItem(run, 0));
+            Assert.AreEqual(25, run.SpiritStones);
+            Assert.AreEqual(CultivationRunState.DefaultDeckLimit, run.Deck.Count);
+            Assert.AreEqual(14, run.CurrentMarketItems.Count);
+            Assert.AreEqual(0, run.PurchasedMarketItems.Count);
+        }
+
+        [Test]
+        public void StorageBagFromChestIncreasesDeckLimit()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var run = engine.StartRun(CreateInstantWinDeck(), CreateSingleArtifactChestRoute(CultivationSeedData.StorageBagArtifact));
+
+            var artifact = engine.OpenChest(run);
+
+            Assert.AreSame(CultivationSeedData.StorageBagArtifact, artifact);
+            Assert.AreEqual(CultivationRunState.DefaultDeckLimit + 3, run.DeckLimit);
+            Assert.AreEqual(1, run.ChestArtifacts.Count);
+        }
+
+        [Test]
+        public void SpiritGatheringArrayAddsFirstTurnSpiritEachBattle()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var run = engine.StartRun(CreateInstantWinDeck(), CreateSingleArtifactChestRoute(CultivationSeedData.SpiritGatheringArrayArtifact));
+
+            var artifact = engine.OpenChest(run);
+
+            Assert.AreSame(CultivationSeedData.SpiritGatheringArrayArtifact, artifact);
+            Assert.AreEqual(run.CurrentBattle.SpiritMax + 1, run.CurrentBattle.Spirit);
+            Assert.IsTrue(run.CurrentBattle.Logs.Any(log => log.Message.Contains("首回合灵力 +1")));
+        }
+
+        [Test]
+        public void HeartProtectingMirrorReducesFirstEnemyDamageOnlyOnce()
+        {
+            var enemy = new EnemyDefinition(
+                "mirror_attacker",
+                "mirror_attacker",
+                40,
+                0,
+                new EnemyIntent(EnemyIntentType.Attack, 10),
+                new EnemyIntent(EnemyIntentType.Attack, 10));
+            var battleEngine = new BattleEngine(1);
+            var engine = new CultivationRunEngine(battleEngine);
+            var run = engine.StartRun(
+                CreateDefensiveDeck(),
+                CreateSingleArtifactChestRoute(CultivationSeedData.HeartProtectingMirrorArtifact, enemy));
+
+            var artifact = engine.OpenChest(run);
+
+            battleEngine.EndPlayerTurn(run.CurrentBattle);
+            var hpAfterFirstHit = run.CurrentBattle.Player.CurrentHp;
+            battleEngine.EndPlayerTurn(run.CurrentBattle);
+
+            Assert.AreSame(CultivationSeedData.HeartProtectingMirrorArtifact, artifact);
+            Assert.AreEqual(95, hpAfterFirstHit);
+            Assert.AreEqual(85, run.CurrentBattle.Player.CurrentHp);
+            Assert.IsTrue(run.CurrentBattle.HasTriggeredArtifactFirstDamageReductionEachBattle);
+            Assert.IsTrue(run.CurrentBattle.Logs.Any(log => log.Message.Contains("护心镜触发")));
+        }
+
+        [Test]
+        public void FlyingSwordTokenAddsFirstAttackDamageOnlyOnce()
+        {
+            var enemyDefinition = new EnemyDefinition(
+                "flying_sword_target",
+                "flying_sword_target",
+                40,
+                0,
+                new EnemyIntent(EnemyIntentType.Attack, 1));
+            var battleEngine = new BattleEngine(1);
+            var engine = new CultivationRunEngine(battleEngine);
+            var run = engine.StartRun(
+                CreateWeakAttackDeck(),
+                CreateSingleArtifactChestRoute(CultivationSeedData.FlyingSwordTokenArtifact, enemyDefinition));
+            engine.OpenChest(run);
+            var battle = run.CurrentBattle;
+            var enemy = battle.Enemies[0];
+
+            battleEngine.PlayCard(battle, battle.Hand[0], enemy);
+            var hpAfterFirstAttack = enemy.Body.CurrentHp;
+            battleEngine.PlayCard(battle, battle.Hand[0], enemy);
+
+            Assert.AreEqual(34, hpAfterFirstAttack);
+            Assert.AreEqual(33, enemy.Body.CurrentHp);
+            Assert.IsTrue(battle.HasTriggeredArtifactFirstAttackFlatDamageBonus);
+            Assert.IsTrue(battle.Logs.Any(log => log.Message.Contains("飞剑令 +5")));
         }
 
         [Test]
@@ -1676,6 +1819,27 @@ namespace GameLogic.Tests
             };
         }
 
+        private static IReadOnlyList<CardDefinition> CreateDeckAtDefaultLimit()
+        {
+            var instantWin = new CardDefinition("instant_win", "instant_win", 0, new CardEffect(CardEffectType.Damage, 999));
+            return Enumerable.Range(0, CultivationRunState.DefaultDeckLimit)
+                .Select(_ => instantWin)
+                .ToArray();
+        }
+
+        private static IReadOnlyList<CardDefinition> CreateWeakAttackDeck()
+        {
+            var weakAttack = new CardDefinition("weak_attack", "weak_attack", 0, new CardEffect(CardEffectType.Damage, 1));
+            return new[]
+            {
+                weakAttack,
+                weakAttack,
+                weakAttack,
+                weakAttack,
+                weakAttack,
+            };
+        }
+
         private static void ReachFoundationSwordCultivator(CultivationRunEngine engine, CultivationRunState run)
         {
             WinCurrentBattle(engine, run);
@@ -1872,6 +2036,10 @@ namespace GameLogic.Tests
                         new CultivationMarketItem("market_foundation_pill", CultivationSeedData.FoundationPillItem, 70),
                         new CultivationMarketItem("market_spirit_stone_mine", CultivationSeedData.SpiritStoneMineArtifact, 25),
                         new CultivationMarketItem("market_rejuvenation_jade", CultivationSeedData.RejuvenationJadeArtifact, 30),
+                        new CultivationMarketItem("market_storage_bag", CultivationSeedData.StorageBagArtifact, 30),
+                        new CultivationMarketItem("market_spirit_gathering_array", CultivationSeedData.SpiritGatheringArrayArtifact, 40),
+                        new CultivationMarketItem("market_heart_protecting_mirror", CultivationSeedData.HeartProtectingMirrorArtifact, 55),
+                        new CultivationMarketItem("market_flying_sword_token", CultivationSeedData.FlyingSwordTokenArtifact, 55),
                     }),
                 new CultivationRunNode(
                     "after_market",
@@ -1903,7 +2071,7 @@ namespace GameLogic.Tests
             };
         }
 
-        private static IReadOnlyList<CultivationRunNode> CreateSingleArtifactChestRoute(ArtifactDefinition artifact)
+        private static IReadOnlyList<CultivationRunNode> CreateSingleArtifactChestRoute(ArtifactDefinition artifact, EnemyDefinition battleEnemy = null)
         {
             return new List<CultivationRunNode>
             {
@@ -1919,7 +2087,7 @@ namespace GameLogic.Tests
                     "after_artifact_chest",
                     "after_artifact_chest",
                     CultivationRunNodeType.Battle,
-                    CultivationSeedData.StoneDemon,
+                    battleEnemy ?? CultivationSeedData.StoneDemon,
                     CultivationSeedData.CreateDemonicSectRewardPool()),
             };
         }

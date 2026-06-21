@@ -93,6 +93,10 @@ namespace GameLogic.Cultivation
 
         public int ArtifactMissingHpDamageBonusPerStepPercent { get; private set; }
 
+        public int ArtifactFirstAttackFlatDamageBonus { get; private set; }
+
+        public bool HasTriggeredArtifactFirstAttackFlatDamageBonus { get; private set; }
+
         public int ArtifactFirstAttackSwordMarkStacks { get; private set; }
 
         public bool HasTriggeredArtifactFirstAttackSwordMarkThisTurn { get; private set; }
@@ -118,6 +122,10 @@ namespace GameLogic.Cultivation
         public int ArtifactAttackCounterPierceDamageReductionPercent { get; private set; }
 
         public bool HasTriggeredArtifactFirstDamageReductionThisTurn { get; private set; }
+
+        public int ArtifactFirstDamageReductionPercent { get; private set; }
+
+        public bool HasTriggeredArtifactFirstDamageReductionEachBattle { get; private set; }
 
         public int SelfHpLostThisTurn { get; private set; }
 
@@ -438,6 +446,22 @@ namespace GameLogic.Cultivation
             ArtifactMissingHpDamageBonusPerStepPercent += Math.Max(0, percentPerMissingHpStep);
         }
 
+        public void AddArtifactFirstAttackFlatDamageBonus(int amount)
+        {
+            ArtifactFirstAttackFlatDamageBonus += Math.Max(0, amount);
+        }
+
+        public int TryConsumeArtifactFirstAttackFlatDamageBonus()
+        {
+            if (ArtifactFirstAttackFlatDamageBonus <= 0 || HasTriggeredArtifactFirstAttackFlatDamageBonus)
+            {
+                return 0;
+            }
+
+            HasTriggeredArtifactFirstAttackFlatDamageBonus = true;
+            return ArtifactFirstAttackFlatDamageBonus;
+        }
+
         public void AddArtifactFirstAttackSwordMark(int stacks)
         {
             ArtifactFirstAttackSwordMarkStacks += Math.Max(0, stacks);
@@ -546,6 +570,22 @@ namespace GameLogic.Cultivation
 
             HasTriggeredArtifactFirstDamageReductionThisTurn = true;
             return true;
+        }
+
+        public void AddArtifactFirstDamageReductionEachBattle(int percent)
+        {
+            ArtifactFirstDamageReductionPercent += Math.Max(0, percent);
+        }
+
+        public int TryConsumeArtifactFirstDamageReductionEachBattle()
+        {
+            if (ArtifactFirstDamageReductionPercent <= 0 || HasTriggeredArtifactFirstDamageReductionEachBattle)
+            {
+                return 0;
+            }
+
+            HasTriggeredArtifactFirstDamageReductionEachBattle = true;
+            return ArtifactFirstDamageReductionPercent;
         }
 
         public void AddSelfHpLostThisTurn(int amount)

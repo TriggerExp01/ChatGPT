@@ -107,6 +107,11 @@ namespace GameLogic.Cultivation
             }
 
             var reward = state.CurrentRewards[rewardIndex];
+            if (state.Deck.Count >= state.DeckLimit)
+            {
+                throw new InvalidOperationException("Deck limit reached.");
+            }
+
             state.Deck.Add(reward.Card);
             state.ClaimedRewards.Add(reward);
             AdvanceAfterReward(state);
@@ -247,6 +252,11 @@ namespace GameLogic.Cultivation
                 throw new InvalidOperationException("Pill slots are full.");
             }
 
+            if (item.IsCard && state.Deck.Count >= state.DeckLimit)
+            {
+                throw new InvalidOperationException("Deck limit reached.");
+            }
+
             state.SpiritStones -= item.Price;
             state.PurchasedMarketItems.Add(item);
             state.CurrentMarketItems.RemoveAt(itemIndex);
@@ -254,18 +264,17 @@ namespace GameLogic.Cultivation
             if (item.IsCard)
             {
                 state.Deck.Add(item.Card);
-                return;
             }
-
-            if (item.IsArtifact)
+            else if (item.IsArtifact)
             {
-                state.Artifacts.Add(item.Artifact);
+                AddArtifact(state, item.Artifact);
                 state.PurchasedMarketArtifacts.Add(item.Artifact);
-                return;
             }
-
-            state.Pills.Add(item.Pill);
-            state.PurchasedMarketPills.Add(item.Pill);
+            else
+            {
+                state.Pills.Add(item.Pill);
+                state.PurchasedMarketPills.Add(item.Pill);
+            }
         }
 
         public void RemoveDeckCardAtMarket(CultivationRunState state, int deckIndex)
@@ -356,7 +365,7 @@ namespace GameLogic.Cultivation
                 throw new InvalidOperationException("Chest node does not have an artifact reward.");
             }
 
-            state.Artifacts.Add(artifact);
+            AddArtifact(state, artifact);
             state.ChestArtifacts.Add(artifact);
             AdvanceToNextNode(state);
             return artifact;
@@ -480,6 +489,18 @@ namespace GameLogic.Cultivation
             {
                 switch (artifact.EffectType)
                 {
+                    case ArtifactEffectType.FirstTurnSpiritBonus:
+                        state.CurrentBattle.Spirit += artifact.FirstTurnSpiritBonus;
+                        state.CurrentBattle.Logs.Add(new BattleLogEntry($"{artifact.Name} 生效：首回合灵力 +{artifact.FirstTurnSpiritBonus}。"));
+                        break;
+                    case ArtifactEffectType.FirstDamageReductionEachBattle:
+                        state.CurrentBattle.AddArtifactFirstDamageReductionEachBattle(artifact.FirstDamageReductionEachBattlePercent);
+                        state.CurrentBattle.Logs.Add(new BattleLogEntry($"{artifact.Name} 生效：本场首次受击伤害 -{artifact.FirstDamageReductionEachBattlePercent}%。"));
+                        break;
+                    case ArtifactEffectType.FirstAttackFlatDamageBonusEachBattle:
+                        state.CurrentBattle.AddArtifactFirstAttackFlatDamageBonus(artifact.FirstAttackFlatDamageBonusEachBattle);
+                        state.CurrentBattle.Logs.Add(new BattleLogEntry($"{artifact.Name} 生效：本场首次攻击伤害 +{artifact.FirstAttackFlatDamageBonusEachBattle}。"));
+                        break;
                     case ArtifactEffectType.PreventFirstSelfHpLossEachBattle:
                         state.CurrentBattle.AddPreventSelfHpLossCharges(artifact.PreventFirstSelfHpLossEachBattleCharges);
                         state.CurrentBattle.Logs.Add(new BattleLogEntry($"{artifact.Name} 生效：本场战斗前 {artifact.PreventFirstSelfHpLossEachBattleCharges} 次自伤被免疫。"));
@@ -600,6 +621,29 @@ namespace GameLogic.Cultivation
             return state.Artifacts.Sum(artifact => artifact.HealAfterVictoryAmount);
         }
 
+        private static void AddArtifact(CultivationRunState state, ArtifactDefinition artifact)
+        {
+            state.Artifacts.Add(artifact);
+            ApplyArtifactRunEffects(state, artifact);
+        }
+
+        private static void ApplyArtifactRunEffects(CultivationRunState state, ArtifactDefinition artifact)
+        {
+            if (artifact == null)
+            {
+                return;
+            }
+
+            switch (artifact.EffectType)
+            {
+                case ArtifactEffectType.DeckLimitBonus:
+                    state.AddDeckLimitBonus(artifact.DeckLimitBonus);
+                    break;
+                default:
+                    break;
+            }
+        }
+
         private ArtifactDefinition CreateArtifactReward(CultivationRunNode node)
         {
             if (node.Type != CultivationRunNodeType.Elite && node.Type != CultivationRunNodeType.Chest)
@@ -623,7 +667,7 @@ namespace GameLogic.Cultivation
                 return;
             }
 
-            state.Artifacts.Add(artifact);
+            AddArtifact(state, artifact);
             state.DroppedArtifacts.Add(artifact);
             state.CurrentBattle.Logs.Add(new BattleLogEntry($"精英战获得法宝：{artifact.Name}。"));
         }
