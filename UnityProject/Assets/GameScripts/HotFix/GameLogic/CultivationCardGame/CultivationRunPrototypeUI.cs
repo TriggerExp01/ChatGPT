@@ -697,7 +697,7 @@ namespace GameLogic.Cultivation
                     {
                         var index = i;
                         var option = _run.MysticEventChoices[i];
-                        var button = CreateActionButton($"Mystic_{i}_{option.Id}", _choiceRoot, $"秘境：{option.Name}", option.Description, ActionTemplateKind.MysticEvent);
+                        var button = CreateActionButton($"Mystic_{i}_{option.Id}", _choiceRoot, $"秘境：{option.Name}", CultivationRunPrototypePresenter.FormatMysticEventOptionSummary(_run, option), ActionTemplateKind.MysticEvent);
                         button.onClick.AddListener(() => ChooseMysticEventOption(index));
                         SetLayout(button.gameObject, preferredWidth: 260, preferredHeight: 96);
                     }

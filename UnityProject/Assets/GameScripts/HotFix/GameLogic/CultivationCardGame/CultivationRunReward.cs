@@ -139,7 +139,8 @@ namespace GameLogic.Cultivation
         HealOnEnemyKill,
         ExtraDrawPerTurn,
         FatalDamageSurviveOncePerRun,
-        PillEveryThirdVictory
+        PillEveryThirdVictory,
+        MysticNegativeChanceReduction
     }
 
     public sealed class ArtifactDefinition
@@ -220,6 +221,8 @@ namespace GameLogic.Cultivation
         public int FatalDamageSurviveOncePerRunCharges => EffectType == ArtifactEffectType.FatalDamageSurviveOncePerRun ? Math.Max(1, EffectValue) : 0;
 
         public int PillEveryThirdVictoryInterval => EffectType == ArtifactEffectType.PillEveryThirdVictory ? Math.Max(1, EffectValue) : 0;
+
+        public int MysticNegativeChanceReductionPercent => EffectType == ArtifactEffectType.MysticNegativeChanceReduction ? EffectValue : 0;
     }
 
     public sealed class CultivationMarketItem
@@ -283,6 +286,9 @@ namespace GameLogic.Cultivation
         GainCard,
         GainPill,
         GainArtifact,
+        LoseHp,
+        LoseSpiritStones,
+        LoseArtifact,
         Leave,
     }
 
@@ -296,7 +302,13 @@ namespace GameLogic.Cultivation
             int effectValue = 0,
             CardDefinition cardReward = null,
             PillDefinition pillReward = null,
-            ArtifactDefinition artifactReward = null)
+            ArtifactDefinition artifactReward = null,
+            int successChancePercent = 100,
+            MysticEventEffectType failureEffectType = MysticEventEffectType.Leave,
+            int failureEffectValue = 0,
+            CardDefinition failureCardReward = null,
+            PillDefinition failurePillReward = null,
+            ArtifactDefinition failureArtifactReward = null)
         {
             if (string.IsNullOrWhiteSpace(id))
             {
@@ -316,6 +328,12 @@ namespace GameLogic.Cultivation
             CardReward = cardReward;
             PillReward = pillReward;
             ArtifactReward = artifactReward;
+            SuccessChancePercent = Math.Max(0, Math.Min(100, successChancePercent));
+            FailureEffectType = failureEffectType;
+            FailureEffectValue = Math.Max(0, failureEffectValue);
+            FailureCardReward = failureCardReward;
+            FailurePillReward = failurePillReward;
+            FailureArtifactReward = failureArtifactReward;
         }
 
         public string Id { get; }
@@ -333,6 +351,22 @@ namespace GameLogic.Cultivation
         public PillDefinition PillReward { get; }
 
         public ArtifactDefinition ArtifactReward { get; }
+
+        public int SuccessChancePercent { get; }
+
+        public int NegativeOutcomeChancePercent => 100 - SuccessChancePercent;
+
+        public MysticEventEffectType FailureEffectType { get; }
+
+        public int FailureEffectValue { get; }
+
+        public CardDefinition FailureCardReward { get; }
+
+        public PillDefinition FailurePillReward { get; }
+
+        public ArtifactDefinition FailureArtifactReward { get; }
+
+        public bool HasRandomOutcome => SuccessChancePercent < 100;
     }
 
     public sealed class MysticEventDefinition

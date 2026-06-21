@@ -3380,6 +3380,13 @@ namespace GameLogic.Cultivation
             ArtifactEffectType.PillEveryThirdVictory,
             3);
 
+        public static ArtifactDefinition BarrierBreakingPearlArtifact { get; } = new ArtifactDefinition(
+            "barrier_breaking_pearl",
+            "Barrier Breaking Pearl",
+            "Artifact: mystic event negative outcome chance -15%.",
+            ArtifactEffectType.MysticNegativeChanceReduction,
+            15);
+
         public static ArtifactDefinition SpiritStoneMineArtifact { get; } = new ArtifactDefinition(
             "spirit_stone_mine",
             "灵石矿",
@@ -3888,6 +3895,7 @@ namespace GameLogic.Cultivation
                 new CultivationMarketItem("market_storage_bag", StorageBagArtifact, 30),
                 new CultivationMarketItem("market_spirit_gathering_array", SpiritGatheringArrayArtifact, 40),
                 new CultivationMarketItem("market_spirit_beast_bag", SpiritBeastBagArtifact, 50),
+                new CultivationMarketItem("market_barrier_breaking_pearl", BarrierBreakingPearlArtifact, 45),
                 new CultivationMarketItem("market_heart_protecting_mirror", HeartProtectingMirrorArtifact, 55),
                 new CultivationMarketItem("market_flying_sword_token", FlyingSwordTokenArtifact, 55),
                 new CultivationMarketItem("market_azure_underworld_sword", AzureUnderworldSwordArtifact, 80),
@@ -3902,6 +3910,7 @@ namespace GameLogic.Cultivation
                 StorageBagArtifact,
                 SpiritGatheringArrayArtifact,
                 SpiritBeastBagArtifact,
+                BarrierBreakingPearlArtifact,
                 SpiritStoneMineArtifact,
                 RejuvenationJadeArtifact,
                 HeartProtectingMirrorArtifact,
@@ -3970,6 +3979,25 @@ namespace GameLogic.Cultivation
                 "leave_spirit_spring",
                 "离开",
                 "不冒险，直接离开。",
+                MysticEventEffectType.Leave));
+
+        public static MysticEventDefinition ImmortalRuinsMysticEvent { get; } = new MysticEventDefinition(
+            "mystic_immortal_ruins",
+            "Immortal Ruins",
+            "A ruined abode with unstable restrictions.",
+            new MysticEventOption(
+                "explore_immortal_ruins",
+                "Explore",
+                "50%: gain Cloud Guard. Failure: lose 10 HP.",
+                MysticEventEffectType.GainCard,
+                cardReward: CloudGuard,
+                successChancePercent: 50,
+                failureEffectType: MysticEventEffectType.LoseHp,
+                failureEffectValue: 10),
+            new MysticEventOption(
+                "leave_immortal_ruins",
+                "Leave",
+                "Leave safely.",
                 MysticEventEffectType.Leave));
 
         public static IReadOnlyList<CultivationRunNode> CreateFirstPrototypeRoute(CultivationSect sect = CultivationSect.Sword)

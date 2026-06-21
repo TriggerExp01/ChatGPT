@@ -417,9 +417,43 @@ namespace GameLogic.Tests
         }
 
         [Test]
+        public void BuildViewModelIncludesBarrierBreakingPearlStatus()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var run = engine.StartRun(CreateArtifactDisplayDeck(), CreateSingleArtifactChestRoute(CultivationSeedData.BarrierBreakingPearlArtifact));
+
+            engine.OpenChest(run);
+            var view = CultivationRunPrototypePresenter.BuildViewModel(run);
+
+            Assert.AreEqual("artifact_barrier_pearl", view.ArtifactItems[0].IconKey);
+            Assert.AreEqual("秘境负面结果概率 -15%", view.ArtifactItems[0].StatusSummary);
+        }
+
+        [Test]
         public void FormatArtifactEffectSummaryIncludesSpiritBeastBag()
         {
             StringAssert.Contains("每 3 场胜利获得 1 颗随机丹药", CultivationRunPrototypePresenter.FormatArtifactEffectSummary(CultivationSeedData.SpiritBeastBagArtifact));
+        }
+
+        [Test]
+        public void FormatArtifactEffectSummaryIncludesBarrierBreakingPearl()
+        {
+            StringAssert.Contains("秘境负面结果概率 -15%", CultivationRunPrototypePresenter.FormatArtifactEffectSummary(CultivationSeedData.BarrierBreakingPearlArtifact));
+        }
+
+        [Test]
+        public void FormatMysticEventOptionSummaryShowsBarrierBreakingPearlReduction()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var normalRun = engine.StartRun(CreateInstantWinDeck(), CreateRiskMysticDisplayRoute());
+            var pearlRun = engine.StartRun(CreateInstantWinDeck(), CreateBarrierBreakingPearlRiskMysticDisplayRoute());
+
+            engine.OpenChest(pearlRun);
+            var normalSummary = CultivationRunPrototypePresenter.FormatMysticEventOptionSummary(normalRun, normalRun.MysticEventChoices[0]);
+            var pearlSummary = CultivationRunPrototypePresenter.FormatMysticEventOptionSummary(pearlRun, pearlRun.MysticEventChoices[0]);
+
+            StringAssert.Contains("成功 50% / 负面 50%", normalSummary);
+            StringAssert.Contains("成功 65% / 负面 35%", pearlSummary);
         }
 
         [Test]
@@ -907,6 +941,56 @@ namespace GameLogic.Tests
                     "spirit_beast_bag_display_battle",
                     CultivationRunNodeType.Battle,
                     new EnemyDefinition("spirit_beast_bag_display_enemy", "spirit_beast_bag_display_enemy", 1, 0, new EnemyIntent(EnemyIntentType.Attack, 1)),
+                    CultivationSeedData.CreateSwordSectRewardPool()),
+            };
+        }
+
+        private static IReadOnlyList<CultivationRunNode> CreateRiskMysticDisplayRoute()
+        {
+            return new List<CultivationRunNode>
+            {
+                new CultivationRunNode(
+                    "risk_mystic_display",
+                    "risk_mystic_display",
+                    CultivationRunNodeType.Mystic,
+                    null,
+                    null,
+                    nextNodeIndices: new[] { 1 },
+                    mysticEvent: CultivationSeedData.ImmortalRuinsMysticEvent),
+                new CultivationRunNode(
+                    "after_risk_mystic_display",
+                    "after_risk_mystic_display",
+                    CultivationRunNodeType.Battle,
+                    new EnemyDefinition("after_risk_mystic_display_enemy", "after_risk_mystic_display_enemy", 1, 0, new EnemyIntent(EnemyIntentType.Attack, 1)),
+                    CultivationSeedData.CreateSwordSectRewardPool()),
+            };
+        }
+
+        private static IReadOnlyList<CultivationRunNode> CreateBarrierBreakingPearlRiskMysticDisplayRoute()
+        {
+            return new List<CultivationRunNode>
+            {
+                new CultivationRunNode(
+                    "barrier_breaking_pearl_display_chest",
+                    "barrier_breaking_pearl_display_chest",
+                    CultivationRunNodeType.Chest,
+                    null,
+                    null,
+                    nextNodeIndices: new[] { 1 },
+                    artifactRewardPool: new[] { CultivationSeedData.BarrierBreakingPearlArtifact }),
+                new CultivationRunNode(
+                    "risk_mystic_display_after_pearl",
+                    "risk_mystic_display_after_pearl",
+                    CultivationRunNodeType.Mystic,
+                    null,
+                    null,
+                    nextNodeIndices: new[] { 2 },
+                    mysticEvent: CultivationSeedData.ImmortalRuinsMysticEvent),
+                new CultivationRunNode(
+                    "after_risk_mystic_display_with_pearl",
+                    "after_risk_mystic_display_with_pearl",
+                    CultivationRunNodeType.Battle,
+                    new EnemyDefinition("after_risk_mystic_display_with_pearl_enemy", "after_risk_mystic_display_with_pearl_enemy", 1, 0, new EnemyIntent(EnemyIntentType.Attack, 1)),
                     CultivationSeedData.CreateSwordSectRewardPool()),
             };
         }

@@ -235,7 +235,7 @@ namespace GameLogic.Cultivation
                     for (var i = 0; i < state.MysticEventChoices.Count; i++)
                     {
                         var option = state.MysticEventChoices[i];
-                        builder.Append(i + 1).Append(". ").Append(option.Name).Append(" / ").Append(option.Description).AppendLine();
+                        builder.Append(i + 1).Append(". ").Append(option.Name).Append(" / ").Append(FormatMysticEventOptionSummary(state, option)).AppendLine();
                     }
                 }
             }
@@ -361,6 +361,8 @@ namespace GameLogic.Cultivation
                     return $"每回合额外抽 {artifact.ExtraDrawPerTurn} 张牌";
                 case ArtifactEffectType.PillEveryThirdVictory:
                     return $"每 {artifact.PillEveryThirdVictoryInterval} 场胜利获得 1 颗随机丹药";
+                case ArtifactEffectType.MysticNegativeChanceReduction:
+                    return $"秘境负面结果概率 -{artifact.MysticNegativeChanceReductionPercent}%";
                 case ArtifactEffectType.FatalDamageSurviveOncePerRun:
                     return "致命伤害保留 1 HP / 每 Run 1 次";
                 case ArtifactEffectType.PreventFirstSelfHpLossEachBattle:
@@ -423,6 +425,8 @@ namespace GameLogic.Cultivation
                     return "artifact_heavenly_dao";
                 case ArtifactEffectType.PillEveryThirdVictory:
                     return "artifact_spirit_beast_bag";
+                case ArtifactEffectType.MysticNegativeChanceReduction:
+                    return "artifact_barrier_pearl";
                 case ArtifactEffectType.FatalDamageSurviveOncePerRun:
                     return "artifact_immortal_core";
                 case ArtifactEffectType.PreventFirstSelfHpLossEachBattle:
@@ -831,6 +835,24 @@ namespace GameLogic.Cultivation
             builder.AppendLine();
             builder.Append("战斗结果：").Append(battle.Outcome);
             return builder.ToString();
+        }
+
+        public static string FormatMysticEventOptionSummary(CultivationRunState state, MysticEventOption option)
+        {
+            if (option == null)
+            {
+                return string.Empty;
+            }
+
+            if (!option.HasRandomOutcome)
+            {
+                return option.Description;
+            }
+
+            var reduction = state?.Artifacts.Sum(artifact => artifact.MysticNegativeChanceReductionPercent) ?? 0;
+            var negativeChance = Math.Max(0, option.NegativeOutcomeChancePercent - reduction);
+            var successChance = 100 - negativeChance;
+            return $"{option.Description}（成功 {successChance}% / 负面 {negativeChance}%）";
         }
 
         private static void AppendArtifactBattleSummary(StringBuilder builder, CultivationRunState state)

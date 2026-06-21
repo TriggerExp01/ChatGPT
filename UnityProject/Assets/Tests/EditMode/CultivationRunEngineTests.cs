@@ -289,6 +289,7 @@ namespace GameLogic.Tests
             CollectionAssert.Contains(swordArtifacts, CultivationSeedData.HeavenlyDaoStoneArtifact.Id);
             CollectionAssert.Contains(swordArtifacts, CultivationSeedData.ImmortalGoldenCoreArtifact.Id);
             CollectionAssert.Contains(swordArtifacts, CultivationSeedData.SpiritBeastBagArtifact.Id);
+            CollectionAssert.Contains(swordArtifacts, CultivationSeedData.BarrierBreakingPearlArtifact.Id);
             CollectionAssert.Contains(fireArtifacts, CultivationSeedData.FireCloudTokenArtifact.Id);
             CollectionAssert.Contains(fireArtifacts, CultivationSeedData.BurningHeavenFurnaceArtifact.Id);
             CollectionAssert.Contains(thunderArtifacts, CultivationSeedData.ThunderSpiritPearlArtifact.Id);
@@ -1060,7 +1061,7 @@ namespace GameLogic.Tests
             var run = engine.StartRun(CreateInstantWinDeck(), CreateMarketRoute(), initialSpiritStones: 25);
 
             Assert.AreEqual(CultivationRunStatus.Market, run.Status);
-            Assert.AreEqual(17, run.CurrentMarketItems.Count);
+            Assert.AreEqual(18, run.CurrentMarketItems.Count);
 
             var deckCount = run.Deck.Count;
             engine.BuyMarketItem(run, 0);
@@ -1069,7 +1070,7 @@ namespace GameLogic.Tests
             Assert.AreEqual(deckCount + 1, run.Deck.Count);
             Assert.AreEqual("cloud_guard", run.Deck.Last().Id);
             Assert.AreEqual(1, run.PurchasedMarketItems.Count);
-            Assert.AreEqual(16, run.CurrentMarketItems.Count);
+            Assert.AreEqual(17, run.CurrentMarketItems.Count);
         }
 
         [Test]
@@ -1086,7 +1087,7 @@ namespace GameLogic.Tests
             Assert.AreEqual(1, run.Pills.Count);
             Assert.AreEqual(1, run.PurchasedMarketPills.Count);
             Assert.AreEqual("small_restore_pill", run.Pills[0].Id);
-            Assert.AreEqual(16, run.CurrentMarketItems.Count);
+            Assert.AreEqual(17, run.CurrentMarketItems.Count);
         }
 
         [Test]
@@ -1102,7 +1103,7 @@ namespace GameLogic.Tests
             Assert.AreEqual(20, run.SpiritStones);
             Assert.AreEqual(5, run.Deck.Count);
             Assert.AreEqual(3, run.Pills.Count);
-            Assert.AreEqual(17, run.CurrentMarketItems.Count);
+            Assert.AreEqual(18, run.CurrentMarketItems.Count);
             Assert.AreEqual(0, run.PurchasedMarketPills.Count);
         }
 
@@ -1308,6 +1309,19 @@ namespace GameLogic.Tests
         }
 
         [Test]
+        public void MarketBuyingBarrierBreakingPearlCostsFortyFiveSpiritStones()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var run = engine.StartRun(CreateInstantWinDeck(), CreateMarketRoute(), initialSpiritStones: 45);
+
+            engine.BuyMarketItem(run, 12);
+
+            Assert.AreEqual(0, run.SpiritStones);
+            Assert.AreEqual("barrier_breaking_pearl", run.Artifacts[0].Id);
+            Assert.AreEqual(1, run.PurchasedMarketArtifacts.Count);
+        }
+
+        [Test]
         public void ChoosingRewardRejectsWhenDeckLimitReached()
         {
             var engine = new CultivationRunEngine(new BattleEngine(1), rewardSeed: 3);
@@ -1333,7 +1347,7 @@ namespace GameLogic.Tests
             Assert.Throws<System.InvalidOperationException>(() => engine.BuyMarketItem(run, 0));
             Assert.AreEqual(25, run.SpiritStones);
             Assert.AreEqual(CultivationRunState.DefaultDeckLimit, run.Deck.Count);
-            Assert.AreEqual(17, run.CurrentMarketItems.Count);
+            Assert.AreEqual(18, run.CurrentMarketItems.Count);
             Assert.AreEqual(0, run.PurchasedMarketItems.Count);
         }
 
@@ -1594,6 +1608,39 @@ namespace GameLogic.Tests
             Assert.AreEqual("collect_small_restore_pill", option.Id);
             Assert.AreEqual(1, run.Pills.Count);
             Assert.AreEqual("small_restore_pill", run.Pills[0].Id);
+            Assert.AreEqual(1, run.ResolvedMysticEventOptions.Count);
+            Assert.AreEqual(CultivationRunStatus.InBattle, run.Status);
+        }
+
+        [Test]
+        public void MysticEventRiskOptionCanFailWithNegativeOutcome()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1), rewardSeed: 0);
+            var run = engine.StartRun(CreateInstantWinDeck(), CreateRiskMysticRoute(), playerCurrentHp: 50);
+
+            var option = engine.ChooseMysticEventOption(run, 0);
+
+            Assert.AreEqual("explore_immortal_ruins", option.Id);
+            Assert.AreEqual(40, run.PlayerCurrentHp);
+            Assert.IsFalse(run.Deck.Any(card => card.Id == CultivationSeedData.CloudGuard.Id));
+            Assert.AreEqual(1, run.ResolvedMysticEventOptions.Count);
+            Assert.AreEqual(CultivationRunStatus.InBattle, run.Status);
+        }
+
+        [Test]
+        public void BarrierBreakingPearlReducesMysticNegativeOutcomeChance()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1), rewardSeed: 13);
+            var run = engine.StartRun(CreateInstantWinDeck(), CreateRiskMysticRoute(), playerCurrentHp: 50);
+
+            run.Artifacts.Add(CultivationSeedData.BarrierBreakingPearlArtifact);
+            var deckCount = run.Deck.Count;
+            var option = engine.ChooseMysticEventOption(run, 0);
+
+            Assert.AreEqual("explore_immortal_ruins", option.Id);
+            Assert.AreEqual(50, run.PlayerCurrentHp);
+            Assert.AreEqual(deckCount + 1, run.Deck.Count);
+            Assert.AreEqual(CultivationSeedData.CloudGuard.Id, run.Deck.Last().Id);
             Assert.AreEqual(1, run.ResolvedMysticEventOptions.Count);
             Assert.AreEqual(CultivationRunStatus.InBattle, run.Status);
         }
@@ -2213,6 +2260,7 @@ namespace GameLogic.Tests
                         new CultivationMarketItem("market_rejuvenation_jade", CultivationSeedData.RejuvenationJadeArtifact, 30),
                         new CultivationMarketItem("market_storage_bag", CultivationSeedData.StorageBagArtifact, 30),
                         new CultivationMarketItem("market_spirit_beast_bag", CultivationSeedData.SpiritBeastBagArtifact, 50),
+                        new CultivationMarketItem("market_barrier_breaking_pearl", CultivationSeedData.BarrierBreakingPearlArtifact, 45),
                         new CultivationMarketItem("market_spirit_gathering_array", CultivationSeedData.SpiritGatheringArrayArtifact, 40),
                         new CultivationMarketItem("market_heart_protecting_mirror", CultivationSeedData.HeartProtectingMirrorArtifact, 55),
                         new CultivationMarketItem("market_flying_sword_token", CultivationSeedData.FlyingSwordTokenArtifact, 55),
@@ -2331,6 +2379,27 @@ namespace GameLogic.Tests
                     "after_mystic",
                     CultivationRunNodeType.Battle,
                     new EnemyDefinition("after_mystic_enemy", "after_mystic_enemy", 1, 0, new EnemyIntent(EnemyIntentType.Attack, 1)),
+                    CultivationSeedData.CreateSwordSectRewardPool()),
+            };
+        }
+
+        private static IReadOnlyList<CultivationRunNode> CreateRiskMysticRoute()
+        {
+            return new List<CultivationRunNode>
+            {
+                new CultivationRunNode(
+                    "risk_mystic",
+                    "risk_mystic",
+                    CultivationRunNodeType.Mystic,
+                    null,
+                    null,
+                    nextNodeIndices: new[] { 1 },
+                    mysticEvent: CultivationSeedData.ImmortalRuinsMysticEvent),
+                new CultivationRunNode(
+                    "after_risk_mystic",
+                    "after_risk_mystic",
+                    CultivationRunNodeType.Battle,
+                    new EnemyDefinition("after_risk_mystic_enemy", "after_risk_mystic_enemy", 1, 0, new EnemyIntent(EnemyIntentType.Attack, 1)),
                     CultivationSeedData.CreateSwordSectRewardPool()),
             };
         }

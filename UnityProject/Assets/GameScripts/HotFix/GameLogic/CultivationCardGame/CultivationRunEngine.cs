@@ -384,7 +384,7 @@ namespace GameLogic.Cultivation
             }
 
             var option = state.MysticEventChoices[optionIndex];
-            ResolveMysticEventOption(state, option);
+            ResolveMysticEventOption(state, option, RollMysticEventSuccess(state, option));
             state.ResolvedMysticEventOptions.Add(option);
             AdvanceToNextNode(state);
             return option;
@@ -848,26 +848,72 @@ namespace GameLogic.Cultivation
             }
         }
 
-        private static void ResolveMysticEventOption(CultivationRunState state, MysticEventOption option)
+        private bool RollMysticEventSuccess(CultivationRunState state, MysticEventOption option)
         {
-            switch (option.EffectType)
+            if (!option.HasRandomOutcome)
+            {
+                return true;
+            }
+
+            var successChance = Math.Min(100, option.SuccessChancePercent + GetMysticNegativeChanceReduction(state));
+            var roll = _rewardRandom.Next(100);
+            return roll < successChance;
+        }
+
+        private static int GetMysticNegativeChanceReduction(CultivationRunState state)
+        {
+            return state.Artifacts.Sum(artifact => artifact.MysticNegativeChanceReductionPercent);
+        }
+
+        private static void ResolveMysticEventOption(CultivationRunState state, MysticEventOption option, bool success)
+        {
+            if (!success)
+            {
+                ResolveMysticEventEffect(
+                    state,
+                    option.FailureEffectType,
+                    option.FailureEffectValue,
+                    option.FailureCardReward,
+                    option.FailurePillReward,
+                    option.FailureArtifactReward);
+                return;
+            }
+
+            ResolveMysticEventEffect(
+                state,
+                option.EffectType,
+                option.EffectValue,
+                option.CardReward,
+                option.PillReward,
+                option.ArtifactReward);
+        }
+
+        private static void ResolveMysticEventEffect(
+            CultivationRunState state,
+            MysticEventEffectType effectType,
+            int effectValue,
+            CardDefinition cardReward,
+            PillDefinition pillReward,
+            ArtifactDefinition artifactReward)
+        {
+            switch (effectType)
             {
                 case MysticEventEffectType.GainSpiritStones:
-                    state.SpiritStones += option.EffectValue;
+                    state.SpiritStones += effectValue;
                     break;
                 case MysticEventEffectType.Heal:
-                    state.PlayerCurrentHp = Math.Min(state.PlayerMaxHp, state.PlayerCurrentHp + option.EffectValue);
+                    state.PlayerCurrentHp = Math.Min(state.PlayerMaxHp, state.PlayerCurrentHp + effectValue);
                     break;
                 case MysticEventEffectType.GainCard:
-                    if (option.CardReward == null)
+                    if (cardReward == null)
                     {
                         throw new InvalidOperationException("Mystic event card option does not have a card reward.");
                     }
 
-                    state.Deck.Add(option.CardReward);
+                    state.Deck.Add(cardReward);
                     break;
                 case MysticEventEffectType.GainPill:
-                    if (option.PillReward == null)
+                    if (pillReward == null)
                     {
                         throw new InvalidOperationException("Mystic event pill option does not have a pill reward.");
                     }
@@ -877,20 +923,33 @@ namespace GameLogic.Cultivation
                         throw new InvalidOperationException("Pill slots are full.");
                     }
 
-                    state.Pills.Add(option.PillReward);
+                    state.Pills.Add(pillReward);
                     break;
                 case MysticEventEffectType.GainArtifact:
-                    if (option.ArtifactReward == null)
+                    if (artifactReward == null)
                     {
                         throw new InvalidOperationException("Mystic event artifact option does not have an artifact reward.");
                     }
 
-                    AddArtifact(state, option.ArtifactReward);
+                    AddArtifact(state, artifactReward);
+                    break;
+                case MysticEventEffectType.LoseHp:
+                    state.PlayerCurrentHp = Math.Max(1, state.PlayerCurrentHp - effectValue);
+                    break;
+                case MysticEventEffectType.LoseSpiritStones:
+                    state.SpiritStones = Math.Max(0, state.SpiritStones - effectValue);
+                    break;
+                case MysticEventEffectType.LoseArtifact:
+                    if (state.Artifacts.Count > 0)
+                    {
+                        state.Artifacts.RemoveAt(0);
+                    }
+
                     break;
                 case MysticEventEffectType.Leave:
                     break;
                 default:
-                    throw new ArgumentOutOfRangeException(nameof(option.EffectType), option.EffectType, "Unsupported mystic event effect type.");
+                    throw new ArgumentOutOfRangeException(nameof(effectType), effectType, "Unsupported mystic event effect type.");
             }
         }
 
