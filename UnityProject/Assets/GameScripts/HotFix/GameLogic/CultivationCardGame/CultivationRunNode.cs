@@ -17,6 +17,7 @@ namespace GameLogic.Cultivation
             IEnumerable<CultivationMarketItem> marketItems = null,
             IEnumerable<ArtifactDefinition> artifactRewardPool = null,
             MysticEventDefinition mysticEvent = null,
+            IEnumerable<MysticEventDefinition> mysticEventPool = null,
             CultivationRealm realm = CultivationRealm.QiRefining)
         {
             if (string.IsNullOrWhiteSpace(id))
@@ -42,6 +43,7 @@ namespace GameLogic.Cultivation
             MarketItems = new List<CultivationMarketItem>(marketItems ?? Array.Empty<CultivationMarketItem>()).AsReadOnly();
             ArtifactRewardPool = new List<ArtifactDefinition>(artifactRewardPool ?? Array.Empty<ArtifactDefinition>()).AsReadOnly();
             MysticEvent = mysticEvent;
+            MysticEventPool = new List<MysticEventDefinition>(mysticEventPool ?? Array.Empty<MysticEventDefinition>()).AsReadOnly();
             Realm = realm;
             RestHealAmount = Math.Max(0, restHealAmount);
             SpiritStoneReward = Math.Max(0, spiritStoneReward);
@@ -73,6 +75,8 @@ namespace GameLogic.Cultivation
         public IReadOnlyList<ArtifactDefinition> ArtifactRewardPool { get; }
 
         public MysticEventDefinition MysticEvent { get; }
+
+        public IReadOnlyList<MysticEventDefinition> MysticEventPool { get; }
 
         public CultivationRealm Realm { get; }
 

@@ -106,6 +106,8 @@ namespace GameLogic.Cultivation
 
         public List<MysticEventOption> ResolvedMysticEventOptions { get; }
 
+        public MysticEventDefinition CurrentMysticEvent { get; set; }
+
         public int PillSlotLimit { get; }
 
         public CultivationRealm CurrentRealm { get; private set; }
@@ -121,6 +123,8 @@ namespace GameLogic.Cultivation
         public int FatalDamageSurviveCharges { get; private set; }
 
         public int SpiritBeastBagVictoryCounter { get; private set; }
+
+        public int NextMarketDiscountPercent { get; private set; }
 
         public List<PillDefinition> Pills { get; }
 
@@ -186,6 +190,18 @@ namespace GameLogic.Cultivation
         public void ResetSpiritBeastBagVictoryCounter()
         {
             SpiritBeastBagVictoryCounter = 0;
+        }
+
+        public void SetNextMarketDiscountPercent(int percent)
+        {
+            NextMarketDiscountPercent = Math.Max(0, Math.Min(100, percent));
+        }
+
+        public int ConsumeNextMarketDiscountPercent()
+        {
+            var percent = NextMarketDiscountPercent;
+            NextMarketDiscountPercent = 0;
+            return percent;
         }
 
         public bool NeedsGoldenCorePassiveChoice => CurrentRealm >= CultivationRealm.GoldenCore

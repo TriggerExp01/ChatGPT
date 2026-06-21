@@ -441,7 +441,7 @@ namespace GameLogic.Cultivation
                     state.RestUpgradeChoices.Clear();
                     state.CurrentRouteChoices.Clear();
                     state.CurrentMarketItems.Clear();
-                    state.CurrentMarketItems.AddRange(state.CurrentNode.MarketItems);
+                    state.CurrentMarketItems.AddRange(CreateCurrentMarketItems(state));
                     state.Status = CultivationRunStatus.Market;
                     break;
                 case CultivationRunNodeType.Chest:
@@ -459,9 +459,10 @@ namespace GameLogic.Cultivation
                     state.CurrentRouteChoices.Clear();
                     state.CurrentMarketItems.Clear();
                     state.MysticEventChoices.Clear();
-                    if (state.CurrentNode.MysticEvent != null)
+                    state.CurrentMysticEvent = SelectMysticEvent(state.CurrentNode);
+                    if (state.CurrentMysticEvent != null)
                     {
-                        state.MysticEventChoices.AddRange(state.CurrentNode.MysticEvent.Options);
+                        state.MysticEventChoices.AddRange(state.CurrentMysticEvent.Options);
                     }
 
                     state.Status = CultivationRunStatus.Mystic;
@@ -634,6 +635,50 @@ namespace GameLogic.Cultivation
             return rewards.Take(choiceCount).ToArray();
         }
 
+        private IReadOnlyList<CultivationMarketItem> CreateCurrentMarketItems(CultivationRunState state)
+        {
+            var discountPercent = state.ConsumeNextMarketDiscountPercent();
+            if (discountPercent <= 0)
+            {
+                return state.CurrentNode.MarketItems.ToArray();
+            }
+
+            return state.CurrentNode.MarketItems
+                .Select(item => CloneMarketItemWithDiscount(item, discountPercent))
+                .ToArray();
+        }
+
+        private static CultivationMarketItem CloneMarketItemWithDiscount(CultivationMarketItem item, int discountPercent)
+        {
+            var discountedPrice = Math.Max(1, item.Price * (100 - discountPercent) / 100);
+            if (item.IsCard)
+            {
+                return new CultivationMarketItem(item.Id, item.Card, discountedPrice);
+            }
+
+            if (item.IsPill)
+            {
+                return new CultivationMarketItem(item.Id, item.Pill, discountedPrice);
+            }
+
+            if (item.IsArtifact)
+            {
+                return new CultivationMarketItem(item.Id, item.Artifact, discountedPrice);
+            }
+
+            throw new InvalidOperationException("Market item does not have a payload.");
+        }
+
+        private MysticEventDefinition SelectMysticEvent(CultivationRunNode node)
+        {
+            if (node.MysticEventPool.Count > 0)
+            {
+                return node.MysticEventPool[_rewardRandom.Next(node.MysticEventPool.Count)];
+            }
+
+            return node.MysticEvent;
+        }
+
         private static int GetBonusSpiritStonesOnVictory(CultivationRunState state)
         {
             return state.Artifacts.Sum(artifact => artifact.BonusSpiritStonesOnVictory);
@@ -706,6 +751,40 @@ namespace GameLogic.Cultivation
             }
         }
 
+        private void UpgradeRandomDeckCard(CultivationRunState state)
+        {
+            var candidates = state.Deck
+                .Select((card, index) => new { Card = card, Index = index })
+                .Where(entry => entry.Card.CanUpgrade)
+                .ToArray();
+            if (candidates.Length == 0)
+            {
+                return;
+            }
+
+            var selected = candidates[_rewardRandom.Next(candidates.Length)];
+            state.Deck[selected.Index] = selected.Card.UpgradeOptions[0].UpgradedCard;
+        }
+
+        private void GainRandomRewardCard(CultivationRunState state)
+        {
+            if (state.Deck.Count >= state.DeckLimit)
+            {
+                return;
+            }
+
+            var rewards = state.CurrentNode.RewardPool
+                .Where(reward => reward.Card != null)
+                .ToArray();
+            if (rewards.Length == 0)
+            {
+                return;
+            }
+
+            var reward = rewards[_rewardRandom.Next(rewards.Length)];
+            state.Deck.Add(reward.Card);
+        }
+
         private ArtifactDefinition CreateArtifactReward(CultivationRunNode node)
         {
             if (node.Type != CultivationRunNodeType.Elite && node.Type != CultivationRunNodeType.Chest)
@@ -768,6 +847,7 @@ namespace GameLogic.Cultivation
             state.CurrentRouteChoices.Clear();
             state.CurrentMarketItems.Clear();
             state.MysticEventChoices.Clear();
+            state.CurrentMysticEvent = null;
             state.CurrentBattle = null;
 
             var nextNodeIndices = ResolveNextNodeIndices(state);
@@ -865,7 +945,7 @@ namespace GameLogic.Cultivation
             return state.Artifacts.Sum(artifact => artifact.MysticNegativeChanceReductionPercent);
         }
 
-        private static void ResolveMysticEventOption(CultivationRunState state, MysticEventOption option, bool success)
+        private void ResolveMysticEventOption(CultivationRunState state, MysticEventOption option, bool success)
         {
             if (!success)
             {
@@ -888,7 +968,7 @@ namespace GameLogic.Cultivation
                 option.ArtifactReward);
         }
 
-        private static void ResolveMysticEventEffect(
+        private void ResolveMysticEventEffect(
             CultivationRunState state,
             MysticEventEffectType effectType,
             int effectValue,
@@ -932,6 +1012,15 @@ namespace GameLogic.Cultivation
                     }
 
                     AddArtifact(state, artifactReward);
+                    break;
+                case MysticEventEffectType.UpgradeRandomCard:
+                    UpgradeRandomDeckCard(state);
+                    break;
+                case MysticEventEffectType.GainRandomRewardCard:
+                    GainRandomRewardCard(state);
+                    break;
+                case MysticEventEffectType.NextMarketDiscount:
+                    state.SetNextMarketDiscountPercent(effectValue);
                     break;
                 case MysticEventEffectType.LoseHp:
                     state.PlayerCurrentHp = Math.Max(1, state.PlayerCurrentHp - effectValue);

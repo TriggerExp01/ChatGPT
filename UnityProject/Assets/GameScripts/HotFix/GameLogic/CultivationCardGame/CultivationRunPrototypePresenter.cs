@@ -224,14 +224,15 @@ namespace GameLogic.Cultivation
             if (state.Status == CultivationRunStatus.Mystic)
             {
                 builder.AppendLine();
-                if (state.CurrentNode.MysticEvent == null)
+                var mysticEvent = state.CurrentMysticEvent ?? state.CurrentNode.MysticEvent;
+                if (mysticEvent == null)
                 {
                     builder.AppendLine("Mystic event: none");
                 }
                 else
                 {
-                    builder.Append("Mystic event: ").Append(state.CurrentNode.MysticEvent.Name).AppendLine();
-                    builder.AppendLine(state.CurrentNode.MysticEvent.Description);
+                    builder.Append("Mystic event: ").Append(mysticEvent.Name).AppendLine();
+                    builder.AppendLine(mysticEvent.Description);
                     for (var i = 0; i < state.MysticEventChoices.Count; i++)
                     {
                         var option = state.MysticEventChoices[i];

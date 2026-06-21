@@ -512,7 +512,7 @@ namespace GameLogic.Tests
         [Test]
         public void BuildTextIncludesMysticStateAndResolvedChoiceCount()
         {
-            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var engine = new CultivationRunEngine(new BattleEngine(1), rewardSeed: 1);
             var route = new[]
             {
                 new CultivationRunNode(
@@ -520,9 +520,9 @@ namespace GameLogic.Tests
                     "mystic",
                     CultivationRunNodeType.Mystic,
                     null,
-                    null,
+                    CultivationSeedData.CreateSwordSectRewardPool(),
                     nextNodeIndices: new[] { 1 },
-                    mysticEvent: CultivationSeedData.SpiritSpringMysticEvent),
+                    mysticEventPool: CultivationSeedData.CreateLowRiskMysticEventPool()),
                 new CultivationRunNode(
                     "after_mystic",
                     "after_mystic",
@@ -530,7 +530,16 @@ namespace GameLogic.Tests
                     new EnemyDefinition("after_mystic_enemy", "after_mystic_enemy", 1, 0, new EnemyIntent(EnemyIntentType.Attack, 1)),
                     CultivationSeedData.CreateSwordSectRewardPool()),
             };
-            var run = engine.StartRun(CreateInstantWinDeck(), route);
+            var instantWin = new CardDefinition("instant_win", "instant_win", 0, new CardEffect(CardEffectType.Damage, 999));
+            var deck = new[]
+            {
+                CultivationSeedData.SwordQi,
+                instantWin,
+                instantWin,
+                instantWin,
+                instantWin,
+            };
+            var run = engine.StartRun(deck, route);
 
             var text = CultivationRunPrototypePresenter.BuildText(run);
             var beforeSnapshot = CultivationRunPrototypePresenter.CreateSnapshot(run);
@@ -540,8 +549,9 @@ namespace GameLogic.Tests
             Assert.AreEqual(CultivationRunStatus.Mystic, beforeSnapshot.Status);
             Assert.AreEqual(3, beforeSnapshot.MysticEventChoiceCount);
             StringAssert.Contains("Mystic event:", text.NodeText);
-            StringAssert.Contains(CultivationSeedData.SpiritSpringMysticEvent.Name, text.NodeText);
-            Assert.AreEqual(1, afterSnapshot.PillCount);
+            StringAssert.Contains(CultivationSeedData.ImmortalAbodeMysticEvent.Name, text.NodeText);
+            StringAssert.Contains("Read Scripture", text.NodeText);
+            Assert.AreEqual("sword_qi_damage_1", run.Deck[0].Id);
             Assert.AreEqual(1, afterSnapshot.ResolvedMysticEventCount);
             Assert.AreEqual(CultivationRunStatus.InBattle, afterSnapshot.Status);
         }

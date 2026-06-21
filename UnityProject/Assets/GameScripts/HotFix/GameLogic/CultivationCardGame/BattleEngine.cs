@@ -3981,6 +3981,72 @@ namespace GameLogic.Cultivation
                 "不冒险，直接离开。",
                 MysticEventEffectType.Leave));
 
+        public static MysticEventDefinition ImmortalAbodeMysticEvent { get; } = new MysticEventDefinition(
+            "mystic_immortal_abode",
+            "Immortal Abode",
+            "A broken immortal abode with hidden scripture marks.",
+            new MysticEventOption(
+                "explore_immortal_abode",
+                "Explore",
+                "50%: gain Cloud Guard. Failure: lose 10 HP.",
+                MysticEventEffectType.GainCard,
+                cardReward: CloudGuard,
+                successChancePercent: 50,
+                failureEffectType: MysticEventEffectType.LoseHp,
+                failureEffectValue: 10),
+            new MysticEventOption(
+                "read_wall_scripture",
+                "Read Scripture",
+                "Upgrade one random upgradable card.",
+                MysticEventEffectType.UpgradeRandomCard),
+            new MysticEventOption(
+                "leave_immortal_abode",
+                "Leave",
+                "Leave safely.",
+                MysticEventEffectType.Leave));
+
+        public static MysticEventDefinition WanderingMerchantMysticEvent { get; } = new MysticEventDefinition(
+            "mystic_wandering_merchant",
+            "Wandering Merchant",
+            "A travelling merchant offers a short-lived bargain.",
+            new MysticEventOption(
+                "take_market_discount",
+                "Bargain",
+                "Next market prices -30%.",
+                MysticEventEffectType.NextMarketDiscount,
+                30),
+            new MysticEventOption(
+                "talk_with_merchant",
+                "Talk",
+                "Gain 10 spirit stones.",
+                MysticEventEffectType.GainSpiritStones,
+                10),
+            new MysticEventOption(
+                "leave_wandering_merchant",
+                "Leave",
+                "Leave safely.",
+                MysticEventEffectType.Leave));
+
+        public static MysticEventDefinition TrainingStonePlatformMysticEvent { get; } = new MysticEventDefinition(
+            "mystic_training_stone_platform",
+            "Training Stone Platform",
+            "An old stone platform gathers calm spiritual pressure.",
+            new MysticEventOption(
+                "meditate_on_stone_platform",
+                "Meditate",
+                "Upgrade one random upgradable card.",
+                MysticEventEffectType.UpgradeRandomCard),
+            new MysticEventOption(
+                "study_stone_platform",
+                "Study",
+                "Gain one random reward card from this route.",
+                MysticEventEffectType.GainRandomRewardCard),
+            new MysticEventOption(
+                "leave_stone_platform",
+                "Leave",
+                "Leave safely.",
+                MysticEventEffectType.Leave));
+
         public static MysticEventDefinition ImmortalRuinsMysticEvent { get; } = new MysticEventDefinition(
             "mystic_immortal_ruins",
             "Immortal Ruins",
@@ -3999,6 +4065,17 @@ namespace GameLogic.Cultivation
                 "Leave",
                 "Leave safely.",
                 MysticEventEffectType.Leave));
+
+        public static IReadOnlyList<MysticEventDefinition> CreateLowRiskMysticEventPool()
+        {
+            return new[]
+            {
+                ImmortalAbodeMysticEvent,
+                SpiritSpringMysticEvent,
+                WanderingMerchantMysticEvent,
+                TrainingStonePlatformMysticEvent,
+            };
+        }
 
         public static IReadOnlyList<CultivationRunNode> CreateFirstPrototypeRoute(CultivationSect sect = CultivationSect.Sword)
         {
@@ -4067,7 +4144,7 @@ namespace GameLogic.Cultivation
                     null,
                     null,
                     nextNodeIndices: new[] { 6 },
-                    mysticEvent: SpiritSpringMysticEvent),
+                    mysticEventPool: CreateLowRiskMysticEventPool()),
                 new CultivationRunNode(
                     "node_stone_demon_leader",
                     "石魔首领",

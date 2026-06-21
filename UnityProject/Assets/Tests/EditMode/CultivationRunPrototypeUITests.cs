@@ -1,5 +1,6 @@
 using GameLogic.Cultivation;
 using NUnit.Framework;
+using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
 using UnityEngine.UI;
@@ -445,12 +446,7 @@ namespace GameLogic.Tests
         [Test]
         public void PrototypeUiCanResolveMysticEventAndGainPill()
         {
-            ForceCurrentBattleVictory();
-            _ui.ResolveBattle();
-            _ui.SkipReward();
-            _ui.ChooseRoute(1);
-            _ui.Rest();
-            _ui.ChooseRoute(2);
+            SetRunForUi(new BattleEngine(1), CreateSpiritSpringMysticRoute());
 
             Assert.AreEqual(CultivationRunStatus.Mystic, _ui.Snapshot.Status);
             Assert.AreEqual(3, _ui.Snapshot.MysticEventChoiceCount);
@@ -943,6 +939,45 @@ namespace GameLogic.Tests
             var battleField = typeof(CultivationRunPrototypeUI)
                 .GetField("_run", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
             return (CultivationRunState)battleField.GetValue(_ui);
+        }
+
+        private void SetRunForUi(BattleEngine battleEngine, IReadOnlyList<CultivationRunNode> route)
+        {
+            var runEngine = new CultivationRunEngine(battleEngine);
+            var run = runEngine.StartRun(route: route);
+            SetPrivateField("_battleEngine", battleEngine);
+            SetPrivateField("_runEngine", runEngine);
+            SetPrivateField("_run", run);
+        }
+
+        private void SetPrivateField(string fieldName, object value)
+        {
+            var field = typeof(CultivationRunPrototypeUI)
+                .GetField(fieldName, BindingFlags.NonPublic | BindingFlags.Instance);
+            field.SetValue(_ui, value);
+        }
+
+        private static IReadOnlyList<CultivationRunNode> CreateSpiritSpringMysticRoute()
+        {
+            var rewards = CultivationSeedData.CreateSwordSectRewardPool();
+            return new List<CultivationRunNode>
+            {
+                new CultivationRunNode(
+                    "node_spirit_spring",
+                    "灵泉",
+                    CultivationRunNodeType.Mystic,
+                    null,
+                    rewards,
+                    nextNodeIndices: new[] { 1 },
+                    mysticEvent: CultivationSeedData.SpiritSpringMysticEvent),
+                new CultivationRunNode(
+                    "node_stone_demon_leader",
+                    "石魔首领",
+                    CultivationRunNodeType.Elite,
+                    CultivationSeedData.StoneDemonLeader,
+                    rewards,
+                    spiritStoneReward: 35),
+            };
         }
 
         private static Transform FindFirstChildWithPrefix(Transform parent, string prefix)

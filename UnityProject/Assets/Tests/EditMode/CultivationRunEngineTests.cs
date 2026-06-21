@@ -305,6 +305,20 @@ namespace GameLogic.Tests
         }
 
         [Test]
+        public void LowRiskMysticEventPoolContainsFourDesignEvents()
+        {
+            var eventIds = CultivationSeedData.CreateLowRiskMysticEventPool()
+                .Select(mysticEvent => mysticEvent.Id)
+                .ToArray();
+
+            Assert.AreEqual(4, eventIds.Length);
+            CollectionAssert.Contains(eventIds, CultivationSeedData.ImmortalAbodeMysticEvent.Id);
+            CollectionAssert.Contains(eventIds, CultivationSeedData.SpiritSpringMysticEvent.Id);
+            CollectionAssert.Contains(eventIds, CultivationSeedData.WanderingMerchantMysticEvent.Id);
+            CollectionAssert.Contains(eventIds, CultivationSeedData.TrainingStonePlatformMysticEvent.Id);
+        }
+
+        [Test]
         public void BloodDemonOrbPreventsFirstSelfHpLossEachBattle()
         {
             var battleEngine = new BattleEngine(20260620);
@@ -1613,6 +1627,82 @@ namespace GameLogic.Tests
         }
 
         [Test]
+        public void MysticEventPoolSelectsDeterministicEventFromRewardSeed()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1), rewardSeed: 1);
+            var run = engine.StartRun(CreateInstantWinDeck(), CreateMysticPoolRoute());
+
+            Assert.AreSame(CultivationSeedData.ImmortalAbodeMysticEvent, run.CurrentMysticEvent);
+            Assert.AreEqual(3, run.MysticEventChoices.Count);
+            Assert.AreEqual("explore_immortal_abode", run.MysticEventChoices[0].Id);
+        }
+
+        [Test]
+        public void MysticImmortalAbodeExploreCanFailWithNegativeOutcome()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1), rewardSeed: 0);
+            var run = engine.StartRun(CreateInstantWinDeck(), CreateImmortalAbodeMysticRoute(), playerCurrentHp: 50);
+
+            var option = engine.ChooseMysticEventOption(run, 0);
+
+            Assert.AreEqual("explore_immortal_abode", option.Id);
+            Assert.AreEqual(40, run.PlayerCurrentHp);
+            Assert.IsFalse(run.Deck.Any(card => card.Id == CultivationSeedData.CloudGuard.Id));
+            Assert.AreEqual(CultivationRunStatus.InBattle, run.Status);
+        }
+
+        [Test]
+        public void MysticImmortalAbodeReadScriptureUpgradesRandomCard()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1), rewardSeed: 1);
+            var deck = new[] { CultivationSeedData.SwordQi, CultivationSeedData.CloudGuard };
+            var run = engine.StartRun(deck, CreateImmortalAbodeMysticRoute());
+
+            var option = engine.ChooseMysticEventOption(run, 1);
+
+            Assert.AreEqual("read_wall_scripture", option.Id);
+            Assert.AreEqual("sword_qi_damage_1", run.Deck[0].Id);
+            Assert.AreSame(CultivationSeedData.CloudGuard, run.Deck[1]);
+            Assert.AreEqual(CultivationRunStatus.InBattle, run.Status);
+        }
+
+        [Test]
+        public void MysticWanderingMerchantDiscountAppliesToNextMarketOnce()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1));
+            var run = engine.StartRun(CreateInstantWinDeck(), CreateWanderingMerchantThenMarketRoute(), initialSpiritStones: 100);
+
+            var option = engine.ChooseMysticEventOption(run, 0);
+
+            Assert.AreEqual("take_market_discount", option.Id);
+            Assert.AreEqual(CultivationRunStatus.Market, run.Status);
+            Assert.AreEqual(0, run.NextMarketDiscountPercent);
+            Assert.AreEqual(14, run.CurrentMarketItems[0].Price);
+            Assert.AreEqual(17, run.CurrentMarketItems[1].Price);
+
+            engine.LeaveMarket(run);
+
+            Assert.AreEqual(CultivationRunStatus.Market, run.Status);
+            Assert.AreEqual(20, run.CurrentMarketItems[0].Price);
+            Assert.AreEqual(25, run.CurrentMarketItems[1].Price);
+        }
+
+        [Test]
+        public void MysticTrainingStonePlatformCanGrantRandomRewardCard()
+        {
+            var engine = new CultivationRunEngine(new BattleEngine(1), rewardSeed: 0);
+            var run = engine.StartRun(CreateInstantWinDeck(), CreateTrainingStoneMysticRoute());
+            var deckCount = run.Deck.Count;
+
+            var option = engine.ChooseMysticEventOption(run, 1);
+
+            Assert.AreEqual("study_stone_platform", option.Id);
+            Assert.AreEqual(deckCount + 1, run.Deck.Count);
+            CollectionAssert.Contains(new[] { CultivationSeedData.CloudGuard.Id, CultivationSeedData.Thrust.Id }, run.Deck.Last().Id);
+            Assert.AreEqual(CultivationRunStatus.InBattle, run.Status);
+        }
+
+        [Test]
         public void MysticEventRiskOptionCanFailWithNegativeOutcome()
         {
             var engine = new CultivationRunEngine(new BattleEngine(1), rewardSeed: 0);
@@ -2379,6 +2469,113 @@ namespace GameLogic.Tests
                     "after_mystic",
                     CultivationRunNodeType.Battle,
                     new EnemyDefinition("after_mystic_enemy", "after_mystic_enemy", 1, 0, new EnemyIntent(EnemyIntentType.Attack, 1)),
+                    CultivationSeedData.CreateSwordSectRewardPool()),
+            };
+        }
+
+        private static IReadOnlyList<CultivationRunNode> CreateMysticPoolRoute()
+        {
+            return new List<CultivationRunNode>
+            {
+                new CultivationRunNode(
+                    "mystic_pool",
+                    "mystic_pool",
+                    CultivationRunNodeType.Mystic,
+                    null,
+                    CultivationSeedData.CreateSwordSectRewardPool(),
+                    nextNodeIndices: new[] { 1 },
+                    mysticEventPool: CultivationSeedData.CreateLowRiskMysticEventPool()),
+                new CultivationRunNode(
+                    "after_mystic_pool",
+                    "after_mystic_pool",
+                    CultivationRunNodeType.Battle,
+                    new EnemyDefinition("after_mystic_pool_enemy", "after_mystic_pool_enemy", 1, 0, new EnemyIntent(EnemyIntentType.Attack, 1)),
+                    CultivationSeedData.CreateSwordSectRewardPool()),
+            };
+        }
+
+        private static IReadOnlyList<CultivationRunNode> CreateImmortalAbodeMysticRoute()
+        {
+            return CreateSingleMysticRoute(CultivationSeedData.ImmortalAbodeMysticEvent);
+        }
+
+        private static IReadOnlyList<CultivationRunNode> CreateTrainingStoneMysticRoute()
+        {
+            return new List<CultivationRunNode>
+            {
+                new CultivationRunNode(
+                    "training_stone_mystic",
+                    "training_stone_mystic",
+                    CultivationRunNodeType.Mystic,
+                    null,
+                    new[]
+                    {
+                        new CultivationRunReward("reward_cloud_guard", CultivationSeedData.CloudGuard),
+                        new CultivationRunReward("reward_thrust", CultivationSeedData.Thrust),
+                    },
+                    nextNodeIndices: new[] { 1 },
+                    mysticEvent: CultivationSeedData.TrainingStonePlatformMysticEvent),
+                new CultivationRunNode(
+                    "after_training_stone_mystic",
+                    "after_training_stone_mystic",
+                    CultivationRunNodeType.Battle,
+                    new EnemyDefinition("after_training_stone_mystic_enemy", "after_training_stone_mystic_enemy", 1, 0, new EnemyIntent(EnemyIntentType.Attack, 1)),
+                    CultivationSeedData.CreateSwordSectRewardPool()),
+            };
+        }
+
+        private static IReadOnlyList<CultivationRunNode> CreateWanderingMerchantThenMarketRoute()
+        {
+            var marketItems = new[]
+            {
+                new CultivationMarketItem("market_cloud_guard", CultivationSeedData.CloudGuard, 20),
+                new CultivationMarketItem("market_thrust", CultivationSeedData.Thrust, 25),
+            };
+            return new List<CultivationRunNode>
+            {
+                new CultivationRunNode(
+                    "wandering_merchant_mystic",
+                    "wandering_merchant_mystic",
+                    CultivationRunNodeType.Mystic,
+                    null,
+                    null,
+                    nextNodeIndices: new[] { 1 },
+                    mysticEvent: CultivationSeedData.WanderingMerchantMysticEvent),
+                new CultivationRunNode(
+                    "discounted_market",
+                    "discounted_market",
+                    CultivationRunNodeType.Market,
+                    null,
+                    null,
+                    nextNodeIndices: new[] { 2 },
+                    marketItems: marketItems),
+                new CultivationRunNode(
+                    "normal_market",
+                    "normal_market",
+                    CultivationRunNodeType.Market,
+                    null,
+                    null,
+                    marketItems: marketItems),
+            };
+        }
+
+        private static IReadOnlyList<CultivationRunNode> CreateSingleMysticRoute(MysticEventDefinition mysticEvent)
+        {
+            return new List<CultivationRunNode>
+            {
+                new CultivationRunNode(
+                    "single_mystic",
+                    "single_mystic",
+                    CultivationRunNodeType.Mystic,
+                    null,
+                    CultivationSeedData.CreateSwordSectRewardPool(),
+                    nextNodeIndices: new[] { 1 },
+                    mysticEvent: mysticEvent),
+                new CultivationRunNode(
+                    "after_single_mystic",
+                    "after_single_mystic",
+                    CultivationRunNodeType.Battle,
+                    new EnemyDefinition("after_single_mystic_enemy", "after_single_mystic_enemy", 1, 0, new EnemyIntent(EnemyIntentType.Attack, 1)),
                     CultivationSeedData.CreateSwordSectRewardPool()),
             };
         }
