@@ -1,11 +1,17 @@
-# AGENTS.md - TEngine 空工程骨架规则
+# AGENTS.md - TEngine 骨架与 Cultivation 原型规则
 
-本仓库已清理为可用于新游戏开工的 Unity + TEngine 空工程骨架。旧肉鸽玩法、旧 UI Prefab、旧视觉资产、演示截图和阶段路线已移除。
+本仓库已从旧项目清理为可用于新游戏开工的 Unity + TEngine 工程骨架，并且当前 Dev 分支已经接入 `Cultivation / 修仙养成原型` 的入口与部分业务原型。
+
+当前默认协作基线是：**TEngine 骨架 + Cultivation 修仙养成原型**。这表示后续阶段可以围绕修仙、养成、秘境事件、路线选择和卡牌战斗继续收束原型；但这不是最终产品方向锁死，正式产品名、商业化定位、美术风格、完整玩法边界仍需在阶段开始前确认。
+
+旧肉鸽玩法、旧 UI Prefab、旧视觉资产、演示截图和阶段路线已移除，仍然禁止作为默认内容恢复。
 
 ## 项目定位
 
-- 当前项目只保留 TEngine 框架、启动流程、热更入口、基础 UI 模块、配置生成链路、Unity 包依赖和必要工程设置。
-- 后续新游戏必须重新确认产品方向、玩法边界、UI 风格和阶段计划。
+- 当前项目保留 TEngine 框架、启动流程、热更入口、基础 UI 模块、配置生成链路、Unity 包依赖和必要工程设置。
+- 当前 Dev 分支已接入 Cultivation 原型入口；它是当前默认原型方向，不等于最终产品方向已经锁定。
+- 后续新增阶段必须先确认该阶段的产品目标、玩法边界、UI 风格和验收标准。
+- Editor 快速入口只视为原型调试入口；正式验收应优先走 Procedure -> GameApp -> Cultivation 业务入口，并区分两条链路的验证结果。
 - 不允许把旧肉鸽项目的玩法、UI 风格或资源作为默认方向继续继承。
 
 ## 默认协作规则
@@ -13,6 +19,8 @@
 - 涉及产品方向、玩法设计、UI 风格、资源选择、架构边界、批量删除或批量替换时，先确认需求和限制，再执行。
 - 小修、只读检查、构建验证和明确的清理任务可以直接执行。
 - 文档默认使用中文。
+- 当前 Cultivation 原型相关工作优先先收束主循环、验收标准和配置/模块边界，再继续堆叠零散功能。
+- 不允许让 UI Service 逐步变成业务总控；新增业务能力应逐步沉淀为清晰的 Cultivation 业务模型、系统或模块。
 - 当前会话用户明确指令优先于本文件。
 
 ## 保留内容边界
@@ -25,6 +33,7 @@
 - `UnityProject/Assets/GameScripts/Procedure`
 - `UnityProject/Assets/GameScripts/HotFix/GameLogic/GameApp.cs`
 - `UnityProject/Assets/GameScripts/HotFix/GameLogic/GameModule.cs`
+- `UnityProject/Assets/GameScripts/HotFix/GameLogic/CultivationCardGame`
 - `UnityProject/Assets/GameScripts/HotFix/GameLogic/Module/UIModule`
 - `UnityProject/Assets/GameScripts/HotFix/GameProto`
 - `UnityProject/Assets/Editor`
@@ -46,15 +55,16 @@
 - 旧演示截图、Steam 展示图、阶段路线和开发日志
 - Unity `UserSettings` 布局噪声
 
-## 新游戏开工流程
+## 新阶段开工流程
 
-1. 先写一页产品合同：题材、视角、核心循环、目标手感、明确禁区。
+1. 先写一页产品合同或方向说明：题材、视角、核心循环、目标手感、明确禁区。
 2. 再写阶段计划：每次只推进一个可验收阶段。
 3. 先做无美术或低美术依赖的垂直切片。
 4. UI 必须先做参考图和黄金样板，确认后再落 Prefab。
 5. 新增配置时优先走 `Configs/GameConfig` 和 Luban 生成链路。
 6. 新增全局模块时优先通过 `GameModule` 暴露。
 7. 新增阶段交付说明统一放入 `Doc/交付说明/`，不要继续散放在 `Doc/设计文档/` 根目录。
+8. 当前 Cultivation 原型阶段需要同时说明 Editor 快速入口和正式启动入口的验收差异。
 
 ## TEngine 优先原则
 
