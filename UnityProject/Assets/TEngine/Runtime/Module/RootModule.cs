@@ -161,9 +161,15 @@ namespace TEngine
 
         private void OnDestroy()
         {
-#if !UNITY_EDITOR
-            ModuleSystem.Shutdown();
-#endif
+            if (_instance == this)
+            {
+                _instance = null;
+            }
+
+            if (Application.isPlaying)
+            {
+                ModuleSystem.Shutdown();
+            }
         }
 
         /// <summary>

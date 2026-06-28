@@ -21,6 +21,14 @@ namespace TEngine
 
         private static bool _isExecuteListDirty;
 
+#if UNITY_EDITOR
+        [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetEditorPlayModeState()
+        {
+            Shutdown();
+        }
+#endif
+
         /// <summary>
         /// 所有游戏框架模块轮询。
         /// </summary>
@@ -55,6 +63,7 @@ namespace TEngine
             _moduleMaps.Clear();
             _updateModules.Clear();
             _updateExecuteList.Clear();
+            _isExecuteListDirty = false;
             MemoryPool.ClearAll();
             Utility.Marshal.FreeCachedHGlobal();
         }

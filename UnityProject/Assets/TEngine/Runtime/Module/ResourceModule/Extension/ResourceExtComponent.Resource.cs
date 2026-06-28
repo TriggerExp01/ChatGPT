@@ -201,6 +201,13 @@ namespace TEngine
         /// </summary>
         private void OnDestroy()
         {
+            if (Instance == this)
+            {
+                Instance = null;
+            }
+
+            _resourceModule = null;
+
             foreach (var state in _loadingStates.Values)
             {
                 MemoryPool.Release(state);

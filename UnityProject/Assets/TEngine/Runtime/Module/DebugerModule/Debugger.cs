@@ -155,6 +155,12 @@ namespace TEngine
 
         private void OnDestroy()
         {
+            if (_instance == this)
+            {
+                _instance = null;
+            }
+
+            s_TextEditor = null;
             PlayerPrefs.Save();
         }
 
