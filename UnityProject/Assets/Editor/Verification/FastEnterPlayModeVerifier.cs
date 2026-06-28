@@ -15,18 +15,30 @@ namespace CodexTools.Verification
     {
         private const string MenuPath = "Codex/Verify/Fast Enter Play Mode Twice";
         private const string ReportPathFromRepoRoot = "Doc/验证报告/Phase81_FastEnterPlayMode_Twice_Verification.md";
-        private const double WaitSecondsPerPlayMode = 5.0d;
-        private const double TransitionTimeoutSeconds = 45.0d;
+        private const double MinWaitSecondsPerPlayMode = 10.0d;
+        private const int MinPlayFrames = 30;
+        private const double TransitionTimeoutSeconds = 90.0d;
 
         private static readonly List<string> KeyFailureLogs = new List<string>();
+        private static readonly List<string> PlayModeStateTimeline = new List<string>();
 
         private static VerificationPhase _phase = VerificationPhase.Idle;
+        private static VerificationResult _result = VerificationResult.Skipped;
         private static double _phaseStartedAt;
+        private static double _playModeEnteredAt;
+        private static int _playModeEnteredFrame;
+        private static WaitInfo _firstWaitInfo;
+        private static WaitInfo _secondWaitInfo;
         private static ConsoleSnapshot _firstSnapshot;
         private static ConsoleSnapshot _secondSnapshot;
         private static string _resultLog;
         private static string _reportPath;
         private static bool _isRunning;
+        private static bool _requestedExitPlayMode;
+        private static bool _requestedEnterPlayMode;
+        private static bool _unexpectedExitDetected;
+        private static string _unexpectedExitReason;
+        private static bool _hasFinished;
 
         private enum VerificationPhase
         {
@@ -37,7 +49,16 @@ namespace CodexTools.Verification
             EnteringSecondPlayMode,
             WaitingSecondPlayMode,
             ExitingSecondPlayMode,
+            FinishingAfterUnexpectedExit,
             Finished
+        }
+
+        private enum VerificationResult
+        {
+            Pass,
+            Fail,
+            FailDiagnostic,
+            Skipped
         }
 
         [MenuItem(MenuPath)]
@@ -49,57 +70,101 @@ namespace CodexTools.Verification
                 return;
             }
 
+            ResetRunState();
+            EditorApplication.update += Tick;
+            EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
+
             if (EditorApplication.isPlayingOrWillChangePlaymode || EditorApplication.isCompiling || EditorApplication.isUpdating)
             {
-                Debug.LogWarning("Fast Enter Play Mode twice verification skipped: editor is busy.");
+                _result = VerificationResult.Skipped;
+                _resultLog = "SKIPPED:\nFast Enter Play Mode twice verification skipped because editor is busy.";
+                _reportPath = WriteReport();
+                Finish();
                 return;
             }
 
             _isRunning = true;
+            ClearConsole();
+            SetPhase(VerificationPhase.EnteringFirstPlayMode);
+            RequestEnterPlayMode();
+            Debug.Log("Fast Enter Play Mode twice verification started.");
+        }
+
+        private static void ResetRunState()
+        {
+            _phase = VerificationPhase.Idle;
+            _result = VerificationResult.Skipped;
+            _phaseStartedAt = EditorApplication.timeSinceStartup;
+            _playModeEnteredAt = 0.0d;
+            _playModeEnteredFrame = 0;
+            _firstWaitInfo = WaitInfo.Empty;
+            _secondWaitInfo = WaitInfo.Empty;
             _firstSnapshot = ConsoleSnapshot.Empty;
             _secondSnapshot = ConsoleSnapshot.Empty;
             _resultLog = string.Empty;
             _reportPath = string.Empty;
+            _isRunning = false;
+            _requestedExitPlayMode = false;
+            _requestedEnterPlayMode = false;
+            _unexpectedExitDetected = false;
+            _unexpectedExitReason = string.Empty;
+            _hasFinished = false;
             KeyFailureLogs.Clear();
-
-            ClearConsole();
-            EditorApplication.update += Tick;
-            EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
-            SetPhase(VerificationPhase.EnteringFirstPlayMode);
-            EditorApplication.EnterPlaymode();
-            Debug.Log("Fast Enter Play Mode twice verification started.");
+            PlayModeStateTimeline.Clear();
         }
 
         private static void OnPlayModeStateChanged(PlayModeStateChange state)
         {
-            if (!_isRunning)
+            if (!_isRunning && _phase != VerificationPhase.Idle)
             {
                 return;
             }
 
-            if (state == PlayModeStateChange.EnteredPlayMode)
+            RecordPlayModeStateChange(state);
+
+            switch (state)
             {
-                if (_phase == VerificationPhase.EnteringFirstPlayMode)
-                {
-                    SetPhase(VerificationPhase.WaitingFirstPlayMode);
-                }
-                else if (_phase == VerificationPhase.EnteringSecondPlayMode)
-                {
-                    SetPhase(VerificationPhase.WaitingSecondPlayMode);
-                }
-            }
-            else if (state == PlayModeStateChange.EnteredEditMode)
-            {
-                if (_phase == VerificationPhase.ExitingFirstPlayMode)
-                {
-                    ClearConsole();
-                    SetPhase(VerificationPhase.EnteringSecondPlayMode);
-                    EditorApplication.delayCall += EditorApplication.EnterPlaymode;
-                }
-                else if (_phase == VerificationPhase.ExitingSecondPlayMode)
-                {
-                    Finish();
-                }
+                case PlayModeStateChange.ExitingEditMode:
+                    _requestedEnterPlayMode = true;
+                    _requestedExitPlayMode = false;
+                    break;
+
+                case PlayModeStateChange.EnteredPlayMode:
+                    _requestedEnterPlayMode = false;
+                    _requestedExitPlayMode = false;
+                    _playModeEnteredAt = EditorApplication.timeSinceStartup;
+                    _playModeEnteredFrame = Time.frameCount;
+                    if (_phase == VerificationPhase.EnteringFirstPlayMode)
+                    {
+                        SetPhase(VerificationPhase.WaitingFirstPlayMode);
+                    }
+                    else if (_phase == VerificationPhase.EnteringSecondPlayMode)
+                    {
+                        SetPhase(VerificationPhase.WaitingSecondPlayMode);
+                    }
+                    break;
+
+                case PlayModeStateChange.ExitingPlayMode:
+                    if (!_requestedExitPlayMode)
+                    {
+                        MarkUnexpectedExit("Editor left Play Mode without verifier exit request during " + _phase + ".");
+                    }
+                    break;
+
+                case PlayModeStateChange.EnteredEditMode:
+                    if (_phase == VerificationPhase.ExitingFirstPlayMode)
+                    {
+                        ClearConsole();
+                        SetPhase(VerificationPhase.EnteringSecondPlayMode);
+                        _requestedEnterPlayMode = false;
+                        _requestedExitPlayMode = false;
+                    }
+                    else if (_phase == VerificationPhase.ExitingSecondPlayMode ||
+                             _phase == VerificationPhase.FinishingAfterUnexpectedExit)
+                    {
+                        Finish();
+                    }
+                    break;
             }
         }
 
@@ -110,56 +175,59 @@ namespace CodexTools.Verification
                 switch (_phase)
                 {
                     case VerificationPhase.EnteringFirstPlayMode:
-                    case VerificationPhase.ExitingFirstPlayMode:
                     case VerificationPhase.EnteringSecondPlayMode:
-                    case VerificationPhase.ExitingSecondPlayMode:
+                        if (!EditorApplication.isPlaying && !EditorApplication.isPlayingOrWillChangePlaymode)
+                        {
+                            RequestEnterPlayMode();
+                        }
+
                         if (ElapsedInPhase() >= TransitionTimeoutSeconds)
                         {
                             FailAndFinish("Timed out during " + _phase + ".");
                         }
+                        break;
 
+                    case VerificationPhase.ExitingFirstPlayMode:
+                    case VerificationPhase.ExitingSecondPlayMode:
+                    case VerificationPhase.FinishingAfterUnexpectedExit:
+                        if (ElapsedInPhase() >= TransitionTimeoutSeconds)
+                        {
+                            FailAndFinish("Timed out during " + _phase + ".");
+                        }
                         break;
 
                     case VerificationPhase.WaitingFirstPlayMode:
+                        UpdateFirstWaitInfo();
                         if (!EditorApplication.isPlaying)
                         {
-                            FailAndFinish("Editor left first Play Mode before verification wait completed.");
+                            MarkUnexpectedExit("Editor left first Play Mode before verification wait completed.");
+                            _firstSnapshot = ReadConsoleSnapshot();
+                            FailDiagnosticAndExitIfNeeded();
                             return;
                         }
 
-                        if (ElapsedInPhase() >= WaitSecondsPerPlayMode)
+                        if (_firstWaitInfo.MeetsMinimumWait)
                         {
                             _firstSnapshot = ReadConsoleSnapshot();
-                            SetPhase(VerificationPhase.ExitingFirstPlayMode);
-                            EditorApplication.ExitPlaymode();
+                            RequestExitPlayMode(VerificationPhase.ExitingFirstPlayMode);
                         }
-
                         break;
 
                     case VerificationPhase.WaitingSecondPlayMode:
+                        UpdateSecondWaitInfo();
                         if (!EditorApplication.isPlaying)
                         {
-                            FailAndFinish("Editor left second Play Mode before verification wait completed.");
+                            MarkUnexpectedExit("Editor left second Play Mode before verification wait completed.");
+                            _secondSnapshot = ReadConsoleSnapshot();
+                            FailDiagnosticAndExitIfNeeded();
                             return;
                         }
 
-                        if (ElapsedInPhase() >= WaitSecondsPerPlayMode)
+                        if (_secondWaitInfo.MeetsMinimumWait)
                         {
                             _secondSnapshot = ReadConsoleSnapshot();
-                            var passed = _firstSnapshot.CanRead &&
-                                         _secondSnapshot.CanRead &&
-                                         _firstSnapshot.ErrorCount == 0 &&
-                                         _firstSnapshot.WarningCount == 0 &&
-                                         _secondSnapshot.ErrorCount == 0 &&
-                                         _secondSnapshot.WarningCount == 0;
-                            _resultLog = passed
-                                ? "PASS:\nFast Enter Play Mode twice verification passed."
-                                : "FAIL:\nFast Enter Play Mode twice verification failed.";
-                            _reportPath = WriteReport();
-                            SetPhase(VerificationPhase.ExitingSecondPlayMode);
-                            EditorApplication.ExitPlaymode();
+                            CompleteNormalVerification();
                         }
-
                         break;
                 }
             }
@@ -169,22 +237,90 @@ namespace CodexTools.Verification
             }
         }
 
-        private static void FailAndFinish(string reason)
+        private static void CompleteNormalVerification()
         {
-            AddKeyFailureLog(reason);
-            _resultLog = "FAIL:\nFast Enter Play Mode twice verification failed.";
+            var passed = _firstSnapshot.CanRead &&
+                         _secondSnapshot.CanRead &&
+                         _firstSnapshot.ErrorCount == 0 &&
+                         _firstSnapshot.WarningCount == 0 &&
+                         _secondSnapshot.ErrorCount == 0 &&
+                         _secondSnapshot.WarningCount == 0 &&
+                         !_unexpectedExitDetected;
+
+            _result = passed ? VerificationResult.Pass : VerificationResult.Fail;
+            _resultLog = passed
+                ? "PASS:\nFast Enter Play Mode twice verification passed."
+                : "FAIL:\nFast Enter Play Mode twice verification failed.";
+            _reportPath = WriteReport();
+            RequestExitPlayMode(VerificationPhase.ExitingSecondPlayMode);
+        }
+
+        private static void FailDiagnosticAndExitIfNeeded()
+        {
+            _result = VerificationResult.FailDiagnostic;
+            _resultLog = "FAIL-DIAGNOSTIC:\nFast Enter Play Mode twice verification ended with diagnostic failure.";
+            AddKeyFailureLog(_unexpectedExitReason);
             _reportPath = WriteReport();
 
             if (EditorApplication.isPlaying)
             {
-                EditorApplication.ExitPlaymode();
+                RequestExitPlayMode(VerificationPhase.FinishingAfterUnexpectedExit);
+            }
+            else
+            {
+                SetPhase(VerificationPhase.FinishingAfterUnexpectedExit);
+                Finish();
+            }
+        }
+
+        private static void FailAndFinish(string reason)
+        {
+            AddKeyFailureLog(reason);
+            if (_unexpectedExitDetected || IsTransitionPhase(_phase))
+            {
+                _result = VerificationResult.FailDiagnostic;
+                _resultLog = "FAIL-DIAGNOSTIC:\nFast Enter Play Mode twice verification ended with diagnostic failure.";
+            }
+            else
+            {
+                _result = VerificationResult.Fail;
+                _resultLog = "FAIL:\nFast Enter Play Mode twice verification failed.";
             }
 
-            Finish();
+            _reportPath = WriteReport();
+            if (EditorApplication.isPlaying)
+            {
+                RequestExitPlayMode(VerificationPhase.FinishingAfterUnexpectedExit);
+            }
+            else
+            {
+                Finish();
+            }
+        }
+
+        private static bool IsTransitionPhase(VerificationPhase phase)
+        {
+            return phase == VerificationPhase.EnteringFirstPlayMode ||
+                   phase == VerificationPhase.ExitingFirstPlayMode ||
+                   phase == VerificationPhase.EnteringSecondPlayMode ||
+                   phase == VerificationPhase.ExitingSecondPlayMode ||
+                   phase == VerificationPhase.FinishingAfterUnexpectedExit;
         }
 
         private static void Finish()
         {
+            if (_hasFinished)
+            {
+                return;
+            }
+
+            if (EditorApplication.isPlaying)
+            {
+                RequestExitPlayMode(VerificationPhase.FinishingAfterUnexpectedExit);
+                return;
+            }
+
+            _hasFinished = true;
             EditorApplication.update -= Tick;
             EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
             SetPhase(VerificationPhase.Finished);
@@ -192,7 +328,8 @@ namespace CodexTools.Verification
 
             if (string.IsNullOrEmpty(_resultLog))
             {
-                _resultLog = "FAIL:\nFast Enter Play Mode twice verification failed.";
+                _result = VerificationResult.Skipped;
+                _resultLog = "SKIPPED:\nFast Enter Play Mode twice verification did not run.";
             }
 
             if (string.IsNullOrEmpty(_reportPath) || !File.Exists(_reportPath))
@@ -200,14 +337,95 @@ namespace CodexTools.Verification
                 _reportPath = WriteReport();
             }
 
-            if (_resultLog.StartsWith("PASS:", StringComparison.Ordinal))
+            if (_result == VerificationResult.Pass)
             {
                 Debug.Log(_resultLog + "\nReport: " + _reportPath);
             }
             else
             {
-                Debug.LogError(_resultLog + "\nReport: " + _reportPath);
+                Debug.LogWarning(_resultLog + "\nReport: " + _reportPath);
             }
+        }
+
+        private static void RequestExitPlayMode(VerificationPhase nextPhase)
+        {
+            _requestedExitPlayMode = true;
+            _requestedEnterPlayMode = false;
+            SetPhase(nextPhase);
+            EditorApplication.ExitPlaymode();
+        }
+
+        private static void RequestEnterPlayMode()
+        {
+            if (_requestedEnterPlayMode)
+            {
+                return;
+            }
+
+            _requestedEnterPlayMode = true;
+            _requestedExitPlayMode = false;
+            EditorApplication.EnterPlaymode();
+        }
+
+        private static void MarkUnexpectedExit(string reason)
+        {
+            if (_unexpectedExitDetected)
+            {
+                return;
+            }
+
+            _unexpectedExitDetected = true;
+            _unexpectedExitReason = reason;
+            AddKeyFailureLog(reason);
+            if (_phase == VerificationPhase.WaitingFirstPlayMode)
+            {
+                UpdateFirstWaitInfo();
+            }
+            else if (_phase == VerificationPhase.WaitingSecondPlayMode)
+            {
+                UpdateSecondWaitInfo();
+            }
+        }
+
+        private static void RecordPlayModeStateChange(PlayModeStateChange state)
+        {
+            var line = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff") +
+                       " | state=" + state +
+                       " | phase=" + _phase +
+                       " | isPlaying=" + EditorApplication.isPlaying +
+                       " | isPlayingOrWillChangePlaymode=" + EditorApplication.isPlayingOrWillChangePlaymode +
+                       " | frame=" + Time.frameCount +
+                       " | requestedExit=" + _requestedExitPlayMode;
+            PlayModeStateTimeline.Add(line);
+        }
+
+        private static void UpdateFirstWaitInfo()
+        {
+            _firstWaitInfo = CaptureWaitInfo();
+        }
+
+        private static void UpdateSecondWaitInfo()
+        {
+            _secondWaitInfo = CaptureWaitInfo();
+        }
+
+        private static WaitInfo CaptureWaitInfo()
+        {
+            var elapsedSeconds = _playModeEnteredAt <= 0.0d
+                ? 0.0d
+                : EditorApplication.timeSinceStartup - _playModeEnteredAt;
+            var elapsedFrames = _playModeEnteredFrame <= 0
+                ? 0
+                : Time.frameCount - _playModeEnteredFrame;
+
+            return new WaitInfo
+            {
+                ElapsedSeconds = elapsedSeconds,
+                ElapsedFrames = elapsedFrames,
+                MeetsMinimumWait = EditorApplication.isPlaying &&
+                                   elapsedSeconds >= MinWaitSecondsPerPlayMode &&
+                                   elapsedFrames >= MinPlayFrames
+            };
         }
 
         private static void SetPhase(VerificationPhase phase)
@@ -240,6 +458,9 @@ namespace CodexTools.Verification
                 var getEntryInternal = logEntriesType.GetMethod("GetEntryInternal", staticFlags);
                 var modeField = logEntryType.GetField("mode", instanceFlags);
                 var conditionField = logEntryType.GetField("condition", instanceFlags);
+                var messageField = logEntryType.GetField("message", instanceFlags);
+                var fileField = logEntryType.GetField("file", instanceFlags);
+                var lineField = logEntryType.GetField("line", instanceFlags);
                 if (startGettingEntries == null ||
                     endGettingEntries == null ||
                     getCount == null ||
@@ -260,9 +481,7 @@ namespace CodexTools.Verification
                     {
                         getEntryInternal.Invoke(null, new[] { (object)i, entry });
                         var mode = (int)modeField.GetValue(entry);
-                        var condition = conditionField != null
-                            ? conditionField.GetValue(entry) as string ?? string.Empty
-                            : string.Empty;
+                        var condition = BuildLogEntryMessage(entry, conditionField, messageField, fileField, lineField, i);
 
                         if (IsErrorMode(mode))
                         {
@@ -287,6 +506,39 @@ namespace CodexTools.Verification
             {
                 return ConsoleSnapshot.Failed(exception.Message);
             }
+        }
+
+        private static string BuildLogEntryMessage(
+            object entry,
+            FieldInfo conditionField,
+            FieldInfo messageField,
+            FieldInfo fileField,
+            FieldInfo lineField,
+            int index)
+        {
+            var condition = conditionField != null ? conditionField.GetValue(entry) as string : null;
+            var message = messageField != null ? messageField.GetValue(entry) as string : null;
+            var file = fileField != null ? fileField.GetValue(entry) as string : null;
+            var line = lineField != null ? lineField.GetValue(entry) : null;
+            var text = !string.IsNullOrWhiteSpace(condition) ? condition : message;
+
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                text = "Console entry #" + index + " did not expose a readable message through reflection.";
+            }
+
+            if (!string.IsNullOrWhiteSpace(file))
+            {
+                text += " (" + file;
+                if (line != null)
+                {
+                    text += ":" + line;
+                }
+
+                text += ")";
+            }
+
+            return text;
         }
 
         private static bool IsErrorMode(int mode)
@@ -340,7 +592,6 @@ namespace CodexTools.Verification
         {
             var enterPlayModeEnabled = EditorSettings.enterPlayModeOptionsEnabled;
             var enterPlayModeOptions = EditorSettings.enterPlayModeOptions;
-            var passed = _resultLog.StartsWith("PASS:", StringComparison.Ordinal);
             var report = new StringBuilder();
 
             report.AppendLine("# Phase81 Fast Enter Play Mode 连续两次验证报告");
@@ -351,12 +602,11 @@ namespace CodexTools.Verification
             report.Append("- 当前 commit：").Append(RunGit("rev-parse --short HEAD")).AppendLine();
             report.Append("- Enter Play Mode Options Enabled：").Append(enterPlayModeEnabled ? "1" : "0").AppendLine();
             report.Append("- Enter Play Mode Options：").Append((int)enterPlayModeOptions).Append(" (").Append(enterPlayModeOptions).AppendLine(")");
-            report.Append("- 第一次 Play Mode Console Error：").Append(_firstSnapshot.ErrorCount).AppendLine();
-            report.Append("- 第一次 Play Mode Console Warning：").Append(_firstSnapshot.WarningCount).AppendLine();
-            report.Append("- 第二次 Play Mode Console Error：").Append(_secondSnapshot.ErrorCount).AppendLine();
-            report.Append("- 第二次 Play Mode Console Warning：").Append(_secondSnapshot.WarningCount).AppendLine();
-            report.Append("- Console 读取状态：").Append(GetConsoleReadStatus()).AppendLine();
-            report.Append("- 是否通过：").Append(passed ? "通过" : "失败").AppendLine();
+            report.Append("- 最终结果：").Append(GetResultText()).AppendLine();
+            report.Append("- 最终阶段：").Append(_phase).AppendLine();
+            report.Append("- 是否发生非预期退出：").Append(_unexpectedExitDetected ? "true" : "false").AppendLine();
+            report.Append("- 非预期退出原因：").Append(string.IsNullOrEmpty(_unexpectedExitReason) ? "无" : _unexpectedExitReason).AppendLine();
+            report.Append("- 是否工具主动请求退出：").Append(_requestedExitPlayMode ? "true" : "false").AppendLine();
             report.AppendLine();
             report.AppendLine("## 验证结论");
             report.AppendLine();
@@ -364,7 +614,42 @@ namespace CodexTools.Verification
             report.AppendLine(_resultLog);
             report.AppendLine("```");
             report.AppendLine();
-            report.AppendLine("## 关键错误或警告日志");
+            AppendWaitInfo(report);
+            AppendConsoleSnapshot(report);
+            AppendTimeline(report);
+            AppendUnmodifiedScope(report);
+            return report.ToString();
+        }
+
+        private static void AppendWaitInfo(StringBuilder report)
+        {
+            report.AppendLine("## 每轮 Play Mode 等待信息");
+            report.AppendLine();
+            AppendSingleWaitInfo(report, "第一次", _firstWaitInfo);
+            AppendSingleWaitInfo(report, "第二次", _secondWaitInfo);
+            report.AppendLine();
+        }
+
+        private static void AppendSingleWaitInfo(StringBuilder report, string label, WaitInfo waitInfo)
+        {
+            report.Append("- ").Append(label)
+                .Append("实际等待秒数：").Append(waitInfo.ElapsedSeconds.ToString("0.00"))
+                .Append("，实际经过帧数：").Append(waitInfo.ElapsedFrames)
+                .Append("，是否满足最短等待条件：").Append(waitInfo.MeetsMinimumWait ? "true" : "false")
+                .AppendLine();
+        }
+
+        private static void AppendConsoleSnapshot(StringBuilder report)
+        {
+            report.AppendLine("## Console Snapshot");
+            report.AppendLine();
+            report.Append("- 第一次 Play Mode Console Error：").Append(_firstSnapshot.ErrorCount).AppendLine();
+            report.Append("- 第一次 Play Mode Console Warning：").Append(_firstSnapshot.WarningCount).AppendLine();
+            report.Append("- 第二次 Play Mode Console Error：").Append(_secondSnapshot.ErrorCount).AppendLine();
+            report.Append("- 第二次 Play Mode Console Warning：").Append(_secondSnapshot.WarningCount).AppendLine();
+            report.Append("- Console 读取状态：").Append(GetConsoleReadStatus()).AppendLine();
+            report.AppendLine();
+            report.AppendLine("### 关键错误或警告日志");
             report.AppendLine();
             if (KeyFailureLogs.Count == 0)
             {
@@ -379,6 +664,29 @@ namespace CodexTools.Verification
             }
 
             report.AppendLine();
+        }
+
+        private static void AppendTimeline(StringBuilder report)
+        {
+            report.AppendLine("## PlayModeStateChange 时间线");
+            report.AppendLine();
+            if (PlayModeStateTimeline.Count == 0)
+            {
+                report.AppendLine("- 未记录到 PlayModeStateChange。");
+            }
+            else
+            {
+                foreach (var line in PlayModeStateTimeline)
+                {
+                    report.Append("- ").Append(SanitizeMarkdownLine(line)).AppendLine();
+                }
+            }
+
+            report.AppendLine();
+        }
+
+        private static void AppendUnmodifiedScope(StringBuilder report)
+        {
             report.AppendLine("## 本轮未修改范围");
             report.AppendLine();
             report.AppendLine("- 未修改 UI Prefab。");
@@ -389,8 +697,21 @@ namespace CodexTools.Verification
             report.AppendLine("- 未修改 UIModule。");
             report.AppendLine("- 未修改 ProjectSettings。");
             report.AppendLine("- 未恢复旧肉鸽玩法、旧 UI Prefab 或旧视觉资产。");
+        }
 
-            return report.ToString();
+        private static string GetResultText()
+        {
+            switch (_result)
+            {
+                case VerificationResult.Pass:
+                    return "PASS";
+                case VerificationResult.Fail:
+                    return "FAIL";
+                case VerificationResult.FailDiagnostic:
+                    return "FAIL-DIAGNOSTIC";
+                default:
+                    return "SKIPPED";
+            }
         }
 
         private static string GetConsoleReadStatus()
@@ -484,6 +805,15 @@ namespace CodexTools.Verification
                     ReadError = error
                 };
             }
+        }
+
+        private struct WaitInfo
+        {
+            public static readonly WaitInfo Empty = new WaitInfo();
+
+            public double ElapsedSeconds;
+            public int ElapsedFrames;
+            public bool MeetsMinimumWait;
         }
     }
 }

@@ -44,6 +44,22 @@ Doc/验证报告/Phase81_FastEnterPlayMode_Twice_Verification.md
 
 ## 已验证结果
 
+首版工具已能生成报告，但曾在第一次 Play Mode 等待阶段发现 Editor 提前退出：
+
+```text
+Editor left first Play Mode before verification wait completed.
+```
+
+该结果不能证明 Phase80 的 TEngine 生命周期修复失败，因为当次报告中的 Console Error / Warning 均为 0，且 Console 读取状态为成功。本轮目标改为增强 Phase81 验证工具的状态机与诊断能力，让它能区分 TEngine 运行错误和验证环境/外部退出问题。
+
+本轮增强内容：
+
+- 增加 `PlayModeStateChange` 时间线，记录 `EnteredEditMode`、`ExitingEditMode`、`EnteredPlayMode`、`ExitingPlayMode`。
+- 增加工具主动退出标记，用于区分工具自身请求退出和非预期退出。
+- 增加非预期退出诊断，不再把提前离开 Play Mode 简单归类为普通失败。
+- 等待条件改为最短秒数 + 最短帧数：至少 10 秒且至少 30 帧。
+- 无论 PASS / FAIL / FAIL-DIAGNOSTIC / SKIPPED，均生成 Markdown 报告。
+
 工具已实现，并已通过以下静态验证：
 
 - `dotnet build UnityProject\UnityProject.sln --no-restore`：通过，存在既有依赖版本冲突警告，无编译错误。
