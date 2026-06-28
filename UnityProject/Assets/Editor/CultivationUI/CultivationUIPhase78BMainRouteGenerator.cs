@@ -10,13 +10,18 @@ public static class CultivationUIPhase78BMainRouteGenerator
 {
     private const string ThemeRoot = "Assets/AssetRaw/UIRaw/Theme/Cultivation";
     private const string PhaseDir = ThemeRoot + "/Phase78B";
+    private const string FinalPhaseDir = ThemeRoot + "/Phase78C";
     private const string TemplateDir = ThemeRoot + "/Templates/SteamDemo";
     private const string FontPath = "Assets/AssetRaw/Fonts/NotoSansCJKsc-VF.ttf";
     private const string PrefabName = "Steam_MainRoute_Phase78B";
     private const string PrefabPath = TemplateDir + "/" + PrefabName + ".prefab";
     private const string ScreenshotName = "Steam_MainRoute_Concept_Phase78B.png";
+    private const string FinalPrefabName = "Steam_MainRoute_Final";
+    private const string FinalPrefabPath = TemplateDir + "/" + FinalPrefabName + ".prefab";
+    private const string FinalScreenshotName = "Steam_MainRoute_Final.png";
 
     private static Font _font;
+    private static string _activePhaseDir = PhaseDir;
 
     [MenuItem("Codex/Cultivation UI/Phase78B/Generate MainRoute Ref Replica And Screenshot")]
     public static void GenerateMainRouteRefReplicaAndScreenshot()
@@ -28,11 +33,22 @@ public static class CultivationUIPhase78BMainRouteGenerator
         Debug.Log("Phase78B MainRoute reference replica generated.");
     }
 
+    [MenuItem("Codex/Cultivation UI/Phase78C/Generate MainRoute Final Visual Baseline And Screenshot")]
+    public static void GenerateMainRouteFinalAndScreenshot()
+    {
+        GenerateMainRouteFinalPrefab();
+        CaptureMainRouteFinalScreenshot();
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+        Debug.Log("Phase78C MainRoute final visual baseline generated.");
+    }
+
     [MenuItem("Codex/Cultivation UI/Phase78B/Generate MainRoute Ref Replica Prefab")]
     public static void GenerateMainRoutePrefab()
     {
         EnsureDirectories();
-        GeneratePhaseTextures();
+        _activePhaseDir = PhaseDir;
+        GeneratePhaseTextures(PhaseDir);
 
         var root = CreateRoot(PrefabName);
         BuildMainRoute(root.transform);
@@ -45,21 +61,59 @@ public static class CultivationUIPhase78BMainRouteGenerator
         Debug.Log("Generated Phase78B MainRoute prefab: " + PrefabPath);
     }
 
+    [MenuItem("Codex/Cultivation UI/Phase78C/Generate MainRoute Final Visual Baseline Prefab")]
+    public static void GenerateMainRouteFinalPrefab()
+    {
+        EnsureDirectories();
+        _activePhaseDir = FinalPhaseDir;
+        GeneratePhaseTextures(FinalPhaseDir);
+
+        var root = CreateRoot(FinalPrefabName);
+        BuildMainRoute(root.transform);
+
+        PrefabUtility.SaveAsPrefabAsset(root, FinalPrefabPath);
+        UnityEngine.Object.DestroyImmediate(root);
+
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+        Debug.Log("Generated Phase78C MainRoute final prefab: " + FinalPrefabPath);
+    }
+
     [MenuItem("Codex/Cultivation UI/Phase78B/Capture MainRoute Ref Replica Screenshot")]
     public static string CaptureMainRouteScreenshot()
     {
-        var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath);
+        return CaptureMainRoutePrefab(PrefabPath, PrefabName, ScreenshotName, "Phase78B");
+    }
+
+    [MenuItem("Codex/Cultivation UI/Phase78C/Capture MainRoute Final Visual Baseline Screenshot")]
+    public static string CaptureMainRouteFinalScreenshot()
+    {
+        return CaptureMainRoutePrefab(FinalPrefabPath, FinalPrefabName, FinalScreenshotName, "Phase78C");
+    }
+
+    private static string CaptureMainRoutePrefab(string prefabPath, string prefabName, string screenshotName, string phaseName)
+    {
+        var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
         if (prefab == null)
         {
-            GenerateMainRoutePrefab();
-            prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath);
+            if (prefabName == FinalPrefabName)
+            {
+                GenerateMainRouteFinalPrefab();
+                _activePhaseDir = FinalPhaseDir;
+            }
+            else
+            {
+                GenerateMainRoutePrefab();
+                _activePhaseDir = PhaseDir;
+            }
+            prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
         }
 
         var instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
-        instance.name = PrefabName + "_CaptureInstance";
+        instance.name = prefabName + "_CaptureInstance";
         instance.hideFlags = HideFlags.HideAndDontSave;
 
-        var cameraObject = new GameObject(PrefabName + "_CaptureCamera");
+        var cameraObject = new GameObject(prefabName + "_CaptureCamera");
         cameraObject.hideFlags = HideFlags.HideAndDontSave;
         var camera = cameraObject.AddComponent<Camera>();
         camera.clearFlags = CameraClearFlags.SolidColor;
@@ -96,7 +150,7 @@ public static class CultivationUIPhase78BMainRouteGenerator
 
         var screenshotDir = Path.Combine(GetRepositoryRoot(), "Doc", "UI截图验收");
         Directory.CreateDirectory(screenshotDir);
-        var screenshotPath = Path.Combine(screenshotDir, ScreenshotName);
+        var screenshotPath = Path.Combine(screenshotDir, screenshotName);
         WriteAllBytesWithRetry(screenshotPath, texture.EncodeToPNG());
 
         camera.targetTexture = previousTarget;
@@ -106,7 +160,7 @@ public static class CultivationUIPhase78BMainRouteGenerator
         UnityEngine.Object.DestroyImmediate(instance);
         UnityEngine.Object.DestroyImmediate(cameraObject);
 
-        Debug.Log("Captured Phase78B MainRoute screenshot: " + screenshotPath);
+        Debug.Log("Captured " + phaseName + " MainRoute screenshot: " + screenshotPath);
         return screenshotPath;
     }
 
@@ -148,28 +202,30 @@ public static class CultivationUIPhase78BMainRouteGenerator
 
     private static void AddCharacterArchive(Transform root)
     {
-        var panel = AddImage("Left_CultivatorArchivePanel", root, SpriteAt("Panel/Panel_Main_JadeThin.png"), RectSpec.Center(new Vector2(-730, 18), new Vector2(390, 842)));
+        var panel = AddImage("Left_CultivatorArchivePanel", root, SpriteAt("Panel/Panel_Main_JadeThin.png"), RectSpec.Center(new Vector2(-728, 18), new Vector2(390, 842)));
         panel.type = Image.Type.Sliced;
-        panel.color = new Color(0.72f, 0.78f, 0.68f, 0.95f);
+        panel.color = new Color(0.62f, 0.67f, 0.58f, 0.96f);
 
-        AddImage("Left_PortraitPaper", root, SpriteAt("Panel/Panel_Secondary_Parchment.png"), RectSpec.Top(new Vector2(-730, -115), new Vector2(340, 320))).type = Image.Type.Sliced;
-        AddImage("Left_Portrait", root, PhaseSprite("Portrait_Phase78B_Cultivator.png"), RectSpec.Top(new Vector2(-730, -137), new Vector2(300, 280)));
-        AddText("Left_ClassStamp", root, "修\n士", 42, Hex("#11100C"), TextAnchor.MiddleCenter, RectSpec.Top(new Vector2(-872, -170), new Vector2(76, 120)), FontStyle.Bold);
-        AddText("Left_Name", root, "凌云子", 28, Hex("#F0DEB8"), TextAnchor.MiddleCenter, RectSpec.Top(new Vector2(-730, -380), new Vector2(220, 42)), FontStyle.Bold);
-        AddText("Left_RealmTitle", root, "境界", 18, Hex("#BBA26D"), TextAnchor.MiddleLeft, RectSpec.Top(new Vector2(-865, -414), new Vector2(90, 28)));
-        AddText("Left_RealmValue", root, "筑基中期", 22, Hex("#E8D8B2"), TextAnchor.MiddleRight, RectSpec.Top(new Vector2(-645, -414), new Vector2(150, 30)), FontStyle.Bold);
+        AddImage("Left_InnerParchment", root, SpriteAt("Panel/Panel_Secondary_Parchment.png"), RectSpec.Top(new Vector2(-728, -104), new Vector2(338, 372))).type = Image.Type.Sliced;
+        AddImage("Left_Portrait", root, PhaseSprite("Portrait_Phase78B_Cultivator.png"), RectSpec.Top(new Vector2(-728, -118), new Vector2(306, 344)));
+        AddImage("Left_PortraitShade", root, SpriteAt("Background/BG_Cultivation_Vignette.png"), RectSpec.Top(new Vector2(-728, -118), new Vector2(306, 344))).color = new Color(0f, 0f, 0f, 0.18f);
+        AddText("Left_ClassStamp", root, "修\n士", 44, Hex("#19140C"), TextAnchor.MiddleCenter, RectSpec.Top(new Vector2(-872, -162), new Vector2(76, 124)), FontStyle.Bold);
+        AddText("Left_Name", root, "凌云子", 30, Hex("#F0DEB8"), TextAnchor.MiddleCenter, RectSpec.Top(new Vector2(-728, -382), new Vector2(220, 42)), FontStyle.Bold);
+        AddImage("Left_NameLine", root, SpriteAt("Divider/Divider_InkGold.png"), RectSpec.Top(new Vector2(-728, -424), new Vector2(308, 4))).color = new Color(0.86f, 0.68f, 0.36f, 0.34f);
+        AddText("Left_RealmTitle", root, "境界", 18, Hex("#BBA26D"), TextAnchor.MiddleLeft, RectSpec.Top(new Vector2(-865, -432), new Vector2(90, 28)));
+        AddText("Left_RealmValue", root, "筑基中期", 22, Hex("#E8D8B2"), TextAnchor.MiddleRight, RectSpec.Top(new Vector2(-645, -432), new Vector2(150, 30)), FontStyle.Bold);
 
-        AddProfileLine(root, "气血", "72/72", -462, "♥");
-        AddProfileLine(root, "灵力", "48/56", -507, "◎");
-        AddProfileLine(root, "攻击", "14", -552, "╱");
-        AddProfileLine(root, "防御", "9", -597, "◇");
-        AddProfileLine(root, "身法", "16", -642, "↯");
-        AddProfileLine(root, "悟性", "12", -687, "▰");
+        AddProfileLine(root, "气血", "72/72", -476, "♥");
+        AddProfileLine(root, "灵力", "48/56", -520, "◎");
+        AddProfileLine(root, "攻击", "14", -564, "╱");
+        AddProfileLine(root, "防御", "9", -608, "◇");
+        AddProfileLine(root, "身法", "16", -652, "↯");
+        AddProfileLine(root, "悟性", "12", -696, "▰");
 
-        AddText("Left_StatusTitle", root, "当前状态", 20, Hex("#D2B76F"), TextAnchor.MiddleLeft, RectSpec.Top(new Vector2(-815, -735), new Vector2(180, 28)), FontStyle.Bold);
-        AddStatusTag(root, "清\n心", "剩余\n2天", new Vector2(-825, -840), Hex("#2B663A"));
-        AddStatusTag(root, "御\n剑", "剩余\n3天", new Vector2(-730, -840), Hex("#24546B"));
-        AddStatusTag(root, "灵\n动", "剩余\n1天", new Vector2(-635, -840), Hex("#43356E"));
+        AddText("Left_StatusTitle", root, "当前状态", 20, Hex("#D2B76F"), TextAnchor.MiddleLeft, RectSpec.Top(new Vector2(-815, -748), new Vector2(180, 28)), FontStyle.Bold);
+        AddStatusTag(root, "清\n心", "剩余\n2天", new Vector2(-825, -804), Hex("#2B663A"));
+        AddStatusTag(root, "御\n剑", "剩余\n3天", new Vector2(-728, -804), Hex("#24546B"));
+        AddStatusTag(root, "灵\n动", "剩余\n1天", new Vector2(-631, -804), Hex("#43356E"));
     }
 
     private static void AddProfileLine(Transform root, string label, string value, float topY, string icon)
@@ -182,37 +238,37 @@ public static class CultivationUIPhase78BMainRouteGenerator
 
     private static void AddStatusTag(Transform root, string glyph, string days, Vector2 topPosition, Color color)
     {
-        var tag = AddImage("Left_StatusTag_" + glyph.Replace("\n", ""), root, SpriteAt("Panel/Panel_Bamboo_Tag.png"), RectSpec.Top(topPosition, new Vector2(62, 118)));
+        var tag = AddImage("Left_StatusTag_" + glyph.Replace("\n", ""), root, SpriteAt("Panel/Panel_Bamboo_Tag.png"), RectSpec.Top(topPosition, new Vector2(68, 128)));
         tag.type = Image.Type.Sliced;
         tag.color = color;
-        AddText("Left_StatusGlyph_" + glyph.Replace("\n", ""), root, glyph, 30, Hex("#E9D7AD"), TextAnchor.MiddleCenter, RectSpec.Top(topPosition + new Vector2(0, -8), new Vector2(58, 78)), FontStyle.Bold);
-        AddText("Left_StatusDays_" + glyph.Replace("\n", ""), root, days, 16, Hex("#D9C99B"), TextAnchor.MiddleCenter, RectSpec.Top(topPosition + new Vector2(0, -92), new Vector2(62, 46)));
+        AddText("Left_StatusGlyph_" + glyph.Replace("\n", ""), root, glyph, 29, Hex("#E9D7AD"), TextAnchor.MiddleCenter, RectSpec.Top(topPosition + new Vector2(0, -8), new Vector2(60, 78)), FontStyle.Bold);
+        AddText("Left_StatusDays_" + glyph.Replace("\n", ""), root, days, 15, Hex("#D9C99B"), TextAnchor.MiddleCenter, RectSpec.Top(topPosition + new Vector2(0, -94), new Vector2(66, 42)));
     }
 
     private static void AddScrollRouteMap(Transform root)
     {
-        AddImage("Center_MapShadow", root, SpriteAt("Panel/Panel_Bottom_Transparent.png"), RectSpec.Center(new Vector2(8, -16), new Vector2(1060, 800))).color = new Color(0f, 0f, 0f, 0.38f);
-        AddImage("Center_LeftScrollRoller", root, PhaseSprite("ScrollRoller_Phase78B.png"), RectSpec.Center(new Vector2(-496, 18), new Vector2(74, 820)));
-        AddImage("Center_RightScrollRoller", root, PhaseSprite("ScrollRoller_Phase78B.png"), RectSpec.Center(new Vector2(496, 18), new Vector2(74, 820)));
-        var map = AddImage("Center_ParchmentRouteMap", root, PhaseSprite("Map_Phase78B_ParchmentScroll.png"), RectSpec.Center(new Vector2(0, 18), new Vector2(960, 760)));
+        AddImage("Center_MapShadow", root, SpriteAt("Panel/Panel_Bottom_Transparent.png"), RectSpec.Center(new Vector2(10, -18), new Vector2(1080, 802))).color = new Color(0f, 0f, 0f, 0.34f);
+        AddImage("Center_LeftScrollRoller", root, PhaseSprite("ScrollRoller_Phase78B.png"), RectSpec.Center(new Vector2(-508, 18), new Vector2(78, 828)));
+        AddImage("Center_RightScrollRoller", root, PhaseSprite("ScrollRoller_Phase78B.png"), RectSpec.Center(new Vector2(508, 18), new Vector2(78, 828)));
+        var map = AddImage("Center_ParchmentRouteMap", root, PhaseSprite("Map_Phase78B_ParchmentScroll.png"), RectSpec.Center(new Vector2(0, 18), new Vector2(986, 760)));
         map.color = new Color(1f, 0.98f, 0.88f, 1f);
 
         AddText("Center_MapVerticalTitle", root, "云\n雾\n秘\n境", 42, Hex("#171209"), TextAnchor.MiddleCenter, RectSpec.Center(new Vector2(-390, 166), new Vector2(86, 260)), FontStyle.Bold);
         AddText("Center_MapSeal", root, "印", 20, Hex("#9F3829"), TextAnchor.MiddleCenter, RectSpec.Center(new Vector2(-382, 16), new Vector2(30, 30)), FontStyle.Bold);
 
-        var hub = new Vector2(48, -8);
+        var hub = new Vector2(50, -4);
         var battle = new Vector2(26, 214);
         var eventNode = new Vector2(-250, 112);
         var chest = new Vector2(302, 92);
         var rest = new Vector2(-248, -226);
         var market = new Vector2(248, -248);
 
-        AddSpiritCurve(root, hub, battle, new Vector2(80, 110), "Center_Path_Hub_Battle");
-        AddSpiritCurve(root, hub, eventNode, new Vector2(-92, 95), "Center_Path_Hub_Event");
-        AddSpiritCurve(root, hub, chest, new Vector2(210, 36), "Center_Path_Hub_Chest");
-        AddSpiritCurve(root, hub, rest, new Vector2(-72, -120), "Center_Path_Hub_Rest");
-        AddSpiritCurve(root, hub, market, new Vector2(170, -126), "Center_Path_Hub_Market");
-        AddSpiritCurve(root, eventNode, battle, new Vector2(-92, 232), "Center_Path_Event_Battle");
+        AddSpiritCurve(root, hub, battle, new Vector2(78, 118), "Center_Path_Hub_Battle");
+        AddSpiritCurve(root, hub, eventNode, new Vector2(-98, 104), "Center_Path_Hub_Event");
+        AddSpiritCurve(root, hub, chest, new Vector2(226, 48), "Center_Path_Hub_Chest");
+        AddSpiritCurve(root, hub, rest, new Vector2(-90, -126), "Center_Path_Hub_Rest");
+        AddSpiritCurve(root, hub, market, new Vector2(174, -136), "Center_Path_Hub_Market");
+        AddSpiritCurve(root, eventNode, battle, new Vector2(-94, 240), "Center_Path_Event_Battle");
 
         AddMapNode(root, "Center_Node_Event", "奇遇", eventNode, "RouteNode/Node_Event_Scroll.png", false);
         AddMapNode(root, "Center_Node_Battle", "战斗", battle, "RouteNode/Node_Battle_Sword.png", false);
@@ -251,14 +307,15 @@ public static class CultivationUIPhase78BMainRouteGenerator
     {
         if (current)
         {
-            AddImage(name + "_OuterGlow", root, SpriteAt("RouteNode/Node_Current_Glow.png"), RectSpec.Center(position, new Vector2(190, 190))).color = new Color(1f, 0.78f, 0.24f, 0.72f);
-            AddImage(name + "_FocusRing", root, SpriteAt("RouteNode/Node_Current_Glow.png"), RectSpec.Center(position, new Vector2(136, 136))).color = new Color(1f, 0.93f, 0.56f, 0.88f);
-            AddImage(name + "_Island", root, PhaseSprite("MapCenter_Island_Phase78B.png"), RectSpec.Center(position, new Vector2(102, 102)));
+            AddImage(name + "_OuterGlow", root, SpriteAt("RouteNode/Node_Current_Glow.png"), RectSpec.Center(position, new Vector2(214, 214))).color = new Color(1f, 0.74f, 0.20f, 0.78f);
+            AddImage(name + "_MiddleGlow", root, SpriteAt("RouteNode/Node_Current_Glow.png"), RectSpec.Center(position, new Vector2(166, 166))).color = new Color(1f, 0.88f, 0.42f, 0.70f);
+            AddImage(name + "_FocusRing", root, SpriteAt("RouteNode/Node_Current_Glow.png"), RectSpec.Center(position, new Vector2(126, 126))).color = new Color(1f, 0.96f, 0.66f, 0.90f);
+            AddImage(name + "_Island", root, PhaseSprite("MapCenter_Island_Phase78B.png"), RectSpec.Center(position, new Vector2(104, 104)));
             return;
         }
 
-        AddImage(name + "_Glow", root, SpriteAt("RouteNode/Node_Current_Glow.png"), RectSpec.Center(position, new Vector2(132, 132))).color = new Color(1f, 0.78f, 0.35f, 0.28f);
-        AddImage(name + "_Icon", root, SpriteAt(iconPath), RectSpec.Center(position, new Vector2(96, 96)));
+        AddImage(name + "_Glow", root, SpriteAt("RouteNode/Node_Current_Glow.png"), RectSpec.Center(position, new Vector2(138, 138))).color = new Color(1f, 0.78f, 0.35f, 0.32f);
+        AddImage(name + "_Icon", root, SpriteAt(iconPath), RectSpec.Center(position, new Vector2(104, 104)));
         var labelBg = AddImage(name + "_InkLabel", root, SpriteAt("Panel/Panel_Bottom_Transparent.png"), RectSpec.Center(position + new Vector2(0, -63), new Vector2(114, 34)));
         labelBg.type = Image.Type.Sliced;
         labelBg.color = new Color(0.03f, 0.025f, 0.018f, 0.78f);
@@ -279,19 +336,21 @@ public static class CultivationUIPhase78BMainRouteGenerator
 
     private static void AddPreviewCard(Transform root, string title, string cost, string type, string desc, string art, Vector2 center, Color tagColor)
     {
-        var card = AddImage("Right_Card_" + title, root, SpriteAt("Card/Card_Cultivation_Common.png"), RectSpec.Center(center, new Vector2(330, 238)));
+        var card = AddImage("Right_Card_" + title, root, SpriteAt("Card/Card_Cultivation_Common.png"), RectSpec.Center(center, new Vector2(342, 242)));
         card.type = Image.Type.Sliced;
-        card.color = new Color(1f, 0.96f, 0.84f, 1f);
-        AddImage("Right_CardArt_" + title, root, PhaseSprite(art), RectSpec.Center(center + new Vector2(0, 34), new Vector2(286, 104)));
-        AddImage("Right_CostOrb_" + title, root, SpriteAt("Card/CostOrb_Gold.png"), RectSpec.Center(center + new Vector2(-142, 84), new Vector2(52, 52)));
-        AddText("Right_Cost_" + title, root, cost, 27, Hex("#11160F"), TextAnchor.MiddleCenter, RectSpec.Center(center + new Vector2(-142, 84), new Vector2(48, 48)), FontStyle.Bold);
-        AddText("Right_CardTitle_" + title, root, title, 29, Hex("#20170D"), TextAnchor.MiddleLeft, RectSpec.Center(center + new Vector2(18, 84), new Vector2(220, 42)), FontStyle.Bold);
-        var typeTag = AddImage("Right_TypeTag_" + title, root, SpriteAt("Panel/Panel_Bamboo_Tag.png"), RectSpec.Center(center + new Vector2(122, 82), new Vector2(72, 34)));
+        card.color = new Color(0.92f, 0.82f, 0.60f, 1f);
+        AddImage("Right_CardDescPaper_" + title, root, PhaseSprite("CardDescPaper_Phase78B.png"), RectSpec.Center(center + new Vector2(0, -72), new Vector2(300, 78))).type = Image.Type.Sliced;
+        AddImage("Right_CardArt_" + title, root, PhaseSprite(art), RectSpec.Center(center + new Vector2(0, 34), new Vector2(292, 108)));
+        AddImage("Right_CardArtFrame_" + title, root, SpriteAt("Divider/Divider_InkGold.png"), RectSpec.Center(center + new Vector2(0, -22), new Vector2(300, 4))).color = new Color(0.36f, 0.25f, 0.14f, 0.45f);
+        AddImage("Right_CostOrb_" + title, root, SpriteAt("Card/CostOrb_Gold.png"), RectSpec.Center(center + new Vector2(-144, 86), new Vector2(56, 56)));
+        AddText("Right_Cost_" + title, root, cost, 28, Hex("#11160F"), TextAnchor.MiddleCenter, RectSpec.Center(center + new Vector2(-144, 86), new Vector2(50, 50)), FontStyle.Bold);
+        AddText("Right_CardTitle_" + title, root, title, 28, Hex("#20170D"), TextAnchor.MiddleLeft, RectSpec.Center(center + new Vector2(20, 86), new Vector2(214, 42)), FontStyle.Bold);
+        var typeTag = AddImage("Right_TypeTag_" + title, root, SpriteAt("Panel/Panel_Bamboo_Tag.png"), RectSpec.Center(center + new Vector2(124, 84), new Vector2(74, 34)));
         typeTag.type = Image.Type.Sliced;
         typeTag.color = tagColor;
-        AddText("Right_Type_" + title, root, type, 17, Hex("#EDE2C5"), TextAnchor.MiddleCenter, RectSpec.Center(center + new Vector2(122, 82), new Vector2(68, 30)), FontStyle.Bold);
-        AddText("Right_Desc_" + title, root, desc, 20, Hex("#241B11"), TextAnchor.UpperLeft, RectSpec.Center(center + new Vector2(0, -74), new Vector2(282, 70)), FontStyle.Bold);
-        AddText("Right_CardMark_" + title, root, "◇", 24, Hex("#2B2112"), TextAnchor.MiddleRight, RectSpec.Center(center + new Vector2(134, -92), new Vector2(32, 32)), FontStyle.Bold);
+        AddText("Right_Type_" + title, root, type, 17, Hex("#EDE2C5"), TextAnchor.MiddleCenter, RectSpec.Center(center + new Vector2(124, 84), new Vector2(70, 30)), FontStyle.Bold);
+        AddText("Right_Desc_" + title, root, desc, 18, Hex("#1F160D"), TextAnchor.UpperLeft, RectSpec.Center(center + new Vector2(0, -72), new Vector2(282, 66)), FontStyle.Bold);
+        AddText("Right_CardMark_" + title, root, "◇", 24, Hex("#2B2112"), TextAnchor.MiddleRight, RectSpec.Center(center + new Vector2(136, -94), new Vector2(32, 32)), FontStyle.Bold);
     }
 
     private static void AddBottomActions(Transform root)
@@ -320,17 +379,18 @@ public static class CultivationUIPhase78BMainRouteGenerator
         AddText("Bottom_ButtonLabel_" + label, root, label, 27, Hex("#DCCB9C"), TextAnchor.MiddleCenter, RectSpec.Center(center + new Vector2(24, 0), new Vector2(92, 40)), FontStyle.Bold);
     }
 
-    private static void GeneratePhaseTextures()
+    private static void GeneratePhaseTextures(string outputDir)
     {
-        CreateTableMist(PhaseDir + "/BG_Phase78B_TableMist.png");
-        CreateParchmentMap(PhaseDir + "/Map_Phase78B_ParchmentScroll.png");
-        CreateScrollRoller(PhaseDir + "/ScrollRoller_Phase78B.png");
-        CreateSpiritLine(PhaseDir + "/SpiritLine_Phase78B.png");
-        CreatePortrait(PhaseDir + "/Portrait_Phase78B_Cultivator.png");
-        CreateCardArt(PhaseDir + "/CardArt_Phase78B_Sword.png", 0);
-        CreateCardArt(PhaseDir + "/CardArt_Phase78B_Step.png", 1);
-        CreateCardArt(PhaseDir + "/CardArt_Phase78B_Meditation.png", 2);
-        CreateIsland(PhaseDir + "/MapCenter_Island_Phase78B.png");
+        CreateTableMist(outputDir + "/BG_Phase78B_TableMist.png");
+        CreateParchmentMap(outputDir + "/Map_Phase78B_ParchmentScroll.png");
+        CreateScrollRoller(outputDir + "/ScrollRoller_Phase78B.png");
+        CreateSpiritLine(outputDir + "/SpiritLine_Phase78B.png");
+        CreatePortrait(outputDir + "/Portrait_Phase78B_Cultivator.png");
+        CreateCardArt(outputDir + "/CardArt_Phase78B_Sword.png", 0);
+        CreateCardArt(outputDir + "/CardArt_Phase78B_Step.png", 1);
+        CreateCardArt(outputDir + "/CardArt_Phase78B_Meditation.png", 2);
+        CreateCardDescPaper(outputDir + "/CardDescPaper_Phase78B.png");
+        CreateIsland(outputDir + "/MapCenter_Island_Phase78B.png");
     }
 
     private static void CreateTableMist(string assetPath)
@@ -371,11 +431,20 @@ public static class CultivationUIPhase78BMainRouteGenerator
             }
         }
 
-        for (var i = 0; i < 24; i++)
+        for (var i = 0; i < 20; i++)
         {
-            var baseX = 70 + i * 38;
-            var baseY = 180 + Mathf.Sin(i * 0.8f) * 110;
-            DrawMountain(texture, baseX, baseY, 110 + (i % 4) * 24, 120 + (i % 5) * 24, new Color(0.2f, 0.24f, 0.2f, 0.22f));
+            var baseX = 54 + i * 46;
+            var baseY = 150 + Mathf.Sin(i * 0.65f) * 95;
+            DrawMountain(texture, baseX, baseY, 118 + (i % 4) * 26, 110 + (i % 5) * 20, new Color(0.14f, 0.16f, 0.13f, 0.10f));
+            if (i % 3 == 0)
+            {
+                DrawMountainWash(texture, baseX + 28, baseY + 18, 128, 92, new Color(0.10f, 0.13f, 0.11f, 0.06f));
+            }
+        }
+
+        for (var i = 0; i < 12; i++)
+        {
+            DrawMistBand(texture, 60 + i * 82, 300 + Mathf.Sin(i * 1.2f) * 92, 170, 42, new Color(0.34f, 0.37f, 0.32f, 0.07f));
         }
 
         DrawRect(texture, new Rect(0, 0, 960, 16), Hex("#3B2A19"), 0.35f);
@@ -393,10 +462,58 @@ public static class CultivationUIPhase78BMainRouteGenerator
         var peak = new Vector2(baseX + width * 0.5f, baseY + height);
         var left = new Vector2(baseX, baseY);
         var right = new Vector2(baseX + width, baseY);
-        DrawLine(texture, left, peak, color, 9);
-        DrawLine(texture, peak, right, color, 9);
-        DrawLine(texture, left + new Vector2(width * 0.22f, height * 0.28f), peak + new Vector2(width * 0.06f, -height * 0.22f), color, 5);
-        DrawLine(texture, peak + new Vector2(-width * 0.04f, -height * 0.24f), right + new Vector2(-width * 0.28f, height * 0.22f), color, 5);
+        DrawLine(texture, left, peak, color, 5);
+        DrawLine(texture, peak, right, color, 5);
+        DrawLine(texture, left + new Vector2(width * 0.22f, height * 0.28f), peak + new Vector2(width * 0.06f, -height * 0.22f), color, 3);
+        DrawLine(texture, peak + new Vector2(-width * 0.04f, -height * 0.24f), right + new Vector2(-width * 0.28f, height * 0.22f), color, 3);
+    }
+
+    private static void DrawMountainWash(Texture2D texture, float baseX, float baseY, float width, float height, Color color)
+    {
+        var center = new Vector2(baseX + width * 0.5f, baseY + height * 0.38f);
+        var minX = Mathf.FloorToInt(baseX);
+        var maxX = Mathf.CeilToInt(baseX + width);
+        var minY = Mathf.FloorToInt(baseY);
+        var maxY = Mathf.CeilToInt(baseY + height);
+        for (var y = minY; y <= maxY; y++)
+        {
+            for (var x = minX; x <= maxX; x++)
+            {
+                if (!InBounds(texture, x, y))
+                {
+                    continue;
+                }
+
+                var p = new Vector2(x, y);
+                var dx = Mathf.Abs((p.x - center.x) / (width * 0.5f));
+                var dy = Mathf.Abs((p.y - center.y) / (height * 0.5f));
+                var alpha = Mathf.Clamp01(1f - dx * dx - dy * dy);
+                BlendPixel(texture, x, y, color, alpha * color.a);
+            }
+        }
+    }
+
+    private static void DrawMistBand(Texture2D texture, float centerX, float centerY, float width, float height, Color color)
+    {
+        var minX = Mathf.FloorToInt(centerX - width * 0.5f);
+        var maxX = Mathf.CeilToInt(centerX + width * 0.5f);
+        var minY = Mathf.FloorToInt(centerY - height * 0.5f);
+        var maxY = Mathf.CeilToInt(centerY + height * 0.5f);
+        for (var y = minY; y <= maxY; y++)
+        {
+            for (var x = minX; x <= maxX; x++)
+            {
+                if (!InBounds(texture, x, y))
+                {
+                    continue;
+                }
+
+                var dx = Mathf.Abs((x - centerX) / (width * 0.5f));
+                var dy = Mathf.Abs((y - centerY) / (height * 0.5f));
+                var alpha = Mathf.Clamp01(1f - dx * dx - dy * dy);
+                BlendPixel(texture, x, y, color, alpha * color.a);
+            }
+        }
     }
 
     private static void CreateScrollRoller(string assetPath)
@@ -440,15 +557,38 @@ public static class CultivationUIPhase78BMainRouteGenerator
         var texture = NewTransparent(420, 520);
         FillGradient(texture, Hex("#C8C1AD"), Hex("#6F7165"), 1f);
         DrawMist(texture, 0.10f);
-        DrawCircle(texture, new Vector2(214, 344), 48, Hex("#D6C4A5"), 0.95f);
-        DrawLine(texture, new Vector2(176, 390), new Vector2(248, 390), Hex("#11100E"), 24);
-        DrawLine(texture, new Vector2(182, 360), new Vector2(116, 504), Hex("#11100E"), 17);
-        DrawLine(texture, new Vector2(244, 360), new Vector2(316, 504), Hex("#11100E"), 17);
-        DrawCircle(texture, new Vector2(212, 208), 120, Hex("#35494B"), 0.86f);
-        DrawLine(texture, new Vector2(130, 240), new Vector2(294, 100), Hex("#D7D8CF"), 22);
-        DrawLine(texture, new Vector2(158, 242), new Vector2(314, 104), Hex("#2C6470"), 10);
-        DrawLine(texture, new Vector2(98, 298), new Vector2(332, 112), Hex("#0F1110"), 12);
+        DrawCircle(texture, new Vector2(214, 328), 50, Hex("#D6C4A5"), 0.96f);
+        DrawLine(texture, new Vector2(166, 370), new Vector2(258, 370), Hex("#11100E"), 23);
+        DrawLine(texture, new Vector2(172, 342), new Vector2(122, 504), Hex("#11100E"), 14);
+        DrawLine(texture, new Vector2(248, 342), new Vector2(310, 504), Hex("#11100E"), 14);
+        DrawLine(texture, new Vector2(168, 354), new Vector2(86, 440), Hex("#11100E"), 9);
+        DrawLine(texture, new Vector2(248, 354), new Vector2(334, 438), Hex("#11100E"), 9);
+        DrawCircle(texture, new Vector2(212, 194), 122, Hex("#34464B"), 0.86f);
+        DrawLine(texture, new Vector2(126, 238), new Vector2(292, 92), Hex("#D7D8CF"), 24);
+        DrawLine(texture, new Vector2(156, 238), new Vector2(316, 100), Hex("#2C6470"), 10);
+        DrawLine(texture, new Vector2(96, 294), new Vector2(334, 104), Hex("#0F1110"), 11);
+        DrawLine(texture, new Vector2(210, 374), new Vector2(210, 506), Hex("#11100E"), 8);
+        DrawCircle(texture, new Vector2(198, 334), 4, Hex("#1C1712"), 0.9f);
+        DrawCircle(texture, new Vector2(230, 334), 4, Hex("#1C1712"), 0.9f);
+        DrawLine(texture, new Vector2(200, 306), new Vector2(232, 306), Hex("#8D5848"), 3);
         SaveTexture(texture, assetPath, new Vector4(18, 18, 18, 18));
+    }
+
+    private static void CreateCardDescPaper(string assetPath)
+    {
+        var texture = new Texture2D(320, 96, TextureFormat.RGBA32, false);
+        for (var y = 0; y < texture.height; y++)
+        {
+            for (var x = 0; x < texture.width; x++)
+            {
+                var edge = Mathf.Min(Mathf.Min(x, texture.width - 1 - x), Mathf.Min(y, texture.height - 1 - y));
+                var color = Color.Lerp(Hex("#A98E5B"), Hex("#D9C8A0"), Mathf.Clamp01(edge / 18f));
+                color = Color.Lerp(color, Hex("#6E5430"), Hash01(x, y) * 0.035f);
+                texture.SetPixel(x, y, new Color(color.r, color.g, color.b, 0.98f));
+            }
+        }
+        DrawRect(texture, new Rect(0, 0, texture.width, 4), Hex("#6C4E25"), 0.35f);
+        SaveTexture(texture, assetPath, new Vector4(12, 12, 12, 12));
     }
 
     private static void CreateCardArt(string assetPath, int kind)
@@ -556,7 +696,7 @@ public static class CultivationUIPhase78BMainRouteGenerator
 
     private static Sprite PhaseSprite(string fileName)
     {
-        return AssetDatabase.LoadAssetAtPath<Sprite>(PhaseDir + "/" + fileName);
+        return AssetDatabase.LoadAssetAtPath<Sprite>(_activePhaseDir + "/" + fileName);
     }
 
     private static Font LoadUiFont()
@@ -578,6 +718,7 @@ public static class CultivationUIPhase78BMainRouteGenerator
     private static void EnsureDirectories()
     {
         Directory.CreateDirectory(ToAbsolute(PhaseDir));
+        Directory.CreateDirectory(ToAbsolute(FinalPhaseDir));
         Directory.CreateDirectory(ToAbsolute(TemplateDir));
         AssetDatabase.Refresh();
     }
