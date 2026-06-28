@@ -13,33 +13,42 @@
 
 Fast Enter Play Mode 会让 static 字段跨 Play Mode 生命周期保留，人工点击两次 Play Mode 容易遗漏 Console 清理、等待时长和结果记录。本工具将“清理 Console -> 进入 Play Mode -> 等待启动 -> 退出 -> 再次进入 -> 读取 Console -> 生成报告”的流程固化为一个菜单，后续回归时可以用同一流程复测。
 
-## 菜单入口
+## 验收入口
 
-Unity 菜单：
+Unity Editor 菜单仍保留为调试入口：
 
 ```text
 Codex/Verify/Fast Enter Play Mode Twice
 ```
 
-## 验证流程
+但 MCP 菜单触发会干扰 Play Mode transition，已观察到 `playmode_transition` 卡住、`is_playing=true / is_changing=true`、MCP 自身 `Client handler error: Cannot access a disposed object.` 等现象。因此菜单不再作为最终验收依据，也不要求用户手动打开 Unity 或手动点击菜单。
 
-1. 清理 Unity Console。
-2. 第一次进入 Play Mode。
-3. 等待固定时间，让启动流程有时间进入主流程。
-4. 读取第一次 Play Mode 的 Console Error / Warning 数量。
-5. 退出 Play Mode。
-6. 再次清理 Unity Console。
-7. 第二次进入 Play Mode。
-8. 再次等待固定时间。
-9. 读取第二次 Play Mode 的 Console Error / Warning 数量。
-10. 输出明确的 PASS / FAIL 日志。
-11. 退出 Play Mode。
-12. 生成 Markdown 验证报告。
+最终验收改为 Unity 命令行 / Test Runner：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File Tools\Verify\RunFastEnterPlayModeTwice.ps1
+```
+
+后续 Codex 必须执行该脚本完成验收；如果命令行失败，必须生成诊断报告或输出诊断原因，不能要求用户手动点击。
+
+## 命令行验证流程
+
+1. PowerShell 脚本定位 Unity.exe，优先读取 `UNITY_EXE`，否则使用 Unity 2022.3.17f1 默认安装路径。
+2. 使用 Unity Test Runner Command Line 执行 EditMode 测试。
+3. 测试通过 `UnityEngine.TestTools.EnterPlayMode` / `ExitPlayMode` 连续执行两轮 Play Mode。
+4. 每轮至少等待 10 秒且至少 30 帧。
+5. 通过 `Application.logMessageReceived` 区分第一轮和第二轮日志。
+6. 统计 Error / Warning / Exception / Assert。
+7. 生成 Markdown 验证报告。
+8. 若 Unity 命令行失败、XML 未生成或 Markdown 报告未生成，脚本生成命令行诊断报告。
 
 ## 输出报告路径
 
 ```text
-Doc/验证报告/Phase81_FastEnterPlayMode_Twice_Verification.md
+Doc/验证报告/Phase81_FastEnterPlayMode_UnityTest_Verification.md
+Doc/验证报告/Phase81_FastEnterPlayMode_UnityTestResults.xml
+Doc/验证报告/Phase81_FastEnterPlayMode_UnityTest.log
+Doc/验证报告/Phase81_FastEnterPlayMode_CommandLine_Diagnostic.md
 ```
 
 ## 已验证结果
@@ -65,27 +74,7 @@ Editor left first Play Mode before verification wait completed.
 - `dotnet build UnityProject\UnityProject.sln --no-restore`：通过，存在既有依赖版本冲突警告，无编译错误。
 - `git diff --check`：通过。
 
-本轮曾通过 Unity MCP 刷新 Unity，并尝试执行菜单 `Codex/Verify/Fast Enter Play Mode Twice`。菜单可以被 MCP 触发，但当前 Editor/MCP 会话在 Play Mode 切换阶段未稳定完成两轮状态机，因此本轮不伪造 Unity Play Mode 验证结果，不提交验证报告。
-
-需要在本地 Unity Editor 中重新执行菜单，完成后工具会生成：
-
-```text
-Doc/验证报告/Phase81_FastEnterPlayMode_Twice_Verification.md
-```
-
-通过时 Console 会输出：
-
-```text
-PASS:
-Fast Enter Play Mode twice verification passed.
-```
-
-失败时 Console 会输出：
-
-```text
-FAIL:
-Fast Enter Play Mode twice verification failed.
-```
+本轮进一步新增 Unity Test Runner 命令行验收流程。最终结果以 `Tools/Verify/RunFastEnterPlayModeTwice.ps1` 生成的报告为准，不再以 MCP 菜单触发结果作为最终验收依据。
 
 ## 明确未修改范围
 
