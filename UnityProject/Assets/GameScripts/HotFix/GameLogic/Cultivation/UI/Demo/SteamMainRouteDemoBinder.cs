@@ -34,6 +34,8 @@ namespace GameLogic.Cultivation.UI
                 var resource = model.TopResources[i];
                 SetText("TopResource_" + i + "_Icon", resource.Icon);
                 SetText("TopResource_" + i + "_Text", resource.Label + "   " + resource.Value);
+                SetText("Top_" + resource.Label + "_Icon", resource.Icon);
+                SetText("Top_" + resource.Label, resource.Label + "   " + resource.Value);
             }
 
             if (model.Character != null)
@@ -57,6 +59,8 @@ namespace GameLogic.Cultivation.UI
             {
                 BindCard(i, model.CurrentCards[i]);
             }
+
+            SetText("Right_Title", "\u5F53\u524D\u624B\u724C  (" + model.CurrentCards.Count + "/" + model.CurrentCards.Count + ")");
         }
 
         private void BindStats(IReadOnlyList<StatLineViewModel> stats)
@@ -67,6 +71,9 @@ namespace GameLogic.Cultivation.UI
                 SetText("Left_Stat_" + i + "_Icon", stat.Icon);
                 SetText("Left_Stat_" + i + "_Label", stat.Label);
                 SetText("Left_Stat_" + i + "_Value", stat.Value);
+                SetText("Left_Icon_" + stat.Label, stat.Icon);
+                SetText("Left_Label_" + stat.Label, stat.Label);
+                SetText("Left_Value_" + stat.Label, stat.Value);
             }
         }
 
@@ -76,6 +83,9 @@ namespace GameLogic.Cultivation.UI
             {
                 SetText("Left_StatusTag_" + i + "_Title", tags[i].Title);
                 SetText("Left_StatusTag_" + i + "_Duration", tags[i].Duration);
+                var key = NormalizeKey(tags[i].Title);
+                SetText("Left_StatusGlyph_" + key, tags[i].Title);
+                SetText("Left_StatusDays_" + key, tags[i].Duration);
             }
         }
 
@@ -86,6 +96,12 @@ namespace GameLogic.Cultivation.UI
             SetText("Right_Card_" + index + "_Type", card.Type);
             SetText("Right_Card_" + index + "_Desc", card.Description);
             SetText("Right_Card_" + index + "_Count", card.CountText);
+
+            var key = NormalizeKey(card.Title);
+            SetText("Right_Cost_" + key, card.Cost);
+            SetText("Right_CardTitle_" + key, card.Title);
+            SetText("Right_Type_" + key, card.Type);
+            SetText("Right_Desc_" + key, card.Description);
         }
 
         private void CacheTexts()
@@ -103,6 +119,14 @@ namespace GameLogic.Cultivation.UI
             {
                 text.text = value ?? string.Empty;
             }
+        }
+
+        private static string NormalizeKey(string value)
+        {
+            return (value ?? string.Empty)
+                .Replace("\r", string.Empty)
+                .Replace("\n", string.Empty)
+                .Replace(" ", string.Empty);
         }
     }
 }
