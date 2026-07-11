@@ -1,5 +1,4 @@
 using GameLogic.Cultivation;
-using GameLogic.Cultivation.Flow;
 using TEngine;
 using UnityEngine;
 
@@ -9,7 +8,7 @@ public class GameEntry : MonoBehaviour
     private bool useCultivationPrototypeInEditor = true;
 
 #if UNITY_EDITOR
-    private CultivationGameFlowController _cultivationPrototypeController;
+    private CultivationRunPrototypeUI _cultivationRunUI;
 
     internal bool UseCultivationPrototypeInEditor => useCultivationPrototypeInEditor;
 #endif
@@ -46,12 +45,12 @@ public class GameEntry : MonoBehaviour
 
     private void OpenCultivationPrototypeIfNeeded()
     {
-        if (_cultivationPrototypeController != null)
+        if (_cultivationRunUI != null)
         {
             return;
         }
 
-        _cultivationPrototypeController = CultivationRunUIService.OpenMinimalGameplayLoop();
+        _cultivationRunUI = CultivationRunUIService.OpenGameRun();
     }
 #endif
 }

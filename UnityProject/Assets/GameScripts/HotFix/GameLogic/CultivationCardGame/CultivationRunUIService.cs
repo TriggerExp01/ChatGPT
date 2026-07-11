@@ -1,5 +1,4 @@
 using GameLogic;
-using GameLogic.Cultivation.Flow;
 using UnityEngine;
 using UnityEngine.UI;
 using Object = UnityEngine.Object;
@@ -8,9 +7,9 @@ namespace GameLogic.Cultivation
 {
     public static class CultivationRunUIService
     {
-        public static CultivationGameFlowController OpenMinimalGameplayLoop(Transform parent = null)
+        public static CultivationRunPrototypeUI OpenGameRun(Transform parent = null)
         {
-            return CultivationGameFlowController.OpenOrCreate(parent ?? ResolveMainRunParent());
+            return parent != null ? OpenMainRunUI(parent) : OpenMainRunWindowOrFallback();
         }
 
         public static CultivationRunPrototypeUI OpenMainRunUI(Transform parent = null)

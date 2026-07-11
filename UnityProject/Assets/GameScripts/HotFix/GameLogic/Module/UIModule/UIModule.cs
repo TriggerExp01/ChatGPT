@@ -326,6 +326,19 @@ namespace GameLogic
             if (IsContains(windowName))
             {
                 window = GetWindow(windowName);
+                // 禁用 Domain Reload 时，退出 Play Mode 会销毁面板对象，但静态 UI 模块仍可能
+                // 保留旧窗口实例。把这类失效窗口从栈中移除，下一次打开时重新创建。
+                if (window == null || window.IsDestroyed || (window.IsLoadDone && window.gameObject == null))
+                {
+                    if (window != null)
+                    {
+                        Pop(window);
+                    }
+
+                    window = null;
+                    return false;
+                }
+
                 Pop(window); //弹出窗口
                 Push(window); //重新压入
                 window.TryInvoke(OnWindowPrepare, userDatas);

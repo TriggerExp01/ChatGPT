@@ -11,8 +11,7 @@ namespace GameLogic.Cultivation
     {
         public const string RootName = "CultivationRunPrototypeUI";
 
-        private BattleEngine _battleEngine;
-        private CultivationRunEngine _runEngine;
+        private CultivationRunSession _session;
         private CultivationRunState _run;
         private string _lastRunPillMessage;
         private RectTransform _statsRoot;
@@ -117,6 +116,8 @@ namespace GameLogic.Cultivation
 
         public CultivationRunState DebugRunState => _run;
 
+        public CultivationRunSession DebugSession => _session;
+
         public static CultivationRunPrototypeUI Open(Transform parent = null)
         {
             var uiParent = parent != null ? parent : ResolveParent();
@@ -128,7 +129,7 @@ namespace GameLogic.Cultivation
                 if (existing != null)
                 {
                     existing.Initialize();
-                    existing.ResetRun();
+                    existing.EnsureRun();
                     return existing;
                 }
 
@@ -143,7 +144,7 @@ namespace GameLogic.Cultivation
             EnsureEventSystem();
             var view = root.gameObject.AddComponent<CultivationRunPrototypeUI>();
             view.Initialize();
-            view.ResetRun();
+            view.EnsureRun();
             return view;
         }
 
@@ -154,9 +155,8 @@ namespace GameLogic.Cultivation
 
         public void ResetRun(CultivationSect sect)
         {
-            _battleEngine = new BattleEngine(20260620);
-            _runEngine = new CultivationRunEngine(_battleEngine);
-            _run = _runEngine.StartRun(route: CultivationSeedData.CreateFirstPrototypeBranchingRoute(sect), sect: sect);
+            _session = new CultivationRunSession();
+            _run = _session.StartNewRun(sect);
             _run.CurrentBattle.Logs.Add(new BattleLogEntry("Phase 7 Run 原型界面已连接战斗、奖励、闭关升级和路线选择。"));
             Refresh();
         }
@@ -171,214 +171,208 @@ namespace GameLogic.Cultivation
 
         public void PlayCardAt(int handIndex)
         {
-            if (_run == null || _run.Status != CultivationRunStatus.InBattle || _run.CurrentBattle == null || _run.CurrentBattle.Outcome != BattleOutcome.InProgress)
+            if (_session == null)
             {
                 return;
             }
 
-            if (handIndex < 0 || handIndex >= _run.CurrentBattle.Hand.Count)
-            {
-                return;
-            }
-
-            var card = _run.CurrentBattle.Hand[handIndex];
-            var target = _run.CurrentBattle.Enemies.FirstOrDefault(enemy => !enemy.Body.IsDefeated);
-            if (!_battleEngine.CanPlay(_run.CurrentBattle, card))
-            {
-                _run.CurrentBattle.Logs.Add(new BattleLogEntry($"{card.Name} 灵力不足，无法打出。"));
-                Refresh();
-                return;
-            }
-
-            _battleEngine.PlayCard(_run.CurrentBattle, card, target);
+            _session.PlayCardAt(handIndex);
             Refresh();
         }
 
         public void EndTurn()
         {
-            if (_run == null || _run.Status != CultivationRunStatus.InBattle || _run.CurrentBattle == null || _run.CurrentBattle.Outcome != BattleOutcome.InProgress)
+            if (_session == null)
             {
                 return;
             }
 
-            _battleEngine.EndPlayerTurn(_run.CurrentBattle);
+            _session.EndTurn();
             Refresh();
         }
 
         public void UsePillInBattle(int pillIndex)
         {
-            if (_run == null || _run.Status != CultivationRunStatus.InBattle || _run.CurrentBattle == null || _run.CurrentBattle.Outcome != BattleOutcome.InProgress)
+            if (_session == null)
             {
                 return;
             }
 
-            _runEngine.UsePillInBattle(_run, pillIndex);
+            _session.UsePillInBattle(pillIndex);
             Refresh();
         }
 
         public void UsePillInRun(int pillIndex)
         {
-            if (_run == null || _run.Status == CultivationRunStatus.InBattle)
+            if (_session == null)
             {
                 return;
             }
 
-            _lastRunPillMessage = _runEngine.UsePillInRun(_run, pillIndex);
+            _lastRunPillMessage = _session.UsePillInRun(pillIndex);
             Refresh();
         }
 
         public void ResolveBattle()
         {
-            if (_run == null || _run.Status != CultivationRunStatus.InBattle || _run.CurrentBattle == null || _run.CurrentBattle.Outcome == BattleOutcome.InProgress)
+            if (_session == null)
             {
                 return;
             }
 
-            _runEngine.ResolveBattleResult(_run);
+            _session.ResolveBattle();
             Refresh();
         }
 
         public void ChooseReward(int rewardIndex)
         {
-            if (_run == null || _run.Status != CultivationRunStatus.Reward)
+            if (_session == null)
             {
                 return;
             }
 
-            _runEngine.ChooseReward(_run, rewardIndex);
+            _session.ChooseReward(rewardIndex);
             Refresh();
         }
 
         public void SkipReward()
         {
-            if (_run == null || _run.Status != CultivationRunStatus.Reward)
+            if (_session == null)
             {
                 return;
             }
 
-            _runEngine.SkipReward(_run);
+            _session.SkipReward();
             Refresh();
         }
 
         public void Rest()
         {
-            if (_run == null || _run.Status != CultivationRunStatus.Rest)
+            if (_session == null)
             {
                 return;
             }
 
-            _runEngine.Rest(_run);
+            _session.Rest();
             Refresh();
         }
 
         public void RestAndUpgrade(int deckIndex, int upgradeOptionIndex)
         {
-            if (_run == null || _run.Status != CultivationRunStatus.Rest)
+            if (_session == null)
             {
                 return;
             }
 
-            _runEngine.RestAndUpgrade(_run, deckIndex, upgradeOptionIndex);
+            _session.RestAndUpgrade(deckIndex, upgradeOptionIndex);
             Refresh();
         }
 
         public void ChooseRoute(int choiceIndex)
         {
-            if (_run == null || _run.Status != CultivationRunStatus.RouteChoice)
+            if (_session == null)
             {
                 return;
             }
 
-            _runEngine.ChooseRoute(_run, choiceIndex);
+            _session.ChooseRoute(choiceIndex);
             Refresh();
         }
 
         public void BuyMarketItem(int itemIndex)
         {
-            if (_run == null || _run.Status != CultivationRunStatus.Market)
+            if (_session == null)
             {
                 return;
             }
 
-            _runEngine.BuyMarketItem(_run, itemIndex);
+            _session.BuyMarketItem(itemIndex);
             Refresh();
         }
 
         public void RemoveDeckCardAtMarket(int deckIndex)
         {
-            if (_run == null || _run.Status != CultivationRunStatus.Market)
+            if (_session == null)
             {
                 return;
             }
 
-            _runEngine.RemoveDeckCardAtMarket(_run, deckIndex);
+            _session.RemoveDeckCardAtMarket(deckIndex);
             Refresh();
         }
 
         public void SellDeckCardAtMarket(int deckIndex)
         {
-            if (_run == null || _run.Status != CultivationRunStatus.Market)
+            if (_session == null)
             {
                 return;
             }
 
-            _runEngine.SellDeckCardAtMarket(_run, deckIndex);
+            _session.SellDeckCardAtMarket(deckIndex);
             Refresh();
         }
 
         public void UpgradeDeckCardAtMarket(int deckIndex, int upgradeOptionIndex)
         {
-            if (_run == null || _run.Status != CultivationRunStatus.Market)
+            if (_session == null)
             {
                 return;
             }
 
-            _runEngine.UpgradeDeckCardAtMarket(_run, deckIndex, upgradeOptionIndex);
+            _session.UpgradeDeckCardAtMarket(deckIndex, upgradeOptionIndex);
             Refresh();
         }
 
         public void LeaveMarket()
         {
-            if (_run == null || _run.Status != CultivationRunStatus.Market)
+            if (_session == null)
             {
                 return;
             }
 
-            _runEngine.LeaveMarket(_run);
+            _session.LeaveMarket();
             Refresh();
         }
 
         public void OpenChest()
         {
-            if (_run == null || _run.Status != CultivationRunStatus.Chest)
+            if (_session == null)
             {
                 return;
             }
 
-            _runEngine.OpenChest(_run);
+            _session.OpenChest();
             Refresh();
         }
 
         public void ChooseMysticEventOption(int optionIndex)
         {
-            if (_run == null || _run.Status != CultivationRunStatus.Mystic)
+            if (_session == null)
             {
                 return;
             }
 
-            _runEngine.ChooseMysticEventOption(_run, optionIndex);
+            _session.ChooseMysticEventOption(optionIndex);
             Refresh();
         }
 
         public void ChooseGoldenCorePassive(int passiveIndex)
         {
-            if (_run == null || _run.Status != CultivationRunStatus.GoldenCorePassiveChoice)
+            if (_session == null)
             {
                 return;
             }
 
-            _runEngine.ChooseGoldenCorePassive(_run, passiveIndex);
+            _session.ChooseGoldenCorePassive(passiveIndex);
             Refresh();
+        }
+
+        private void EnsureRun()
+        {
+            if (_session == null || _run == null)
+            {
+                ResetRun();
+            }
         }
 
         private void Initialize()
@@ -732,7 +726,7 @@ namespace GameLogic.Cultivation
                     button.onClick.AddListener(() => RemoveDeckCardAtMarket(index));
                     SetLayout(button.gameObject, preferredWidth: 220, preferredHeight: 130);
 
-                    var sellValue = _runEngine.GetMarketSellValue(_run, index);
+                    var sellValue = _session.GetMarketSellValue(index);
                     var sellButton = CreateActionButton($"SellDeck_{i}_{card.Id}", _handRoot, $"出售：{card.Name}", $"+{sellValue} 灵石", ActionTemplateKind.MarketDeckAction);
                     sellButton.interactable = _run.Deck.Count > 1;
                     sellButton.onClick.AddListener(() => SellDeckCardAtMarket(index));
@@ -790,7 +784,7 @@ namespace GameLogic.Cultivation
                 var card = _run.CurrentBattle.Hand[i];
                 var costText = FormatBattleCardCost(_run.CurrentBattle, card);
                 var button = CreateActionButton($"Card_{i}_{card.Id}", _handRoot, card.Name, $"{costText}\n{string.Join("\n", card.Effects.Select(CultivationRunPrototypePresenter.FormatEffect))}", ActionTemplateKind.BattleCard);
-                button.interactable = _run.CurrentBattle.Outcome == BattleOutcome.InProgress && _battleEngine.CanPlay(_run.CurrentBattle, card);
+                button.interactable = _run.CurrentBattle.Outcome == BattleOutcome.InProgress && _session.CanPlayCardAt(index);
                 button.onClick.AddListener(() => PlayCardAt(index));
                 SetLayout(button.gameObject, preferredWidth: 240, preferredHeight: 130);
             }

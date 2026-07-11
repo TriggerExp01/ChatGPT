@@ -101,9 +101,15 @@ namespace GameLogic.Tests
         public void MainRunUiServiceReusesAndClosesPrototypeUi()
         {
             var first = CultivationRunUIService.OpenMainRunUI(_root.transform);
+            var session = first.DebugSession;
+            var run = first.DebugRunState;
+            run.SpiritStones = 123;
             var second = CultivationRunUIService.OpenMainRunUI(_root.transform);
 
             Assert.AreSame(first, second);
+            Assert.AreSame(session, second.DebugSession);
+            Assert.AreSame(run, second.DebugRunState);
+            Assert.AreEqual(123, second.DebugRunState.SpiritStones);
             Assert.IsTrue(CultivationRunUIService.IsMainRunUIOpen(_root.transform));
             Assert.NotNull(_root.transform.Find(CultivationRunPrototypeUI.RootName));
 
@@ -943,10 +949,9 @@ namespace GameLogic.Tests
 
         private void SetRunForUi(BattleEngine battleEngine, IReadOnlyList<CultivationRunNode> route)
         {
-            var runEngine = new CultivationRunEngine(battleEngine);
-            var run = runEngine.StartRun(route: route);
-            SetPrivateField("_battleEngine", battleEngine);
-            SetPrivateField("_runEngine", runEngine);
+            var session = new CultivationRunSession(battleEngine);
+            var run = session.StartNewRun(route: route);
+            SetPrivateField("_session", session);
             SetPrivateField("_run", run);
         }
 
