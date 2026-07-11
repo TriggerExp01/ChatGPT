@@ -38,13 +38,8 @@ namespace GameLogic.Cultivation.Flow
             var existing = FindObjectOfType<CultivationGameFlowController>();
             if (existing != null)
             {
-                if (existing._mainRouteBinder != null)
-                {
-                    existing.EnterBoot();
-                    return existing;
-                }
-
-                Destroy(existing.gameObject);
+                existing.EnsureInitialized();
+                return existing;
             }
 
             EnsureEventSystem();
@@ -58,9 +53,27 @@ namespace GameLogic.Cultivation.Flow
 
             Stretch(rect);
             var controller = root.AddComponent<CultivationGameFlowController>();
-            controller.BuildRuntimeView();
-            controller.EnterBoot();
+            controller.EnsureInitialized();
             return controller;
+        }
+
+        private void EnsureInitialized()
+        {
+            var rebuiltRuntimeView = false;
+            if (_mainRouteBinder == null || _stateText == null || _hintText == null || _detailText == null || _optionsText == null)
+            {
+                BuildRuntimeView();
+                rebuiltRuntimeView = true;
+            }
+
+            if (_runtimeData == null)
+            {
+                EnterBoot();
+            }
+            else if (rebuiltRuntimeView)
+            {
+                RefreshMainRoute();
+            }
         }
 
         private void Update()
@@ -535,7 +548,10 @@ namespace GameLogic.Cultivation.Flow
             }
 
             var eventSystem = new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
-            Object.DontDestroyOnLoad(eventSystem);
+            if (Application.isPlaying)
+            {
+                Object.DontDestroyOnLoad(eventSystem);
+            }
         }
     }
 }

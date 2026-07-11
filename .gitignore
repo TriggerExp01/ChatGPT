@@ -1,6 +1,15 @@
 
 UnityProject/UserSettings/Layouts/default-2021.dwlt
+UnityProject/UserSettings/Layouts/
 UnityProject/UserSettings/Search.settings
+
+# Local verification outputs
+script-output.txt
+Doc/验证报告/Phase81_FastEnterPlayMode_Twice_Verification.md
+Doc/验证报告/Phase81_FastEnterPlayMode_UnityTest_Verification.md
+Doc/验证报告/Phase81_FastEnterPlayMode_UnityTest*.log
+Doc/验证报告/Phase81_FastEnterPlayMode_UnityTestResults.xml
+Doc/MCPReports/unity-mcp-health-*.md
 
 #Luban
 Tools/Luban/

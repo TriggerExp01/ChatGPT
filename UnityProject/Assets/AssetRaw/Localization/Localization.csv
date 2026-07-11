@@ -1,0 +1,11 @@
+Key,Type,Desc,Chinese,ChineseTraditional [zh-TW],English
+App/Name,Text,Game title,仙途·天命,仙途·天命,Path of Immortality
+Common/Confirm,Text,Confirm action,确认,確認,Confirm
+Common/Cancel,Text,Cancel action,取消,取消,Cancel
+Common/Back,Text,Return action,返回,返回,Back
+Menu/StartRun,Text,Start a new run,开始修行,開始修行,Begin Cultivation
+Menu/ContinueRun,Text,Continue an active run,继续修行,繼續修行,Continue
+Menu/Settings,Text,Open settings,设置,設定,Settings
+Menu/Quit,Text,Quit the game,退出游戏,退出遊戲,Quit
+Run/Victory,Text,Run victory title,渡劫飞升,渡劫飛升,Ascension Achieved
+Run/Defeat,Text,Run defeat title,修行陨落,修行隕落,Cultivation Ended

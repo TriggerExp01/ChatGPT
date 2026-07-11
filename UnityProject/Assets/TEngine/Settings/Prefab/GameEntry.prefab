@@ -44,7 +44,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 706e6317a59f61044b2805be79f6b284, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  innerLocalizationCsv: {fileID: 0}
+  innerLocalizationCsv: {fileID: 4900000, guid: e290a2a96cf748c8b32e256665c67b23, type: 3}
   allLanguage: []
   useRuntimeModule: 1
 --- !u!1 &7696541953913300370

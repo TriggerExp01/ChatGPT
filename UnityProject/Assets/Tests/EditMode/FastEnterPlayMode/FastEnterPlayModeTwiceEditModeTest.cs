@@ -32,59 +32,90 @@ namespace GameLogic.Tests.FastEnterPlayMode
         [UnityTest]
         public IEnumerator FastEnterPlayModeTwice_HasNoConsoleErrorsOrWarnings()
         {
+            var previousIgnoreFailingMessages = LogAssert.ignoreFailingMessages;
             LogAssert.ignoreFailingMessages = true;
             Application.logMessageReceived += OnLogMessageReceived;
 
-            yield return RunRound(1);
-            yield return new ExitPlayMode();
-            yield return WaitForEditModeStable();
-
-            yield return RunRound(2);
-            yield return new ExitPlayMode();
-            yield return WaitForEditModeStable();
-
-            Application.logMessageReceived -= OnLogMessageReceived;
-            EvaluateResult();
-            WriteReport();
-
-            Assert.Pass("Fast Enter Play Mode command line verification finished with result: " + _result);
-        }
-
-        private IEnumerator RunRound(int round)
-        {
-            _activeRound = round;
-            yield return new EnterPlayMode();
-
-            var startedAt = Time.realtimeSinceStartupAsDouble;
-            var startedFrame = Time.frameCount;
-            while (Time.realtimeSinceStartupAsDouble - startedAt < MinWaitSecondsPerPlayMode ||
-                   Time.frameCount - startedFrame < MinPlayFrames)
+            try
             {
-                yield return null;
+                // Test Framework 1.1.33 only accepts EnterPlayMode / ExitPlayMode when
+                // they are yielded directly by the EditMode test enumerator. Yielding
+                // them from a nested IEnumerator is rejected by EditModeRunner.
+                _activeRound = 1;
+                yield return new EnterPlayMode(ExpectDomainReloadOnEnterPlayMode());
+                var startedAt = Time.realtimeSinceStartupAsDouble;
+                var startedFrame = Time.frameCount;
+                while (Time.realtimeSinceStartupAsDouble - startedAt < MinWaitSecondsPerPlayMode ||
+                       Time.frameCount - startedFrame < MinPlayFrames)
+                {
+                    yield return null;
+                }
+
+                _firstRound = CreateCompletedRound(startedAt, startedFrame);
+                yield return new ExitPlayMode();
+                for (var i = 0; i < 5; i++)
+                {
+                    yield return null;
+                }
+
+                _activeRound = 2;
+                yield return new EnterPlayMode(ExpectDomainReloadOnEnterPlayMode());
+                startedAt = Time.realtimeSinceStartupAsDouble;
+                startedFrame = Time.frameCount;
+                while (Time.realtimeSinceStartupAsDouble - startedAt < MinWaitSecondsPerPlayMode ||
+                       Time.frameCount - startedFrame < MinPlayFrames)
+                {
+                    yield return null;
+                }
+
+                _secondRound = CreateCompletedRound(startedAt, startedFrame);
+                yield return new ExitPlayMode();
+                for (var i = 0; i < 5; i++)
+                {
+                    yield return null;
+                }
+            }
+            finally
+            {
+                Application.logMessageReceived -= OnLogMessageReceived;
+                try
+                {
+                    EvaluateResult();
+                    WriteReport();
+                }
+                finally
+                {
+                    LogAssert.ignoreFailingMessages = previousIgnoreFailingMessages;
+                }
             }
 
-            var info = new RoundInfo
+            Assert.That(
+                _result,
+                Is.EqualTo("PASS"),
+                "Fast Enter Play Mode command line verification finished with result: " +
+                _result +
+                ". " +
+                _failureReason);
+        }
+
+        private static bool ExpectDomainReloadOnEnterPlayMode()
+        {
+            if (!EditorSettings.enterPlayModeOptionsEnabled)
             {
+                return true;
+            }
+
+            return (EditorSettings.enterPlayModeOptions & EnterPlayModeOptions.DisableDomainReload) == 0;
+        }
+
+        private static RoundInfo CreateCompletedRound(double startedAt, int startedFrame)
+        {
+            return new RoundInfo
+            {
+                Completed = true,
                 ElapsedSeconds = Time.realtimeSinceStartupAsDouble - startedAt,
                 ElapsedFrames = Time.frameCount - startedFrame
             };
-
-            if (round == 1)
-            {
-                _firstRound = info;
-            }
-            else
-            {
-                _secondRound = info;
-            }
-        }
-
-        private static IEnumerator WaitForEditModeStable()
-        {
-            for (var i = 0; i < 5; i++)
-            {
-                yield return null;
-            }
         }
 
         private void OnLogMessageReceived(string condition, string stackTrace, LogType type)
@@ -133,7 +164,12 @@ namespace GameLogic.Tests.FastEnterPlayMode
                 !hasBlockingFailure &&
                 (_firstRound.WarningCount > 0 || _secondRound.WarningCount > 0);
 
-            if (hasBlockingFailure)
+            if (!_firstRound.Completed || !_secondRound.Completed)
+            {
+                _result = "FAIL-DIAGNOSTIC";
+                _failureReason = "One or both Play Mode rounds did not complete.";
+            }
+            else if (hasBlockingFailure)
             {
                 _result = "FAIL";
                 _failureReason = "At least one Error, Exception, or Assert log was captured.";
@@ -170,6 +206,7 @@ namespace GameLogic.Tests.FastEnterPlayMode
             report.Append("- Enter Play Mode Options Enabled：").Append(EditorSettings.enterPlayModeOptionsEnabled ? "1" : "0").AppendLine();
             report.Append("- Enter Play Mode Options：").Append((int)EditorSettings.enterPlayModeOptions).Append(" (").Append(EditorSettings.enterPlayModeOptions).AppendLine(")");
             report.AppendLine("- 执行方式：Unity Test Runner Command Line");
+            report.Append("- 第一轮是否完成：").Append(_firstRound.Completed ? "是" : "否").AppendLine();
             report.Append("- 第一轮等待秒数：").Append(_firstRound.ElapsedSeconds.ToString("0.00")).AppendLine();
             report.Append("- 第一轮等待帧数：").Append(_firstRound.ElapsedFrames).AppendLine();
             report.Append("- 第一轮 Error / Warning / Exception / Assert 数量：")
@@ -177,6 +214,7 @@ namespace GameLogic.Tests.FastEnterPlayMode
                 .Append(_firstRound.WarningCount).Append(" / ")
                 .Append(_firstRound.ExceptionCount).Append(" / ")
                 .Append(_firstRound.AssertCount).AppendLine();
+            report.Append("- 第二轮是否完成：").Append(_secondRound.Completed ? "是" : "否").AppendLine();
             report.Append("- 第二轮等待秒数：").Append(_secondRound.ElapsedSeconds.ToString("0.00")).AppendLine();
             report.Append("- 第二轮等待帧数：").Append(_secondRound.ElapsedFrames).AppendLine();
             report.Append("- 第二轮 Error / Warning / Exception / Assert 数量：")
@@ -286,6 +324,7 @@ namespace GameLogic.Tests.FastEnterPlayMode
 
         private struct RoundInfo
         {
+            public bool Completed;
             public double ElapsedSeconds;
             public int ElapsedFrames;
             public int ErrorCount;

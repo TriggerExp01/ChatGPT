@@ -1,72 +1,37 @@
-# Phase82 Cultivation 最小游戏流程闭环交付说�?
-## 1. 本轮目标
+# Phase82 Cultivation 最小游戏流程闭环交付说明
 
-本轮目标是优先跑�?Cultivation / 修仙养成原型的最小游戏流程闭环，而不是继�?UI 美化、Phase81 自动验收工具或旧肉鸽内容恢复�?
-目标闭环�?
+## 1. 阶段目标
+
+Phase82 的目标是优先跑通 Cultivation / 修仙养成原型的最小游戏流程，而不是继续 UI 美化、Phase81 自动验收工具或旧肉鸽内容恢复。
+
+目标闭环：
+
 ```text
 启动游戏
--> 进入修仙主路线界�?-> 显示当前路线节点
--> 选择路线节点
--> 进入事件或战�?-> 战斗用最小模拟逻辑完成
+-> 进入修仙主路线界面
+-> 显示并选择路线节点
+-> 进入事件或占位战斗
 -> 战斗结束进入奖励
 -> 领取奖励
 -> 返回路线界面
--> 推进 day / nodeIndex
--> Console �?Error
+-> 推进 Day / NodeIndex
 ```
 
-## 2. 当前流程�?
+## 2. Phase82 状态机
+
 ```mermaid
 flowchart LR
-    Boot["Boot"]
-    MainRoute["MainRoute"]
-    Event["Event"]
-    Battle["Battle"]
-    Reward["Reward"]
-    Finished["Finished / LoopBack"]
-
-    Boot --> MainRoute
-    MainRoute -->|"1/2/3 选择 Battle"| Battle
-    MainRoute -->|"1/2/3 选择 Event"| Event
-    MainRoute -->|"Rest / Shop / Boss 占位"| Reward
-    Event -->|"1 获得灵石 / 2 恢复气血"| Reward
-    Battle -->|"Space 推进回合"| Battle
-    Battle -->|"胜利"| Reward
-    Battle -->|"失败占位"| MainRoute
-    Reward -->|"1/2/3 领奖"| MainRoute
-    MainRoute --> Finished
+    Boot["Boot"] --> MainRoute["MainRoute"]
+    MainRoute --> Event["Event"]
+    MainRoute --> Battle["Battle"]
+    MainRoute --> Reward["Rest / Shop / Boss 占位"]
+    Event --> Reward
+    Battle --> Reward
+    Reward --> MainRoute
+    MainRoute --> Finished["Finished / LoopBack"]
 ```
 
-## 3. 新增 / 修改文件列表
-
-新增�?
-- `UnityProject/Assets/GameScripts/HotFix/GameLogic/Cultivation/Flow/CultivationFlowState.cs`
-- `UnityProject/Assets/GameScripts/HotFix/GameLogic/Cultivation/Flow/CultivationRouteNodeType.cs`
-- `UnityProject/Assets/GameScripts/HotFix/GameLogic/Cultivation/Flow/CultivationRouteNodeRuntimeData.cs`
-- `UnityProject/Assets/GameScripts/HotFix/GameLogic/Cultivation/Flow/CultivationRouteRuntimeData.cs`
-- `UnityProject/Assets/GameScripts/HotFix/GameLogic/Cultivation/Flow/CultivationRouteViewModelFactory.cs`
-- `UnityProject/Assets/GameScripts/HotFix/GameLogic/Cultivation/Flow/CultivationGameFlowController.cs`
-- 对应 Unity `.meta` 文件
-- `Doc/交付说明/Phase82_Cultivation_最小游戏流程闭�?md`
-
-修改�?
-- `UnityProject/Assets/GameScripts/GameEntry.cs`
-- `UnityProject/Assets/GameScripts/HotFix/GameLogic/GameApp.cs`
-- `UnityProject/Assets/GameScripts/HotFix/GameLogic/CultivationCardGame/CultivationRunUIService.cs`
-
-## 4. 状态机说明
-
-新增状态机入口�?
-```csharp
-CultivationRunUIService.OpenMinimalGameplayLoop()
-```
-
-它内部创建或复用�?
-```csharp
-CultivationGameFlowController.OpenOrCreate()
-```
-
-状态至少包含：
+状态枚举包括：
 
 - `Boot`
 - `MainRoute`
@@ -75,46 +40,93 @@ CultivationGameFlowController.OpenOrCreate()
 - `Reward`
 - `Finished`
 
-运行时数据由 `CultivationRouteRuntimeData` 持有，包含：
+## 3. 入口与运行数据
+
+阶段入口：
+
+```csharp
+CultivationRunUIService.OpenMinimalGameplayLoop()
+```
+
+它创建或复用：
+
+```csharp
+CultivationGameFlowController.OpenOrCreate()
+```
+
+`CultivationRouteRuntimeData` 保存：
 
 - 当前层数 `Layer`
 - 当前天数 `Day`
 - 当前节点 `NodeIndex`
-- 当前气血 `Hp`
-- 当前灵力 `Spirit`
-- 当前灵石 `SpiritStones`
-- 当前卡组 `Deck`
-- 当前可选路线节�?`AvailableNodes`
+- 气血 `Hp`
+- 灵力 `Spirit`
+- 灵石 `SpiritStones`
+- 当前牌组 `Deck`
+- 当前可选路线 `AvailableNodes`
 
-## 5. 操作方式
+## 4. 新增与修改文件
 
-运行后可用键盘操作：
+新增 Flow 层：
 
-- `1 / 2 / 3`：在 MainRoute 选择�?1 / 2 / 3 个路线节点�?- `Event` 状态下�?  - `1`：获得灵石�?  - `2`：恢复气血�?- `Battle` 状态下�?  - `Space`：推进一回合模拟战斗�?- `Reward` 状态下�?  - `1`：获得灵石�?  - `2`：获得卡牌�?  - `3`：恢复气血�?
-关键状态切换会输出 `[CultivationFlow]` 日志�?
-## 6. 已跑通内�?
-已实现并验证�?
-- Editor 快速入�?`GameEntry` 默认进入最小流程�?- 正式热更入口 `GameApp.StartGameLogic()` 默认进入最小流程�?- MainRoute 使用 Phase79 当前视觉基线 `Steam_MainRoute_Restore.prefab`，并通过 `SteamMainRouteDemoBinder` 刷新运行时数据�?- 无可用运行时模板时，会创建最小文本兜底界面�?- `MainRoute -> Battle -> Reward -> MainRoute` 可跑通�?- 战斗采用固定伤害模拟�?  - 玩家每回合造成 14 伤害�?  - 敌人存活时造成 6 伤害�?  - 敌人 HP <= 0 进入 Reward�?  - 玩家失败不会卡死，保�?1 HP �?MainRoute�?- Reward 选择后更�?RuntimeData，并推进 `day` �?`nodeIndex`�?- Event 可通过 `1 / 2` 产生灵石或恢复气血，再进入 Reward�?- Rest / Shop / Boss 目前为占位路线，能进�?Reward �?Battle，不阻塞闭环�?
-## 7. 未完成内�?
-本轮未做�?
-- 未做 UI 美化�?- 未重�?MainRoute 视觉�?- 未恢复旧肉鸽玩法、旧 UI Prefab、旧视觉资产�?- 未接完整卡牌 AI、敌�?AI、动画、音效、卡组构筑深度�?- 未改 Luban 生成链路�?- 未继续推�?Phase81 自动验收工具�?- 未修�?ProjectSettings�?- 未修�?Phase80 Runtime 生命周期修复�?
-## 8. 验证结果
+- `UnityProject/Assets/GameScripts/HotFix/GameLogic/Cultivation/Flow/CultivationFlowState.cs`
+- `UnityProject/Assets/GameScripts/HotFix/GameLogic/Cultivation/Flow/CultivationRouteNodeType.cs`
+- `UnityProject/Assets/GameScripts/HotFix/GameLogic/Cultivation/Flow/CultivationRouteNodeRuntimeData.cs`
+- `UnityProject/Assets/GameScripts/HotFix/GameLogic/Cultivation/Flow/CultivationRouteRuntimeData.cs`
+- `UnityProject/Assets/GameScripts/HotFix/GameLogic/Cultivation/Flow/CultivationRouteViewModelFactory.cs`
+- `UnityProject/Assets/GameScripts/HotFix/GameLogic/Cultivation/Flow/CultivationGameFlowController.cs`
 
-命令验证�?
+修改入口与服务：
+
+- `UnityProject/Assets/GameScripts/GameEntry.cs`
+- `UnityProject/Assets/GameScripts/HotFix/GameLogic/GameApp.cs`
+- `UnityProject/Assets/GameScripts/HotFix/GameLogic/CultivationCardGame/CultivationRunUIService.cs`
+
+## 5. Phase82 操作方式
+
+- MainRoute：`1 / 2 / 3` 选择路线节点。
+- Event：`1` 获得灵石，`2` 恢复气血。
+- Battle：`Space` 推进占位战斗回合。
+- Reward：`1` 灵石，`2` 卡牌，`3` 恢复气血。
+
+关键切换使用 `[CultivationFlow]` 日志输出。
+
+## 6. Phase82 已完成内容
+
+- Editor 快速入口默认进入最小游戏流程。
+- `GameApp.StartGameLogic()` 也调用同一入口。
+- MainRoute 在 Editor 中使用 `Steam_MainRoute_Restore.prefab` 并通过 `SteamMainRouteDemoBinder` 刷新数据。
+- 无可用模板时创建运行时文本兜底界面。
+- `MainRoute -> Battle -> Reward -> MainRoute` 可以跑通。
+- 占位战斗使用固定伤害：玩家每回合 14，敌人存活时反击 6。
+- 奖励选择后更新运行数据并推进 Day 与 NodeIndex。
+- Event、Rest、Shop、Boss 有不阻塞闭环的占位处理。
+
+## 7. Phase82 明确未完成
+
+- 没有接入真实 `BattleEngine` 手牌、灵力、敌人意图与卡牌操作。
+- 没有把成熟的 `CultivationRunEngine` 作为唯一 Run 状态来源。
+- 没有完成正式 Player 资源加载；非 Editor 构建仍使用运行时 fallback。
+- 没有完成正式 UI、美术、动画、音效或手感。
+- 没有迁移到 Luban 配置。
+- 没有验证完整 `Procedure -> GameApp -> Cultivation` Player 链路。
+
+这些缺口不能因为最小状态机可运行而视为完整游戏已经完成。
+
+## 8. 当时验证记录
+
+Phase82 提交 `99c4df9` 当时记录：
+
 ```text
 dotnet build UnityProject\UnityProject.sln --no-restore
-结果：成功，0 Error。存在项目既�?warning�?```
+结果：0 Error
 
-```text
 git diff --check
-结果：通过�?```
+结果：通过
+```
 
-Unity MCP 验证�?
-- `refresh_unity` �?Console 当前 0 Error�?- 进入 Play Mode 成功�?- �?Play Mode 内使�?Unity MCP 临时代码等价驱动�?  - 重置 / 创建 `CultivationGameFlowController`
-  - 选择第一个节�?  - 推进 3 次战斗回�?  - 进入 Reward
-  - 选择卡牌奖励
-  - 返回 MainRoute
-- 返回摘要�?
+Unity MCP 以 CodeDom 反射驱动状态机得到：
+
 ```text
 state=MainRoute;
 afterBattle=Reward;
@@ -126,30 +138,8 @@ stones=120;
 hp=60
 ```
 
-Console 流程日志包含�?
-```text
-[CultivationFlow] Boot -> MainRoute
-[CultivationFlow] MainRoute select node: Battle
-[CultivationFlow] Battle start
-[CultivationFlow] Battle turn: playerHp=66 enemyHp=16
-[CultivationFlow] Battle turn: playerHp=60 enemyHp=2
-[CultivationFlow] Battle turn: playerHp=60 enemyHp=0
-[CultivationFlow] Battle win
-[CultivationFlow] Battle -> Reward
-[CultivationFlow] Reward selected: Card
-[CultivationFlow] Reward -> MainRoute
-```
+这证明的是 Phase82 占位状态机闭环，不是人工键盘手感、真实卡牌战斗或完整 Run 验收。
 
-未伪造人工试�?PASS：本轮验证是 Unity MCP 自动进入 Play Mode，并用临时代码等价驱动状态机，不是人工键盘手感验收�?
-## 9. 明确未修改范�?
-本轮未提交也不应提交�?
-- `Library`
-- `Temp`
-- `Logs`
-- `obj`
-- `.vs`
-- `UserSettings`
-- 旧菜单报�?- 大量无关 Prefab
-- `ProjectSettings`
-- 非本轮必要的 UI 美术资产
-- Phase81 自动验收报告与未跟踪残留
+## 9. 后续状态说明
+
+Phase83 已将完整产品方向锁定为《仙途·天命》，并开始修复生命周期验证与重复初始化。后续阶段必须优先合并 Phase82 占位流程和已有 `CultivationRunEngine + BattleEngine`，禁止继续扩展两套平行状态机。
